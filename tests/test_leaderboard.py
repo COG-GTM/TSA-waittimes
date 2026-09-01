@@ -120,6 +120,19 @@ def test_improvement_calculation_and_ordering() -> None:
     assert result["most_improved"]["quiet"] is True
 
 
+def test_sub_minute_improvements_excluded() -> None:
+    latest = [row("AAA", 600), row("BBB", 1200)]
+    baseline = [("AAA", 630), ("BBB", 1260)]
+    result = leaderboard.build(
+        latest,
+        baseline,
+        {iata: iata for iata in ("AAA", "BBB")},
+        now=NOW,
+    )
+
+    assert [e["iata"] for e in result["most_improved"]["entries"]] == ["BBB"]
+
+
 class FakeCursor:
     def __init__(self, pool: FakePool) -> None:
         self.pool = pool

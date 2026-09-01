@@ -94,6 +94,36 @@ a { color: inherit; }
 .faa-attribution { color: var(--muted); font-size: 11px; margin-top: 4px; }
 .faa-attribution a { color: var(--muted); }
 
+.outlook { margin: 12px 16px 0; padding: 10px 14px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px; }
+.outlook-head { margin: 0 0 8px; color: var(--muted); font-size: 13px;
+  letter-spacing: .5px; text-transform: uppercase; }
+.outlook-row { font-size: 13.5px; margin: 6px 0; }
+.outlook-row b { font-size: 15px; }
+.outlook-muted { color: var(--muted); }
+.outlook-worse { color: var(--red); font-weight: 600; }
+.outlook-better { color: var(--green-bright); font-weight: 600; }
+.outlook-normal { color: var(--muted); }
+.outlook-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.forecast-chip { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 9px;
+  border: 1px solid var(--border); border-radius: 12px; font-size: 12.5px; background: var(--bg); }
+.forecast-chip b { font-size: 14px; color: var(--green-bright); }
+.forecast-chip small { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .4px; }
+.forecast-chip.conf-high { border-color: var(--green); }
+.forecast-chip.conf-medium { border-color: var(--amber); }
+.forecast-chip.conf-low { border-color: var(--border); }
+.heatmap { margin-top: 10px; }
+.heatmap-title { color: var(--muted); font-size: 11.5px; margin-bottom: 6px; }
+.heatmap-grid { display: grid; grid-template-columns: 34px repeat(24, minmax(6px, 1fr));
+  gap: 2px; align-items: center; }
+.heatmap-dow { color: var(--muted); font-size: 10px; }
+.heatmap-cell { display: inline-block; width: 100%; height: 12px; min-width: 6px;
+  border-radius: 2px; background: var(--border); }
+.heatmap-cell.now { outline: 1.5px solid var(--text); outline-offset: 1px; }
+.heatmap-legend { color: var(--muted); font-size: 10.5px; margin-top: 6px;
+  display: flex; align-items: center; gap: 5px; }
+.heatmap-legend .heatmap-cell { width: 12px; flex: 0 0 auto; }
+
 .checkpoints { padding: 12px 16px; display: grid; gap: 12px;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 .cp-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }

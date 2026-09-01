@@ -10,6 +10,7 @@ TOP_N = 10
 MIN_ENTRIES = 3
 BASELINE_AGE = timedelta(hours=3)
 BASELINE_TOLERANCE = timedelta(minutes=30)
+MIN_DROP_SECONDS = 60
 
 LatestRow = Sequence[Any]
 
@@ -88,7 +89,7 @@ def build(
         if previous_wait is None:
             continue
         drop_seconds = previous_wait - entry["wait_seconds"]
-        if drop_seconds <= 0:
+        if drop_seconds < MIN_DROP_SECONDS:
             continue
         improved = dict(entry)
         improved["previous_wait_seconds"] = previous_wait
