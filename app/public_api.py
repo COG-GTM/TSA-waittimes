@@ -60,6 +60,7 @@ v1_app.add_middleware(
     allow_origins=["*"],
     allow_methods=["GET"],
     allow_headers=["*"],
+    expose_headers=["Retry-After"],
 )
 
 

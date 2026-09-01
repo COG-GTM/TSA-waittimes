@@ -99,6 +99,7 @@ async def test_airports_shape_and_cors(client, patched_loaders):
         "attribution", "source_url",
     }
     assert response.headers["access-control-allow-origin"] == "*"
+    assert "retry-after" in response.headers["access-control-expose-headers"].lower()
 
 
 @pytest.mark.asyncio
