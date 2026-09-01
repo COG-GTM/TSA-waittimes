@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -14,6 +14,8 @@ from . import db, poller
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 STALE_SECONDS = 30 * 60
+CANONICAL_HOST = "waitpicture.com"
+REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
 
 
 @asynccontextmanager
@@ -42,6 +44,17 @@ async def security_headers(request: Request, call_next):
         "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     )
     return resp
+
+
+@app.middleware("http")
+async def canonical_host_redirect(request: Request, call_next):
+    host = request.headers.get("host", "").split(":", 1)[0].lower()
+    if host in REDIRECT_HOSTS:
+        target = f"https://{CANONICAL_HOST}{request.url.path}"
+        if request.url.query:
+            target += "?" + request.url.query
+        return RedirectResponse(target, status_code=301)
+    return await call_next(request)
 
 
 def _iso(dt: datetime | None) -> str | None:
