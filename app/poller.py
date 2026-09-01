@@ -16,6 +16,10 @@ log = logging.getLogger("poller")
 MAX_BACKOFF = 900  # 15 min
 
 
+class EmptyPollError(RuntimeError):
+    """A fetch succeeded but yielded no observations."""
+
+
 async def register_sources() -> None:
     assert db.pool is not None
     async with db.pool.connection() as conn:
@@ -96,6 +100,8 @@ async def poll_source(source: Source, client: httpx.AsyncClient) -> None:
         try:
             result = await source.fetch(client)
             await store_result(source, result)
+            if not result.observations:
+                raise EmptyPollError(f"{source.code}: feed returned no observations")
             failures = 0
             log.info("polled %s: %d observations", source.code, len(result.observations))
         except Exception as err:  # noqa: BLE001 - keep the loop alive no matter what
