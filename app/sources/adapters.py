@@ -297,9 +297,7 @@ async def fetch_mia(client: httpx.AsyncClient) -> FetchResult:
             "precheck"
             if "pre" in name_lower
             else "other"
-            if "clear" in name_lower
-            else "other"
-            if "priority" in name_lower
+            if "clear" in name_lower or "priority" in name_lower
             else "standard"
         )
         projected = queue.get("projectedWaitTime")
