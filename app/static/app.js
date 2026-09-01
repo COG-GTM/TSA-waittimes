@@ -92,3 +92,25 @@ function renderTsaHistory(history) {
   el.innerHTML = '<span>weekly avg, 2 yr</span><svg class="sparkline" viewBox="0 0 ' + w + " " + h +
     '" preserveAspectRatio="none"><polyline points="' + esc(pts) + '"/></svg>';
 }
+
+function renderTravelBanner(tp) {
+  const el = document.getElementById("travel-banner");
+  if (!el) return;
+  if (!tp) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.className = "travel-banner " + (tp.active ? tp.intensity : "upcoming");
+  if (tp.active) {
+    const label = tp.intensity === "peak" ? "Peak travel" : "Elevated travel";
+    el.innerHTML = "<b>" + esc(label) + ": " + esc(tp.name) +
+      "</b> — expect longer waits. " + esc(tp.note);
+  } else {
+    const days = Number(tp.days_until);
+    el.innerHTML = "Upcoming: <b>" + esc(tp.name) + "</b> begins " +
+      (days === 0 ? "today" : "in " + days + (days === 1 ? " day" : " days")) +
+      " (" + esc(tp.start) + ").";
+  }
+}

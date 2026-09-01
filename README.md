@@ -30,6 +30,16 @@ Demonstration only.
   pages, and a JSON API. Frontend is vanilla JS + vendored Leaflet with a
   vendored US-states GeoJSON basemap (no external tile servers).
 
+## Travel calendar
+
+`data/travel_calendar.json` contains the static US travel-demand calendar. It is
+generated data and must never be hand-edited; regenerate it with
+`python scripts/gen_travel_calendar.py`. Regenerate it when the year rolls over;
+the default covers the current year and next two years, plus any prior-year
+period still active at the start of the current year. At startup, the calendar is seeded into
+the `travel_periods` table with a full replace. The `/api/summary` and
+`/api/airport/{iata}` endpoints expose the selected period as `travel_period`.
+
 ## Live sources
 
 See `SOURCES` in `app/sources/adapters.py` (single source of truth). Each entry

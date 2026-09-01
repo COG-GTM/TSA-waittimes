@@ -84,7 +84,10 @@ function render(data) {
 
 function refreshAirport() {
   fetch("/api/airport/" + iata).then(r => r.json()).then(render).catch(() => {});
-  fetch("/api/summary").then(r => r.json()).then(d => renderTsaStrip(d.tsa_throughput)).catch(() => {});
+  fetch("/api/summary").then(r => r.json()).then(d => {
+    renderTsaStrip(d.tsa_throughput);
+    renderTravelBanner(d.travel_period);
+  }).catch(() => {});
 }
 setInterval(refreshAirport, 60000);
 refreshAirport();

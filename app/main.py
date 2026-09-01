@@ -3,8 +3,9 @@ import logging
 import os
 from collections.abc import Sequence
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -13,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import db, poller, weather_alerts
 from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
+from .travel_calendar import TravelPeriod, period_payload
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -26,6 +28,7 @@ FAA_EVENT_SEVERITY = {
     "arrival_delay": 2,
     "departure_delay": 1,
 }
+EASTERN = ZoneInfo("America/New_York")
 
 
 @asynccontextmanager
@@ -102,6 +105,35 @@ def _alert_dict(row: Sequence[Any]) -> dict[str, Any]:
 
 def _alert_sort_key(alert: dict[str, Any]) -> tuple[int, str]:
     return (-weather_alerts.SEVERITY_RANK.get(alert["severity"], 0), alert["event"])
+
+
+def _today() -> date:
+    return datetime.now(UTC).astimezone(EASTERN).date()
+
+
+async def _travel_period(cur) -> dict | None:
+    today = _today()
+    await cur.execute(
+        """
+        SELECT name, start_date, end_date, intensity, note
+        FROM travel_periods
+        WHERE end_date >= %s
+        ORDER BY start_date, name
+        LIMIT 1
+        """,
+        (today,),
+    )
+    row = await cur.fetchone()
+    if row is None:
+        return None
+    period = TravelPeriod(
+        name=row[0],
+        start=row[1],
+        end=row[2],
+        intensity=row[3],
+        note=row[4],
+    )
+    return period_payload(period, today)
 
 
 LATEST_OBS_SQL = """
@@ -186,6 +218,7 @@ async def api_summary():
             current = a.get("weather_alert")
             if current is None or _alert_sort_key(alert) < _alert_sort_key(current):
                 a["weather_alert"] = alert
+        travel_period = await _travel_period(cur)
         await cur.execute(
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
@@ -231,6 +264,7 @@ async def api_summary():
         "tsa_throughput": tsa,
         "faa_events": faa_events,
         "faa_attribution": FAA_ATTRIBUTION,
+        "travel_period": travel_period,
     })
 
 
@@ -265,6 +299,7 @@ async def api_airport(iata: str):
             }
             if enplanement_row is not None else None
         )
+        travel_period = await _travel_period(cur)
         await cur.execute(
             """
             SELECT c.id, c.name, c.lane_type FROM checkpoints c
@@ -329,6 +364,7 @@ async def api_airport(iata: str):
         "faa_events": faa_events,
         "faa_attribution": FAA_ATTRIBUTION,
         "weather_alerts": alerts,
+        "travel_period": travel_period,
         "generated_at": _iso(datetime.now(UTC)),
     })
 

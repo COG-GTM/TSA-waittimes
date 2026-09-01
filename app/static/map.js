@@ -41,6 +41,7 @@ function render(data) {
   document.getElementById("updated").textContent =
     "Auto-refreshes every 60s · Updated " + new Date(data.generated_at).toLocaleTimeString();
   renderTsaStrip(data.tsa_throughput);
+  renderTravelBanner(data.travel_period);
 
   liveLayer.clearLayers();
   grayLayer.clearLayers();
