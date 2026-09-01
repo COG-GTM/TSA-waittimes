@@ -21,7 +21,12 @@ function asPublished(iso) {
 
 function renderTsaStrip(tsa) {
   const el = document.getElementById("tsa-strip");
-  if (!el || !tsa) return;
+  if (!el) return;
+  if (!tsa) {
+    el.innerHTML = "";
+    renderTsaHistory([]);
+    return;
+  }
   let html = "National throughput " + esc(tsa.date) + ": <b>" +
     tsa.travelers.toLocaleString() + "</b> travelers";
   if (tsa.lastyear_travelers) {
@@ -30,4 +35,30 @@ function renderTsaStrip(tsa) {
   }
   html += " — TSA.gov";
   el.innerHTML = html;
+  renderTsaHistory(tsa.history);
+}
+
+function renderTsaHistory(history) {
+  const el = document.getElementById("tsa-history");
+  if (!el || !history || history.length < 2) {
+    if (el) el.innerHTML = "";
+    return;
+  }
+  const points = history.map(p => [String(p[0]), Number(p[1])])
+    .filter(p => Number.isFinite(p[1]));
+  if (points.length < 2) {
+    el.innerHTML = "";
+    return;
+  }
+  const w = 300, h = 30, pad = 2;
+  const min = Math.min.apply(null, points.map(p => p[1]));
+  const max = Math.max.apply(null, points.map(p => p[1]));
+  const span = Math.max(1, max - min);
+  const pts = points.map((p, i) => {
+    const x = pad + (i / Math.max(1, points.length - 1)) * (w - 2 * pad);
+    const y = h - pad - ((p[1] - min) / span) * (h - 2 * pad);
+    return x.toFixed(1) + "," + y.toFixed(1);
+  }).join(" ");
+  el.innerHTML = '<span>weekly avg, 2 yr</span><svg class="sparkline" viewBox="0 0 ' + w + " " + h +
+    '" preserveAspectRatio="none"><polyline points="' + esc(pts) + '"/></svg>';
 }
