@@ -1,6 +1,7 @@
 """US Checkpoint Wait Picture — web app and API."""
 import logging
 import os
+import re
 from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
@@ -12,7 +13,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db, poller, weather_alerts
+from . import db, forecast, poller, weather_alerts
 from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
 from .travel_calendar import TravelPeriod, period_payload
 
@@ -29,6 +30,7 @@ FAA_EVENT_SEVERITY = {
     "departure_delay": 1,
 }
 EASTERN = ZoneInfo("America/New_York")
+IATA_RE = re.compile(r"^[A-Z]{3}$")
 
 
 @asynccontextmanager
@@ -367,6 +369,21 @@ async def api_airport(iata: str):
         "travel_period": travel_period,
         "generated_at": _iso(datetime.now(UTC)),
     })
+
+
+@app.get("/api/airport/{iata}/forecast")
+async def api_airport_forecast(iata: str):
+    iata = iata.upper()
+    if not IATA_RE.match(iata):
+        raise HTTPException(404, "unknown airport")
+    assert db.pool is not None
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
+        row = await cur.fetchone()
+        if row is None:
+            raise HTTPException(404, "unknown airport")
+        payload = await forecast.get_forecast(cur, row[0], row[1])
+    return JSONResponse(payload)
 
 
 @app.get("/healthz")
