@@ -95,7 +95,12 @@ async def api_summary():
             a.setdefault("source", attribution)
             a.setdefault("source_url", url)
             if wait is not None and is_open and not stale:
-                key = "max_wait_seconds" if lane == "standard" else "max_precheck_seconds"
+                key = {
+                    "standard": "max_wait_seconds",
+                    "precheck": "max_precheck_seconds",
+                }.get(lane)
+                if key is None:
+                    continue
                 if wait > a.get(key, -1):
                     a[key] = wait
                     if lane == "standard":

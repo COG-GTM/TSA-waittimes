@@ -5,6 +5,7 @@ airports' own public websites load in a visitor's browser), identifies with an
 honest User-Agent, and polls no faster than once per minute.
 """
 import json
+import re
 import urllib.parse
 from datetime import datetime, timezone
 
@@ -23,10 +24,16 @@ def _ts(epoch: float | None) -> datetime | None:
     return datetime.fromtimestamp(epoch, tz=timezone.utc)
 
 
-def _lane(name: str) -> str:
-    n = name.lower()
-    if "pre" in n and ("check" in n or n.strip() in ("pre", "precheck")):
+_PRECHECK_RE = re.compile(r"\bpre[\s-]?check\b|\bpre\b")
+_ALT_LANE_RE = re.compile(r"\b(clear|priority|premium|employee|crew|staff|kcm)\b")
+
+
+def _lane(*parts: str | None) -> str:
+    n = " ".join(p.lower() for p in parts if p)
+    if _PRECHECK_RE.search(n):
         return "precheck"
+    if _ALT_LANE_RE.search(n):
+        return "other"
     return "standard"
 
 
@@ -108,7 +115,7 @@ async def _airportlabs(client: httpx.AsyncClient, url: str, key: str, version: s
         obs.append(
             Observation(
                 cp.get("name") or "Checkpoint",
-                "precheck" if "pre" in lane.lower() or "pre" in (cp.get("name") or "").lower() else "standard",
+                _lane(lane, cp.get("name")),
                 cp.get("waitSeconds"),
                 bool(cp.get("isOpen", True)),
                 _ts(cp.get("lastUpdatedTimestamp")),
@@ -209,7 +216,7 @@ async def _zensors(
             obs.append(
                 Observation(
                     f"{jname} — {p.get('name', key)}",
-                    "precheck" if key == "precheck" else "standard",
+                    _lane(key),
                     round(float(wt["value"]) * 60) if wt.get("value") is not None else None,
                     bool(p.get("open", True)),
                     _ts(wt.get("timestamp")),
@@ -248,7 +255,7 @@ async def fetch_pit(client: httpx.AsyncClient) -> FetchResult:
         obs.append(
             Observation(
                 f"{q.get('checkpointName', 'Checkpoint')} — {queue}",
-                "precheck" if "pre" in queue.lower() else "standard",
+                _lane(queue),
                 int(wait) * 60 if wait is not None else None,
                 str(q.get("status", "")).lower() == "open",
             )
@@ -277,7 +284,7 @@ async def fetch_cvg(client: httpx.AsyncClient) -> FetchResult:
         obs.append(
             Observation(
                 cp.get("name") or "Checkpoint",
-                "precheck" if lane.lower() == "pre" else "standard",
+                _lane(lane, cp.get("name")),
                 cp.get("waitSeconds"),
                 bool(cp.get("isOpen", True)),
                 _ts(cp.get("lastUpdatedTimestamp")),
