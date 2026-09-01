@@ -535,6 +535,7 @@ async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
                 "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
                 "updated": None,
                 "rows": [],
+                "html": text,
             },
             observations=[],
         )
@@ -583,6 +584,7 @@ async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
             "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
             "updated": updated,
             "rows": raw_rows,
+            "html_excerpt": text[:4000],
         },
         observations=obs,
     )
@@ -602,6 +604,7 @@ async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
                 "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
                 "updated": None,
                 "rows": [],
+                "html": text,
             },
             observations=[],
         )
@@ -620,6 +623,9 @@ async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
                 published_at = datetime.strptime(timestamp, "%b %d at %I:%M %p").replace(
                     year=datetime.now(zone).year, tzinfo=zone
                 ).astimezone(timezone.utc)
+                now = datetime.now(timezone.utc)
+                if published_at > now + timedelta(days=1):
+                    published_at = published_at.replace(year=published_at.year - 1)
             except ValueError:
                 pass
     obs = []
@@ -642,6 +648,7 @@ async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
             "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
             "updated": updated,
             "rows": raw_rows,
+            "html_excerpt": text[:4000],
         },
         observations=obs,
     )
