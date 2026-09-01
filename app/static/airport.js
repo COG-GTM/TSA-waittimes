@@ -70,7 +70,13 @@ function renderTypicalNow(t) {
 function renderForecastChips(fc) {
   if (!fc) return "";
   if (!fc.available) {
-    return '<div class="outlook-row outlook-muted">Forecast: not enough history yet.</div>';
+    const reasons = {
+      checkpoints_closed: "checkpoints currently closed.",
+      stale_observations: "recent observations unavailable.",
+      insufficient_history: "not enough history yet.",
+    };
+    return '<div class="outlook-row outlook-muted">Forecast: ' +
+      (reasons[fc.reason] || "unavailable right now.") + "</div>";
   }
   return '<div class="outlook-row outlook-chips">Forecast: ' + fc.horizons.map(h =>
     '<span class="forecast-chip conf-' + esc(h.confidence) + '">+' + esc(h.horizon_minutes) +
