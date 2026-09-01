@@ -279,10 +279,18 @@ def _panynj_published_at(row: dict, now_et: datetime) -> datetime | None:
     except ValueError:
         return None
 
-    published = datetime.combine(now_et.date(), updated, tzinfo=PANYNJ_TZ)
-    if published - now_et > timedelta(minutes=5):
-        published -= timedelta(days=1)
-    return published.astimezone(timezone.utc)
+    cutoff = now_et + timedelta(minutes=5)
+    candidates = [
+        datetime.combine(
+            now_et.date() - timedelta(days=days), updated, tzinfo=PANYNJ_TZ
+        ).replace(fold=fold)
+        for days in (0, 1)
+        for fold in (0, 1)
+    ]
+    past = [c for c in candidates if c <= cutoff]
+    if not past:
+        return None
+    return max(past).astimezone(timezone.utc)
 
 
 async def _panynj(client: httpx.AsyncClient, iata: str) -> FetchResult:
