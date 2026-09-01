@@ -129,8 +129,6 @@ async def _airportlabs(
                 _ts(cp.get("lastUpdatedTimestamp")),
             )
         )
-    if not obs:
-        raise ValueError(f"no displayable checkpoints in {collection} from {url}")
     return FetchResult(raw=data, observations=obs)
 
 

@@ -16,6 +16,10 @@ log = logging.getLogger("poller")
 MAX_BACKOFF = 900  # 15 min
 
 
+class EmptyFeed(Exception):
+    """A source returned a successful response that parsed to zero observations."""
+
+
 async def register_sources() -> None:
     assert db.pool is not None
     async with db.pool.connection() as conn:
@@ -61,15 +65,16 @@ async def store_result(source: Source, result: FetchResult) -> None:
                 """,
                 (cp_row[0], ob.wait_seconds, ob.is_open, source.code, ob.published_at, raw_id),
             )
-        await cur.execute(
-            """
-            INSERT INTO poll_health (source_code, last_success_at, last_attempt_at, consecutive_failures)
-            VALUES (%s, now(), now(), 0)
-            ON CONFLICT (source_code) DO UPDATE SET
-                last_success_at = now(), last_attempt_at = now(), consecutive_failures = 0
-            """,
-            (source.code,),
-        )
+        if result.observations:
+            await cur.execute(
+                """
+                INSERT INTO poll_health (source_code, last_success_at, last_attempt_at, consecutive_failures)
+                VALUES (%s, now(), now(), 0)
+                ON CONFLICT (source_code) DO UPDATE SET
+                    last_success_at = now(), last_attempt_at = now(), consecutive_failures = 0
+                """,
+                (source.code,),
+            )
 
 
 async def record_failure(source: Source, err: Exception) -> None:
@@ -96,6 +101,8 @@ async def poll_source(source: Source, client: httpx.AsyncClient) -> None:
         try:
             result = await source.fetch(client)
             await store_result(source, result)
+            if not result.observations:
+                raise EmptyFeed(f"{source.code}: response parsed to zero observations")
             failures = 0
             log.info("polled %s: %d observations", source.code, len(result.observations))
         except Exception as err:  # noqa: BLE001 - keep the loop alive no matter what
