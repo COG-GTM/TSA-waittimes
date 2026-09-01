@@ -46,7 +46,7 @@ See `SOURCES` in `app/sources/adapters.py` (single source of truth). Each entry
 records the airport, the public page where the data is published, attribution,
 and refresh rate.
 Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS,
-PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
+PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX, SFO.
 
 National TSA throughput history is backfilled from 2019 through the last
 completed year at startup, one year at a time. A missing or blocked historical
