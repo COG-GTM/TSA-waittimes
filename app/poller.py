@@ -168,8 +168,11 @@ async def poll_faa_events(client: httpx.AsyncClient) -> None:
             assert db.pool is not None
             async with db.pool.connection() as conn, conn.cursor() as cur:
                 await cur.execute(
-                    "INSERT INTO raw_payloads (source_code, payload) VALUES (%s, %s) RETURNING id",
-                    (FAA_SOURCE_CODE, json.dumps(raw, default=str)),
+                    """
+                    INSERT INTO raw_payloads (source_code, fetched_at, payload)
+                    VALUES (%s, %s, %s) RETURNING id
+                    """,
+                    (FAA_SOURCE_CODE, fetched_at, json.dumps(raw, default=str)),
                 )
                 row = await cur.fetchone()
                 raw_id = row[0] if row else None

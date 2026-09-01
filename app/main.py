@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import db, poller
-from .faa_events import FAA_ATTRIBUTION
+from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -82,8 +82,12 @@ ORDER BY o.checkpoint_id, o.fetched_at DESC
 FAA_EVENTS_SQL = """
 SELECT airport_iata, event_type, reason, avg_delay_seconds, start_time, end_time, update_time
 FROM faa_airport_events
-WHERE fetched_at = (SELECT max(fetched_at) FROM faa_airport_events)
+WHERE fetched_at = (
+        SELECT max(fetched_at) FROM raw_payloads WHERE source_code = %s
+      )
   AND fetched_at > now() - interval '20 minutes'
+  AND (start_time IS NULL OR start_time <= now())
+  AND (end_time IS NULL OR end_time >= now())
 """
 
 
@@ -142,7 +146,7 @@ async def api_summary():
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
         tsa_rows = await cur.fetchall()
-        await cur.execute(FAA_EVENTS_SQL)
+        await cur.execute(FAA_EVENTS_SQL, (FAA_SOURCE_CODE,))
         faa_events = [_faa_event_dict(row, include_iata=True) for row in await cur.fetchall()]
     live = sum(1 for a in airports.values() if a["live"])
     faa_events.sort(key=_faa_sort_key)
@@ -241,7 +245,7 @@ async def api_airport(iata: str):
                 "source_url": src_url,
                 "history": history,
             })
-        await cur.execute(FAA_EVENTS_SQL + " AND airport_iata = %s", (iata,))
+        await cur.execute(FAA_EVENTS_SQL + " AND airport_iata = %s", (FAA_SOURCE_CODE, iata))
         faa_events = [_faa_event_dict(row) for row in await cur.fetchall()]
         faa_events.sort(key=_faa_sort_key)
     return JSONResponse({
