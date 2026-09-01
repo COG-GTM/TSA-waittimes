@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.travel_calendar import build_periods
+from app.travel_calendar import build_default_periods, build_periods
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
         nargs="+",
         type=int,
         default=None,
-        help="calendar years to generate (default: current year and next two)",
+        help="calendar years to generate (default: current year and next two, plus carryover)",
     )
     parser.add_argument(
         "--out",
@@ -27,9 +27,10 @@ def main() -> None:
         help="output JSON path",
     )
     args = parser.parse_args()
-    current_year = datetime.now(UTC).year
-    years = args.years or list(range(current_year, current_year + 3))
-    periods = build_periods(years)
+    if args.years is not None:
+        periods = build_periods(args.years)
+    else:
+        periods = build_default_periods(datetime.now(UTC).date())
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         json.dumps([period.to_json() for period in periods], indent=2) + "\n",

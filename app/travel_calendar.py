@@ -112,6 +112,14 @@ def build_periods(years: Sequence[int]) -> list[TravelPeriod]:
     return sorted(periods, key=lambda period: (period.start, period.name))
 
 
+def build_default_periods(today: date) -> list[TravelPeriod]:
+    """Periods for `today`'s year plus the next two, retaining any prior-year
+    period that runs into the current year."""
+    cutoff = date(today.year, 1, 1)
+    periods = build_periods(list(range(today.year - 1, today.year + 3)))
+    return [period for period in periods if period.end >= cutoff]
+
+
 def period_payload(period: TravelPeriod, today: date) -> TravelPeriodPayload:
     active = period.start <= today <= period.end
     return {

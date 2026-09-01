@@ -8,6 +8,7 @@ import pytest
 from app import main
 from app.travel_calendar import (
     INTENSITIES,
+    build_default_periods,
     build_periods,
     labor_day,
     last_weekday,
@@ -59,6 +60,25 @@ def test_winter_holidays_span_year_boundary() -> None:
         (date(2024, 12, 20), date(2025, 1, 2)),
         (date(2025, 12, 20), date(2026, 1, 2)),
     ]
+
+
+@pytest.mark.parametrize("today", [date(2027, 1, 1), date(2027, 1, 2)])
+def test_default_periods_retain_active_prior_winter(today: date) -> None:
+    periods = build_default_periods(today)
+    winter = next(period for period in periods if period.name == "Winter holidays" and period.start == date(2026, 12, 20))
+    selected = select_period(periods, today)
+    assert winter.end == date(2027, 1, 2)
+    assert selected is not None
+    assert selected["name"] == "Winter holidays"
+    assert selected["start"] == "2026-12-20"
+    assert selected["active"] is True
+    assert selected["days_until"] == 0
+
+
+def test_default_periods_cover_three_year_horizon() -> None:
+    periods = build_default_periods(date(2027, 6, 15))
+    winter = next(period for period in periods if period.name == "Winter holidays" and period.end == date(2029, 1, 2))
+    assert winter.start == date(2028, 12, 20)
 
 
 def test_build_periods_are_sorted_valid_and_non_overlapping() -> None:
@@ -155,14 +175,14 @@ def test_load_periods_rejects_missing_key(tmp_path: Path) -> None:
 
 def test_committed_calendar_matches_generated_periods() -> None:
     path = Path(__file__).parents[1] / "data" / "travel_calendar.json"
-    periods = load_periods(path)
-    years = sorted({period.start.year for period in periods})
-    generated = build_periods(years)
-    loaded_tuples = {
-        (period.name, period.start, period.end, period.intensity, period.note) for period in periods
+    committed = load_periods(path)
+    horizon = max(period.start.year for period in committed)
+    expected = build_default_periods(date(horizon - 2, 1, 1))
+    committed_tuples = {
+        (period.name, period.start, period.end, period.intensity, period.note) for period in committed
     }
-    generated_tuples = {
-        (period.name, period.start, period.end, period.intensity, period.note) for period in generated
+    expected_tuples = {
+        (period.name, period.start, period.end, period.intensity, period.note) for period in expected
     }
-    assert loaded_tuples == generated_tuples
-    assert generated_tuples == loaded_tuples
+    assert committed_tuples == expected_tuples
+    assert expected_tuples == committed_tuples

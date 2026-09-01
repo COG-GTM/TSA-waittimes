@@ -1,5 +1,12 @@
 [
   {
+    "name": "Winter holidays",
+    "start": "2025-12-20",
+    "end": "2026-01-02",
+    "intensity": "peak",
+    "note": "Christmas through New Year's Day travel period."
+  },
+  {
     "name": "Spring break",
     "start": "2026-03-15",
     "end": "2026-04-15",

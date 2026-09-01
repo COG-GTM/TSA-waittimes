@@ -34,7 +34,12 @@ function renderTsaStrip(tsa) {
 
 function renderTravelBanner(tp) {
   const el = document.getElementById("travel-banner");
-  if (!el || !tp) return;
+  if (!el) return;
+  if (!tp) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
   el.hidden = false;
   el.className = "travel-banner " + (tp.active ? tp.intensity : "upcoming");
   if (tp.active) {
