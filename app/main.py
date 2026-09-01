@@ -1,6 +1,7 @@
 """US Checkpoint Wait Picture — web app and API."""
 import logging
 import os
+import re
 from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
@@ -12,7 +13,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db, poller, weather_alerts
+from . import analytics, db, poller, weather_alerts
 from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
 from .travel_calendar import TravelPeriod, period_payload
 
@@ -29,6 +30,7 @@ FAA_EVENT_SEVERITY = {
     "departure_delay": 1,
 }
 EASTERN = ZoneInfo("America/New_York")
+IATA_PATTERN = re.compile(r"^[A-Z]{3}$")
 
 
 @asynccontextmanager
@@ -176,6 +178,35 @@ def _faa_sort_key(event: dict) -> tuple[int, str]:
     return (-FAA_EVENT_SEVERITY.get(event["event_type"], 0), event.get("iata", ""))
 
 
+TYPICAL_HOURS_SQL = """
+SELECT hour_bucket, max(avg_wait_seconds)::int AS value_seconds, sum(sample_count)::int
+FROM observations_hourly
+WHERE airport_iata = %s AND lane_type = 'standard' AND avg_wait_seconds IS NOT NULL AND sample_count > 0
+GROUP BY 1
+ORDER BY 1
+"""
+# Hour-of-week is UTC-based because the airports table carries no timezone
+# (data/us_airports.json has iata/name/city/state/lat/lon/hub only).
+
+
+async def _typical_buckets(cur, iata: str) -> list[analytics.TypicalBucket]:
+    await cur.execute(TYPICAL_HOURS_SQL, (iata,))
+    return analytics.typical_from_hours(await cur.fetchall())
+
+
+async def _airport_name(cur, iata: str) -> tuple[str, str] | None:
+    await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
+    row = await cur.fetchone()
+    return (row[0], row[1]) if row is not None else None
+
+
+def _validated_iata(iata: str) -> str:
+    normalized = iata.upper()
+    if not IATA_PATTERN.fullmatch(normalized):
+        raise HTTPException(404, "unknown airport")
+    return normalized
+
+
 @app.get("/api/summary")
 async def api_summary():
     assert db.pool is not None
@@ -270,7 +301,7 @@ async def api_summary():
 
 @app.get("/api/airport/{iata}")
 async def api_airport(iata: str):
-    iata = iata.upper()
+    iata = _validated_iata(iata)
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
         await cur.execute("SELECT iata, name, city, state, lat, lon FROM airports WHERE iata = %s", (iata,))
@@ -355,6 +386,39 @@ async def api_airport(iata: str):
                 "source_url": src_url,
                 "history": history,
             })
+        typical_buckets = await _typical_buckets(cur, iata)
+        typical_hour = next(
+            bucket for bucket in typical_buckets
+            if bucket.dow == now.weekday() and bucket.hour == now.hour
+        )
+        current_minutes = analytics.seconds_to_minutes(
+            max(
+                (
+                    checkpoint["wait_seconds"]
+                    for checkpoint in checkpoints
+                    if checkpoint["lane_type"] == "standard"
+                    and checkpoint["is_open"]
+                    and not checkpoint["stale"]
+                    and checkpoint["wait_seconds"] is not None
+                ),
+                default=None,
+            )
+        )
+        median_minutes = analytics.seconds_to_minutes(typical_hour.median_seconds)
+        delta_minutes = (
+            round(current_minutes - median_minutes, 1)
+            if current_minutes is not None and median_minutes is not None else None
+        )
+        typical = {
+            "dow": typical_hour.dow,
+            "hour": typical_hour.hour,
+            "timezone": "UTC",
+            "median_minutes": median_minutes,
+            "p75_minutes": analytics.seconds_to_minutes(typical_hour.p75_seconds),
+            "sample_count": typical_hour.sample_count,
+            "current_minutes": current_minutes,
+            "delta_minutes": delta_minutes,
+        }
         await cur.execute(FAA_EVENTS_SQL + " AND airport_iata = %s", (FAA_SOURCE_CODE, iata))
         faa_events = [_faa_event_dict(row) for row in await cur.fetchall()]
         faa_events.sort(key=_faa_sort_key)
@@ -365,6 +429,41 @@ async def api_airport(iata: str):
         "faa_attribution": FAA_ATTRIBUTION,
         "weather_alerts": alerts,
         "travel_period": travel_period,
+        "typical": typical,
+        "generated_at": _iso(datetime.now(UTC)),
+    })
+
+
+@app.get("/api/airport/{iata}/typical")
+async def api_airport_typical(iata: str):
+    iata = _validated_iata(iata)
+    assert db.pool is not None
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        airport_row = await _airport_name(cur, iata)
+        if airport_row is None:
+            raise HTTPException(404, "unknown airport")
+        buckets = await _typical_buckets(cur, iata)
+    payload_buckets = [
+        {
+            "dow": bucket.dow,
+            "hour": bucket.hour,
+            "median_minutes": analytics.seconds_to_minutes(bucket.median_seconds),
+            "p75_minutes": analytics.seconds_to_minutes(bucket.p75_seconds),
+            "sample_count": bucket.sample_count,
+            "observation_count": bucket.observation_count,
+        }
+        for bucket in buckets
+    ]
+    return JSONResponse({
+        "airport": {"iata": airport_row[0], "name": airport_row[1]},
+        "lane_type": "standard",
+        "timezone": "UTC",
+        "buckets": payload_buckets,
+        "coverage": {
+            "buckets_with_data": sum(bucket.sample_count > 0 for bucket in buckets),
+            "total_buckets": len(buckets),
+            "hour_buckets": sum(bucket.sample_count for bucket in buckets),
+        },
         "generated_at": _iso(datetime.now(UTC)),
     })
 
