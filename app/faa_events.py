@@ -17,6 +17,9 @@ _DURATION_RE = re.compile(
     r"(?:\s*(?:and\s*)?(?P<minutes>\d+(?:\.\d+)?)\s*minutes?)?\s*$",
     re.IGNORECASE,
 )
+_DAILY_CLOSURE_RE = re.compile(r"\bDLY\s+(\d{4})-(\d{4})\b", re.IGNORECASE)
+_DLY_MARKER_RE = re.compile(r"\bDLY\b", re.IGNORECASE)
+_CLOSURE_RE = re.compile(r"\bCLSD\b", re.IGNORECASE)
 
 
 @dataclass
@@ -80,10 +83,36 @@ def _event_times(
     return start_valid and end_valid and update_valid, start_time, end_time, update_time
 
 
-def parse_airport_events(payload: Any) -> list[FaaEvent]:
+def _hhmm_minutes(value: str) -> int | None:
+    hour, minute = int(value[:2]), int(value[2:])
+    if hour > 23 or minute > 59:
+        return None
+    return hour * 60 + minute
+
+
+def _daily_closure_active(reason: str, now: datetime) -> bool | None:
+    if _DLY_MARKER_RE.search(reason) is None:
+        return None
+    match = _DAILY_CLOSURE_RE.search(reason)
+    if match is None:
+        return False
+    start = _hhmm_minutes(match.group(1))
+    end = _hhmm_minutes(match.group(2))
+    if start is None or end is None:
+        return False
+    current = now.astimezone(UTC).hour * 60 + now.astimezone(UTC).minute
+    if start < end:
+        return start <= current < end
+    return current >= start or current < end
+
+
+def parse_airport_events(
+    payload: Any, *, now: datetime | None = None
+) -> list[FaaEvent]:
     if not isinstance(payload, list):
         raise ValueError("FAA airport events payload must be a list")  # noqa: TRY004
 
+    now = now or datetime.now(UTC)
     events: list[FaaEvent] = []
     for entry in payload:
         if not isinstance(entry, dict) or not isinstance(entry.get("airportId"), str):
@@ -178,7 +207,32 @@ def parse_airport_events(payload: Any) -> list[FaaEvent]:
             text_valid, text = _optional_text(closure, "text")
             times_valid, start_time, end_time, update_time = _event_times(closure)
             reason = (simple_text or text or "").replace("\r", "").replace("\n", "")
-            if simple_valid and text_valid and times_valid:
+            daily_active = _daily_closure_active(reason, now)
+            if simple_valid and text_valid and times_valid and daily_active is not False:
+                events.append(
+                    FaaEvent(
+                        airport_iata,
+                        "closure",
+                        reason or None,
+                        None,
+                        start_time,
+                        end_time,
+                        update_time,
+                    )
+                )
+
+        free_form = entry.get("freeForm")
+        if isinstance(free_form, dict):
+            simple_valid, simple_text = _optional_text(free_form, "simpleText")
+            text_valid, text = _optional_text(free_form, "text")
+            reason = (simple_text or text or "").replace("\r", "").replace("\n", "")
+            times_valid, start_time, end_time, update_time = _event_times(free_form)
+            daily_active = _daily_closure_active(reason, now)
+            if (
+                simple_valid and text_valid and times_valid
+                and _CLOSURE_RE.search(reason) is not None
+                and daily_active is not False
+            ):
                 events.append(
                     FaaEvent(
                         airport_iata,
@@ -193,8 +247,10 @@ def parse_airport_events(payload: Any) -> list[FaaEvent]:
     return events
 
 
-async def fetch_faa_events(client: httpx.AsyncClient) -> tuple[Any, list[FaaEvent]]:
+async def fetch_faa_events(
+    client: httpx.AsyncClient, *, now: datetime | None = None
+) -> tuple[Any, list[FaaEvent]]:
     response = await client.get(FAA_EVENTS_URL)
     response.raise_for_status()
     payload = response.json()
-    return payload, parse_airport_events(payload)
+    return payload, parse_airport_events(payload, now=now)

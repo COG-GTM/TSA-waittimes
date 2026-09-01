@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -8,11 +9,12 @@ import pytest
 from app.faa_events import FAA_EVENTS_URL, _parse_duration_seconds, fetch_faa_events, parse_airport_events
 
 FIXTURE = Path(__file__).parent / "fixtures" / "faa_airport_events.json"
+FIXTURE_NOW = datetime(2026, 9, 1, 8, tzinfo=UTC)
 
 
 def test_fixture_parses_expected_events() -> None:
     payload = json.loads(FIXTURE.read_text())
-    events = parse_airport_events(payload)
+    events = parse_airport_events(payload, now=FIXTURE_NOW)
     assert {(event.airport_iata, event.event_type) for event in events} == {
         ("BOS", "ground_delay"),
         ("EWR", "ground_delay"),
@@ -20,6 +22,7 @@ def test_fixture_parses_expected_events() -> None:
         ("JFK", "ground_delay"),
         ("LGA", "ground_delay"),
         ("LGA", "departure_delay"),
+        ("LFT", "closure"),
         ("LMT", "closure"),
         ("SAN", "ground_delay"),
         ("SFO", "ground_delay"),
@@ -59,12 +62,41 @@ def test_fetch_faa_events_with_mock_transport() -> None:
 
     async def run() -> tuple[object, int]:
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            raw, events = await fetch_faa_events(client)
+            raw, events = await fetch_faa_events(client, now=FIXTURE_NOW)
             return raw, len(events)
 
     raw, count = asyncio.run(run())
     assert raw == payload
-    assert count == 10
+    assert count == 11
+
+
+def test_daily_closure_is_active_only_during_window() -> None:
+    payload = [{
+        "airportId": "ABC",
+        "airportClosure": {
+            "simpleText": "ABC AD AP CLSD DLY 2300-0400",
+            "text": "DLY 2300-0400",
+            "startTime": "2026-09-01T00:00:00Z",
+            "endTime": "2026-09-02T00:00:00Z",
+            "updatedAt": "2026-09-01T00:00:00Z",
+        },
+    }]
+    assert len(parse_airport_events(payload, now=datetime(2026, 9, 1, 23, tzinfo=UTC))) == 1
+    assert len(parse_airport_events(payload, now=datetime(2026, 9, 1, 12, tzinfo=UTC))) == 0
+
+
+def test_unparseable_daily_closure_is_skipped() -> None:
+    payload = [{
+        "airportId": "ABC",
+        "airportClosure": {
+            "simpleText": "ABC AD AP CLSD DLY unknown",
+            "text": "DLY unknown",
+            "startTime": "2026-09-01T00:00:00Z",
+            "endTime": "2026-09-02T00:00:00Z",
+            "updatedAt": "2026-09-01T00:00:00Z",
+        },
+    }]
+    assert parse_airport_events(payload, now=FIXTURE_NOW) == []
 
 
 def test_parse_rejects_non_list_and_skips_malformed_entries() -> None:
