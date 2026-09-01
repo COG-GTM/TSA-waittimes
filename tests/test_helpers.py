@@ -42,7 +42,7 @@ def test_den_wait_seconds_never_returns_minutes() -> None:
         ("Standard", "standard"),
         ("General Screening", "standard"),
         ("", "standard"),
-        ("Premier", "standard"),
+        ("Premier", "other"),
     ],
 )
 def test_lane(name: str, expected: str) -> None:
