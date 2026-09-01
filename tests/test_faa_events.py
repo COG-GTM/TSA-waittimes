@@ -99,6 +99,63 @@ def test_unparseable_daily_closure_is_skipped() -> None:
     assert parse_airport_events(payload, now=FIXTURE_NOW) == []
 
 
+def test_qualified_free_form_closures_are_skipped() -> None:
+    payload = [
+        {
+            "airportId": "LAX",
+            "freeForm": {
+                "simpleText": (
+                    "!LAX 05/277 LAX AD AP CLSD TO NON SKED TRANSIENT GA ACFT "
+                    "EXC 24HR PPR CTC ATLANTIC AVIATION 310-258-9884 OR "
+                    "SIGNATURE AVIATION 310-410-9605 2605271826-2705281600"
+                ),
+                "text": (
+                    "!LAX 05/277 LAX AD AP CLSD TO NON SKED TRANSIENT GA ACFT "
+                    "EXC 24HR PPR CTC ATLANTIC AVIATION 310-258-9884 OR "
+                    "SIGNATURE AVIATION 310-410-9605 2605271826-2705281600"
+                ),
+                "startTime": "2026-05-27T18:26:00Z",
+                "endTime": "2027-05-28T16:00:00Z",
+                "updatedAt": "2026-05-27T18:26:00Z",
+            },
+        },
+        {
+            "airportId": "SAN",
+            "freeForm": {
+                "simpleText": (
+                    "!SAN 03/071 SAN AD AP CLSD TO NON SKED TRANSIENT GA ACFT "
+                    "EXC PPR 619-298-7704 2603181300-2610010800"
+                ),
+                "text": (
+                    "!SAN 03/071 SAN AD AP CLSD TO NON SKED TRANSIENT GA ACFT "
+                    "EXC PPR 619-298-7704 2603181300-2610010800"
+                ),
+                "startTime": "2026-03-18T13:00:00Z",
+                "endTime": "2026-10-01T08:00:00Z",
+                "updatedAt": "2026-03-18T13:00:00Z",
+            },
+        },
+        {
+            "airportId": "ABC",
+            "freeForm": {
+                "simpleText": "ABC AD AP CLSD EXC MEDEVAC",
+                "text": "ABC AD AP CLSD EXC MEDEVAC",
+                "startTime": "2026-09-01T00:00:00Z",
+                "endTime": "2026-09-02T00:00:00Z",
+                "updatedAt": "2026-09-01T00:00:00Z",
+            },
+        },
+    ]
+    assert parse_airport_events(payload, now=FIXTURE_NOW) == []
+
+
+def test_lft_fixture_free_form_closure_still_parses() -> None:
+    payload = json.loads(FIXTURE.read_text())
+    entry = next(item for item in payload if item["airportId"] == "LFT")
+    events = parse_airport_events([entry], now=FIXTURE_NOW)
+    assert [(event.airport_iata, event.event_type) for event in events] == [("LFT", "closure")]
+
+
 def test_parse_rejects_non_list_and_skips_malformed_entries() -> None:
     with pytest.raises(ValueError):
         parse_airport_events({})
