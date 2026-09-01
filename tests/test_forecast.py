@@ -29,6 +29,8 @@ def test_steady_forecast() -> None:
     assert result.confidence == "medium"
     assert [h.wait_seconds for h in result.horizons] == [600, 600, 600]
     assert [h.confidence for h in result.horizons] == ["high", "high", "medium"]
+    assert result.basis["profile_days"] >= 3
+    assert result.basis["profile_samples"] >= 18
 
 
 def test_rising_forecast_uses_trend_and_profile_blend() -> None:
@@ -50,9 +52,12 @@ def test_rising_forecast_uses_trend_and_profile_blend() -> None:
     level = forecast.recent_level(points, NOW)
     slope = forecast.trend_slope(recent, NOW)
     profile = forecast.hour_of_week_profile(points)
-    profile_mean, _ = forecast.profile_lookup(profile, forecast.hour_of_week(NOW + timedelta(minutes=30)))
+    profile_mean, profile_bucket = forecast.profile_lookup(
+        profile, forecast.hour_of_week(NOW + timedelta(minutes=30))
+    )
     assert level is not None
     assert profile_mean is not None
+    assert profile_bucket is not None
     expected = round(
         (
             forecast.blend_weight(30) * (level + slope * 30)
@@ -63,13 +68,12 @@ def test_rising_forecast_uses_trend_and_profile_blend() -> None:
     assert result.horizons[0].wait_seconds == expected
 
 
-def test_sparse_recent_history_is_trend_only() -> None:
+def test_sparse_stale_history_is_unavailable() -> None:
     points = points_from([(-90, 600), (-70, 700), (-50, 800)])
     result = forecast.build_forecast(points, NOW)
 
-    assert result.available is True
-    assert result.method == "trend_only"
-    assert all(h.confidence == "low" for h in result.horizons)
+    assert result.available is False
+    assert result.reason == "stale_observations"
 
 
 def test_empty_history_is_unavailable() -> None:
@@ -92,19 +96,28 @@ def test_hour_of_week_uses_utc() -> None:
 
 
 def test_profile_lookup_widens_and_falls_back() -> None:
-    assert forecast.profile_lookup({10: (900.0, 3)}, 10) == (900.0, 3)
-    assert forecast.profile_lookup({9: (600.0, 2), 11: (1200.0, 2)}, 10) == (900.0, 4)
-    profile = {20: (600.0, 6), 40: (1200.0, 6)}
-    assert forecast.profile_lookup(profile, 80) == (900.0, 12)
-    assert forecast.profile_lookup({20: (600.0, 2)}, 80) == (None, 0)
+    exact, exact_bucket = forecast.profile_lookup({10: forecast.ProfileBucket(900.0, 3, 2)}, 10)
+    assert exact == 900.0
+    assert exact_bucket == forecast.ProfileBucket(900.0, 3, 2)
+    neighbor, neighbor_bucket = forecast.profile_lookup(
+        {9: forecast.ProfileBucket(600.0, 2, 2), 11: forecast.ProfileBucket(1200.0, 2, 2)},
+        10,
+    )
+    assert neighbor == 900.0
+    assert neighbor_bucket == forecast.ProfileBucket(900.0, 4, 4)
+    profile = {20: forecast.ProfileBucket(600.0, 6, 1), 40: forecast.ProfileBucket(1200.0, 6, 1)}
+    global_mean, global_bucket = forecast.profile_lookup(profile, 80)
+    assert global_mean == 900.0
+    assert global_bucket == forecast.ProfileBucket(900.0, 12, 2)
+    assert forecast.profile_lookup({20: forecast.ProfileBucket(600.0, 2, 1)}, 80) == (None, None)
 
 
 @pytest.mark.parametrize(
     ("kwargs", "expected"),
     [
-        ({"recent_count": 6, "latest_age_minutes": 10, "bucket_samples": 8, "horizon_minutes": 30}, "high"),
-        ({"recent_count": 6, "latest_age_minutes": 10, "bucket_samples": 2, "horizon_minutes": 120}, "medium"),
-        ({"recent_count": 2, "latest_age_minutes": 10, "bucket_samples": 2, "horizon_minutes": 30}, "low"),
+        ({"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 3, "horizon_minutes": 30}, "high"),
+        ({"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 1, "horizon_minutes": 120}, "medium"),
+        ({"recent_count": 2, "latest_age_minutes": 10, "bucket_days": 1, "horizon_minutes": 30}, "low"),
     ],
 )
 def test_confidence_label(kwargs: dict[str, object], expected: str) -> None:
@@ -114,6 +127,80 @@ def test_confidence_label(kwargs: dict[str, object], expected: str) -> None:
 def test_slope_is_clamped() -> None:
     recent = points_from([(-60, 0), (-30, 1200), (0, 2400)])
     assert forecast.trend_slope(recent, NOW) == forecast.MAX_SLOPE_SECONDS_PER_MINUTE
+
+
+def test_profile_counts_distinct_utc_days() -> None:
+    same_bucket_different_days = [
+        forecast.ObsPoint(NOW - timedelta(days=7 * index), 600)
+        for index in range(3)
+    ]
+    profile = forecast.hour_of_week_profile(same_bucket_different_days)
+    bucket = profile[forecast.hour_of_week(NOW)]
+    assert bucket.samples == 3
+    assert bucket.days == 3
+
+    same_day_many_polls = [
+        forecast.ObsPoint(NOW + timedelta(minutes=10 * index), 600)
+        for index in range(6)
+    ]
+    same_day_profile = forecast.hour_of_week_profile(same_day_many_polls)
+    same_day_bucket = same_day_profile[forecast.hour_of_week(NOW)]
+    assert same_day_bucket.samples == 6
+    assert same_day_bucket.days == 1
+
+
+def test_many_samples_on_one_day_are_not_strong_profile_support() -> None:
+    points = [
+        forecast.ObsPoint(NOW + timedelta(minutes=5 * index), 600)
+        for index in range(12)
+    ]
+    profile = forecast.hour_of_week_profile(points)
+    mean, bucket = forecast.profile_lookup(profile, forecast.hour_of_week(NOW))
+    assert mean == 600
+    assert bucket is not None
+    assert bucket.samples == 12
+    assert bucket.days == 1
+    assert forecast.confidence_label(
+        recent_count=0,
+        latest_age_minutes=None,
+        bucket_days=bucket.days,
+        horizon_minutes=30,
+    ) == "low"
+
+
+def test_stale_recent_observations_use_profile_only() -> None:
+    history = [
+        forecast.ObsPoint(NOW - timedelta(minutes=210 + 10 * index), 3000)
+        for index in range(21 * 24 * 6)
+    ]
+    stale_recent = points_from([(-105, 600), (-75, 1200), (-45, 1800)])
+    result = forecast.build_forecast(history + stale_recent, NOW)
+
+    assert result.available is True
+    assert result.method == "profile_only"
+    assert result.basis["latest_observation_age_minutes"] == 45
+
+
+def test_stale_thin_history_is_unavailable() -> None:
+    result = forecast.build_forecast(points_from([(-90, 600), (-70, 700), (-50, 800)]), NOW)
+
+    assert result.available is False
+    assert result.reason == "stale_observations"
+
+
+@pytest.mark.parametrize("method", ["blend", "trend_only", "profile_only", "none"])
+def test_payload_method_note_matches_method(method: str) -> None:
+    result = forecast.Forecast(
+        available=method != "none",
+        reason=None if method != "none" else "insufficient_history",
+        method=method,
+        confidence="low",
+        horizons=[],
+        basis={},
+    )
+    payload = forecast._forecast_payload({"iata": "JFK", "name": "JFK"}, result, NOW)
+
+    assert payload["method_note"] == forecast.METHOD_NOTES[method]
 
 
 class FakeCursor:
@@ -235,4 +322,4 @@ async def test_forecast_endpoint_thin_history_is_unavailable(monkeypatch: pytest
 
     assert response.status_code == 200
     assert response.json()["available"] is False
-    assert response.json()["reason"] == "insufficient_history"
+    assert response.json()["reason"] == "stale_observations"

@@ -1,9 +1,9 @@
 """Short-horizon standard-lane wait forecasts.
 
 The forecast combines the recent level and direction of an airport's
-standard-lane observations with the historical average for the matching UTC
-hour of the week.  Recent observations matter most for the nearest horizon,
-while the historical profile provides a steadier signal farther ahead.
+standard-lane observations with an hour-of-week profile built from distinct
+UTC calendar days over the recent history. Recent observations matter most
+for the nearest horizon, but are excluded from the trend when they are stale.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Protocol
 
 HORIZON_MINUTES: tuple[int, ...] = (30, 60, 120)
@@ -23,9 +23,10 @@ FRESH_MINUTES = 20
 MIN_RECENT_POINTS = 2
 MIN_PROFILE_SAMPLES = 12
 STRONG_RECENT_POINTS = 6
-STRONG_BUCKET_SAMPLES = 8
+STRONG_BUCKET_DAYS = 3
 MAX_WAIT_SECONDS = 7200
 MAX_SLOPE_SECONDS_PER_MINUTE = 20.0
+TREND_STALE_MINUTES = 30
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,23 @@ class ForecastCursor(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class ProfileBucket:
+    """Summary of observations in one UTC hour-of-week bucket."""
+
+    mean: float
+    samples: int
+    days: int
+
+
+class _Profile(dict[int, ProfileBucket]):
+    """Profile mapping with private date sets for pooled day counts."""
+
+    def __init__(self, dates: dict[int, set[date]]):
+        super().__init__()
+        self.dates = dates
+
+
 FORECAST_SQL = """
 WITH per_minute AS (
     SELECT date_trunc('minute', o.fetched_at) AS minute, max(o.wait_seconds) AS wait_seconds
@@ -84,10 +102,22 @@ WITH per_minute AS (
 SELECT minute, wait_seconds FROM per_minute ORDER BY minute
 """
 
-METHOD_NOTE = (
-    "blend of last 3h of standard-lane observations with this airport's hour-of-week "
-    "average over the past 21 days, computed in UTC hour buckets"
-)
+METHOD_NOTES = {
+    "blend": (
+        f"Blend of the last {RECENT_WINDOW_MINUTES // 60} hours of standard-lane observations "
+        f"with this airport's hour-of-week average over the past {HISTORY_DAYS} days "
+        "(UTC hour buckets)."
+    ),
+    "trend_only": (
+        f"Extrapolated from the last {RECENT_WINDOW_MINUTES // 60} hours of standard-lane "
+        "observations; too little history for an hour-of-week average."
+    ),
+    "profile_only": (
+        f"This airport's hour-of-week average over the past {HISTORY_DAYS} days "
+        "(UTC hour buckets); recent observations were missing or stale."
+    ),
+    "none": "Not enough recent or historical standard-lane observations to forecast.",
+}
 
 _cache: dict[str, tuple[float, dict[str, object]]] = {}
 
@@ -140,41 +170,71 @@ def hour_of_week(dt: datetime) -> int:
     return utc_dt.weekday() * 24 + utc_dt.hour
 
 
-def hour_of_week_profile(points: Sequence[ObsPoint]) -> dict[int, tuple[float, int]]:
+def hour_of_week_profile(points: Sequence[ObsPoint]) -> dict[int, ProfileBucket]:
     """Aggregate all observations by UTC hour-of-week bucket."""
 
     buckets: dict[int, list[int]] = {}
+    dates: dict[int, set[date]] = {}
     for point in points:
-        buckets.setdefault(hour_of_week(point.at), []).append(point.wait_seconds)
-    return {
-        bucket: (sum(values) / len(values), len(values))
-        for bucket, values in buckets.items()
-    }
+        bucket = hour_of_week(point.at)
+        buckets.setdefault(bucket, []).append(point.wait_seconds)
+        dates.setdefault(bucket, set()).add(point.at.astimezone(UTC).date())
+    profile = _Profile(dates)
+    profile.update(
+        {
+            bucket: ProfileBucket(
+                mean=sum(values) / len(values),
+                samples=len(values),
+                days=len(dates[bucket]),
+            )
+            for bucket, values in buckets.items()
+        }
+    )
+    return profile
 
 
-def profile_lookup(profile: dict[int, tuple[float, int]], bucket: int) -> tuple[float | None, int]:
+def _pooled_days(profile: dict[int, ProfileBucket], buckets: Sequence[int]) -> int:
+    dates = getattr(profile, "dates", None)
+    if dates is not None:
+        pooled_dates: set[date] = set()
+        for item in buckets:
+            pooled_dates.update(dates.get(item, set()))
+        return len(pooled_dates)
+    return sum(profile[item].days for item in buckets if item in profile)
+
+
+def _pooled_bucket(profile: dict[int, ProfileBucket], buckets: Sequence[int]) -> ProfileBucket:
+    values = [profile[item] for item in buckets if item in profile]
+    samples = sum(value.samples for value in values)
+    return ProfileBucket(
+        mean=sum(value.mean * value.samples for value in values) / samples,
+        samples=samples,
+        days=_pooled_days(profile, buckets),
+    )
+
+
+def profile_lookup(
+    profile: dict[int, ProfileBucket], bucket: int
+) -> tuple[float | None, ProfileBucket | None]:
     """Look up a bucket, widening to nearby buckets or the whole profile."""
 
     exact = profile.get(bucket)
-    if exact is not None and exact[1] >= 3:
-        return exact
+    if exact is not None and exact.days >= 2:
+        return exact.mean, exact
 
-    nearby = [profile.get((bucket + offset) % 168) for offset in (-1, 0, 1)]
-    nearby_values = [value for value in nearby if value is not None]
-    nearby_count = sum(value[1] for value in nearby_values)
-    if nearby_count >= 3:
-        return (
-            sum(mean * count for mean, count in nearby_values) / nearby_count,
-            nearby_count,
-        )
+    nearby_buckets = [(bucket + offset) % 168 for offset in (-1, 0, 1)]
+    nearby = _pooled_bucket(profile, nearby_buckets) if any(
+        item in profile for item in nearby_buckets
+    ) else None
+    if nearby is not None and nearby.days >= 2:
+        return nearby.mean, nearby
 
-    total_count = sum(count for _, count in profile.values())
-    if total_count >= MIN_PROFILE_SAMPLES:
-        return (
-            sum(mean * count for mean, count in profile.values()) / total_count,
-            total_count,
-        )
-    return None, 0
+    total_samples = sum(value.samples for value in profile.values())
+    if total_samples >= MIN_PROFILE_SAMPLES:
+        all_buckets = list(profile)
+        global_bucket = _pooled_bucket(profile, all_buckets)
+        return global_bucket.mean, global_bucket
+    return None, None
 
 
 def blend_weight(horizon_minutes: int) -> float:
@@ -187,14 +247,14 @@ def confidence_label(
     *,
     recent_count: int,
     latest_age_minutes: float | None,
-    bucket_samples: int,
+    bucket_days: int,
     horizon_minutes: int,
 ) -> str:
     """Classify confidence from freshness, recent data, and profile support."""
 
     fresh = latest_age_minutes is not None and latest_age_minutes <= FRESH_MINUTES
     strong_recent = fresh and recent_count >= STRONG_RECENT_POINTS
-    strong_profile = bucket_samples >= STRONG_BUCKET_SAMPLES
+    strong_profile = bucket_days >= STRONG_BUCKET_DAYS
     if strong_recent and strong_profile and horizon_minutes <= 60:
         return "high"
     if strong_recent or strong_profile:
@@ -219,9 +279,19 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
     slope = trend_slope(recent, now)
     profile = hour_of_week_profile(points)
     total_history = len(points)
-    have_trend = level is not None and len(recent) >= MIN_RECENT_POINTS
-    have_profile = total_history >= MIN_PROFILE_SAMPLES
     latest = max(points, key=lambda point: point.at, default=None)
+    latest_age = (
+        (now - latest.at).total_seconds() / 60.0
+        if latest is not None
+        else None
+    )
+    have_trend = (
+        level is not None
+        and len(recent) >= MIN_RECENT_POINTS
+        and latest_age is not None
+        and latest_age <= TREND_STALE_MINUTES
+    )
+    have_profile = total_history >= MIN_PROFILE_SAMPLES
     basis: dict[str, object] = {
         "recent_points": len(recent),
         "recent_level_seconds": round(level) if level is not None else None,
@@ -229,13 +299,21 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         "history_points": total_history,
         "history_days": HISTORY_DAYS,
         "latest_observation_at": latest.at.astimezone(UTC).isoformat() if latest else None,
+        "latest_observation_age_minutes": round(latest_age) if latest_age is not None else None,
         "window_minutes": RECENT_WINDOW_MINUTES,
+        "profile_days": 0,
+        "profile_samples": 0,
     }
 
     if not have_trend and not have_profile:
+        reason = (
+            "stale_observations"
+            if latest_age is not None and latest_age > TREND_STALE_MINUTES
+            else "insufficient_history"
+        )
         return Forecast(
             available=False,
-            reason="insufficient_history",
+            reason=reason,
             method="none",
             confidence="low",
             horizons=[],
@@ -245,18 +323,18 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
     method = "blend" if have_trend and have_profile else "trend_only" if have_trend else "profile_only"
     horizons: list[HorizonForecast] = []
     labels: list[str] = []
-    latest_age = (
-        (now - recent[-1].at).total_seconds() / 60.0
-        if recent
-        else None
-    )
+    profile_days = 0
+    profile_samples = 0
     for horizon in HORIZON_MINUTES:
         valid_at = now + timedelta(minutes=horizon)
         trend_pred = _clamp_wait(level + slope * horizon) if have_trend and level is not None else None
-        profile_pred, bucket_samples = profile_lookup(profile, hour_of_week(valid_at))
+        profile_pred, profile_bucket = profile_lookup(profile, hour_of_week(valid_at))
         if not have_profile or profile_pred is None:
             profile_pred = None
-            bucket_samples = 0
+            profile_bucket = None
+        if profile_bucket is not None:
+            profile_days = max(profile_days, profile_bucket.days)
+            profile_samples = max(profile_samples, profile_bucket.samples)
 
         if trend_pred is not None and profile_pred is not None:
             prediction = blend_weight(horizon) * trend_pred + (1 - blend_weight(horizon)) * profile_pred
@@ -271,7 +349,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         label = confidence_label(
             recent_count=len(recent),
             latest_age_minutes=latest_age,
-            bucket_samples=bucket_samples,
+            bucket_days=profile_bucket.days if profile_bucket is not None else 0,
             horizon_minutes=horizon,
         )
         labels.append(label)
@@ -285,6 +363,8 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
             )
         )
 
+    basis["profile_days"] = profile_days
+    basis["profile_samples"] = profile_samples
     return Forecast(
         available=True,
         reason=None,
@@ -329,7 +409,7 @@ def _forecast_payload(airport: dict[str, str], forecast: Forecast, now: datetime
             for horizon in forecast.horizons
         ],
         "basis": forecast.basis,
-        "method_note": METHOD_NOTE,
+        "method_note": METHOD_NOTES[forecast.method],
     }
 
 
