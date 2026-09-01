@@ -85,3 +85,39 @@ that year.
 
 Every observation stores the source, the source's publish timestamp when
 available, fetch time, and a reference to the raw payload (`raw_payloads`).
+
+## Historical rollups and data retention
+
+The `observations_hourly` table stores one row for every checkpoint and UTC
+hour with observations. Its natural key is `(checkpoint_id, hour_bucket)`;
+`airport_iata` and `lane_type` are denormalized for query speed. The rollup
+loop runs every 15 minutes by default and re-rolls the current UTC hour plus
+the previous two hours. A startup backfill waits briefly for the app to come
+up, then rolls missing or incomplete hours oldest-first in small batches.
+
+Retention windows are measured back from the cleanup run's current timestamp:
+
+| Environment variable | Default | Cutoff measured from |
+|---|---:|---|
+| `RETENTION_RAW_PAYLOAD_DAYS` | 14 days | `raw_payloads.fetched_at` |
+| `RETENTION_OBSERVATION_DAYS` | 90 days | `observations.fetched_at` |
+| `RETENTION_FAA_EVENT_DAYS` | 180 days | `faa_airport_events.fetched_at` |
+| `RETENTION_WEATHER_ALERT_DAYS` | 180 days | `coalesce(expires, ends, fetched_at)` |
+
+Cleanup runs every 6 hours by default (`CLEANUP_INTERVAL_SECONDS`). It never
+deletes an observation unless its checkpoint/hour has an
+`observations_hourly` row. Expired observations, FAA events, and weather
+alerts are deleted in batches before expired raw payloads. Because raw payloads
+are referenced by foreign keys, cleanup first sets matching `raw_id` values to
+NULL in all three tables, then deletes the payload rows.
+
+Each successful cleanup emits exactly one JSON log line, for example:
+
+```text
+{"event":"retention_cleanup","started_at":"2026-09-01T12:00:00+00:00","duration_ms":842,"cutoffs":{"observations":"2026-06-03T12:00:00+00:00","raw_payloads":"2026-08-18T12:00:00+00:00","faa_airport_events":"2026-03-05T12:00:00+00:00","weather_alerts":"2026-03-05T12:00:00+00:00"},"deleted":{"observations":1200,"raw_payloads":900,"faa_airport_events":3,"weather_alerts":8},"raw_payload_refs_cleared":1200}
+```
+
+On Fly, use `fly secrets set` to tune the retention windows, rollup cadence,
+lookback, or batch size via the `RETENTION_*`, `ROLLUP_*`,
+`CLEANUP_INTERVAL_SECONDS`, and `CLEANUP_BATCH_LIMIT` environment variables.
+Grep logs with `fly logs | grep '"event": "retention_cleanup"'`.

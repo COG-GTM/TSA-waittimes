@@ -76,6 +76,19 @@ CREATE TABLE IF NOT EXISTS observations (
 CREATE INDEX IF NOT EXISTS idx_obs_checkpoint_time ON observations (checkpoint_id, fetched_at DESC);
 CREATE INDEX IF NOT EXISTS idx_obs_time ON observations (fetched_at DESC);
 
+CREATE TABLE IF NOT EXISTS observations_hourly (
+    airport_iata TEXT NOT NULL REFERENCES airports(iata),
+    checkpoint_id INTEGER NOT NULL REFERENCES checkpoints(id),
+    lane_type TEXT NOT NULL,
+    hour_bucket TIMESTAMPTZ NOT NULL,
+    avg_wait_seconds INTEGER,
+    max_wait_seconds INTEGER,
+    sample_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (checkpoint_id, hour_bucket)
+);
+CREATE INDEX IF NOT EXISTS idx_obs_hourly_airport ON observations_hourly (airport_iata, lane_type, hour_bucket);
+
 CREATE TABLE IF NOT EXISTS poll_health (
     source_code TEXT PRIMARY KEY REFERENCES sources(code),
     last_success_at TIMESTAMPTZ,

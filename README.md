@@ -27,8 +27,10 @@ Demonstration only.
   payloads for provenance, poll health, TSA daily throughput, and FAA airport
   enplanements.
 - **Web** (`app/main.py`): FastAPI serving the national map, airport drill-down
-  pages, and a JSON API. Frontend is vanilla JS + vendored Leaflet with a
-  vendored US-states GeoJSON basemap (no external tile servers).
+  pages, and a JSON API. `/api/airport/{iata}/typical` provides historical
+  standard-lane wait percentiles by UTC hour of week. Frontend is vanilla JS +
+  vendored Leaflet with a vendored US-states GeoJSON basemap (no external tile
+  servers).
 
 ## Travel calendar
 
