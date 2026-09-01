@@ -709,11 +709,13 @@ def _sfo_published_at(text: str | None, now: datetime) -> datetime | None:
     cutoff = now + timedelta(minutes=5)
     for year in (now_pt.year, now_pt.year - 1):
         try:
-            candidate = parsed.replace(year=year, tzinfo=SFO_TZ).astimezone(UTC)
+            local = parsed.replace(year=year, tzinfo=SFO_TZ)
         except ValueError:  # Feb 29 in a non-leap year
             continue
-        if candidate <= cutoff:
-            return candidate
+        # During the DST fall-back hour a wall time names two instants (fold 0/1).
+        past = [c for c in (local.replace(fold=f).astimezone(UTC) for f in (0, 1)) if c <= cutoff]
+        if past:
+            return max(past)
     return None
 
 

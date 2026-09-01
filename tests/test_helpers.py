@@ -113,6 +113,18 @@ def test_sfo_published_at_rolls_back_a_year_across_new_year() -> None:
     assert result == datetime(2026, 12, 31, 23, 58, tzinfo=PACIFIC)
 
 
+@pytest.mark.parametrize(
+    ("now", "expected"),
+    [
+        # 2026-11-01 01:30 Pacific occurs twice: 08:30Z (PDT, fold=0) and 09:30Z (PST, fold=1).
+        (datetime(2026, 11, 1, 9, 40, tzinfo=UTC), datetime(2026, 11, 1, 9, 30, tzinfo=UTC)),
+        (datetime(2026, 11, 1, 8, 40, tzinfo=UTC), datetime(2026, 11, 1, 8, 30, tzinfo=UTC)),
+    ],
+)
+def test_sfo_published_at_dst_fall_back_picks_latest_past_instant(now: datetime, expected: datetime) -> None:
+    assert _sfo_published_at("Nov 01 at 01:30 am", now) == expected
+
+
 @pytest.mark.parametrize("raw", [None, "", "yesterday", "Sep 01 at 25:00 pm"])
 def test_sfo_published_at_unparseable(raw: str | None) -> None:
     assert _sfo_published_at(raw, datetime(2026, 9, 1, tzinfo=UTC)) is None
