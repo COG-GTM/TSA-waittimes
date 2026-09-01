@@ -153,6 +153,7 @@ async def api_airport(iata: str):
         )
         checkpoints = []
         now = datetime.now(timezone.utc)
+        latest_checkpoints = []
         for cp_id, cp_name, lane in await cur.fetchall():
             await cur.execute(
                 """
@@ -164,10 +165,15 @@ async def api_airport(iata: str):
                 (cp_id,),
             )
             latest = await cur.fetchone()
-            if latest is None:
-                continue
+            if latest is not None:
+                latest_checkpoints.append((cp_id, cp_name, lane, latest))
+        airport_latest = max(
+            (latest[3] for _, _, _, latest in latest_checkpoints),
+            default=None,
+        )
+        for cp_id, cp_name, lane, latest in latest_checkpoints:
             wait, is_open, pub_at, fetched_at, attribution, src_url = latest
-            if (now - fetched_at).total_seconds() > 24 * 60 * 60:
+            if airport_latest is not None and (airport_latest - fetched_at).total_seconds() > 24 * 60 * 60:
                 continue
             await cur.execute(
                 """
