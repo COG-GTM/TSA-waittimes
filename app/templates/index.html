@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="counter-bar">
+  <div class="counter">
+    <span class="counter-live"><b id="live-count">–</b> airports live</span>
+    <span class="counter-sep">·</span>
+    <span class="counter-gray"><b id="gray-count">–</b> airports with no public data</span>
+  </div>
+  <div class="updated" id="updated"></div>
+</section>
+<div id="map"></div>
+<section class="live-list" id="live-list"></section>
+{% endblock %}
+{% block scripts %}<script src="/static/map.js"></script>{% endblock %}

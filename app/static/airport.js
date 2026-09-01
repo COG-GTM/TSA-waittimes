@@ -1,0 +1,51 @@
+const container = document.getElementById("checkpoints");
+const iata = container.dataset.iata;
+
+function sparkline(history) {
+  if (!history || history.length < 2) {
+    return '<div class="cp-src">History accrues from first ingest — check back shortly.</div>';
+  }
+  const w = 300, h = 44, pad = 2;
+  const t0 = history[0][0], t1 = history[history.length - 1][0];
+  const maxW = Math.max.apply(null, history.map(p => p[1])) || 1;
+  const pts = history.map(p => {
+    const x = pad + ((p[0] - t0) / Math.max(1, t1 - t0)) * (w - 2 * pad);
+    const y = h - pad - (p[1] / maxW) * (h - 2 * pad - 8);
+    return x.toFixed(1) + "," + y.toFixed(1);
+  }).join(" ");
+  return '<svg class="sparkline" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">' +
+    '<polyline points="' + pts + '"/>' +
+    '<text class="axis" x="2" y="8">peak ' + fmtMin(maxW) + "</text></svg>";
+}
+
+function render(data) {
+  const a = data.airport;
+  document.getElementById("airport-title").textContent = a.iata + " — " + a.name;
+  document.getElementById("airport-sub").textContent = a.city + ", " + a.state;
+  if (!data.checkpoints.length) {
+    container.innerHTML = '<div class="cp-card"><div class="cp-name">No public wait-time data published for this airport.</div>' +
+      '<div class="cp-src">This airport does not currently publish live checkpoint wait times on its public website.</div></div>';
+    return;
+  }
+  container.innerHTML = data.checkpoints.map(cp => {
+    const waitCls = !cp.is_open ? "closed" : (cp.stale ? "stale" : "");
+    const waitTxt = !cp.is_open ? "Closed" : fmtMin(cp.wait_seconds);
+    return '<div class="cp-card">' +
+      '<div class="cp-name">' + cp.name +
+        '<span class="cp-lane">' + cp.lane_type + "</span>" +
+        (cp.stale ? '<span class="stale-flag">STALE — no update in 30+ min</span>' : "") +
+      "</div>" +
+      '<div class="cp-wait ' + waitCls + '">' + waitTxt + "</div>" +
+      '<div class="cp-src">Source: <a href="' + cp.source_url + '" rel="noopener">' + cp.source + "</a><br>" +
+        asPublished(cp.published_at || cp.fetched_at) +
+        (cp.published_at ? "" : " (fetch time; source does not publish a timestamp)") +
+      "</div>" + sparkline(cp.history) + "</div>";
+  }).join("");
+}
+
+function refreshAirport() {
+  fetch("/api/airport/" + iata).then(r => r.json()).then(render).catch(() => {});
+  fetch("/api/summary").then(r => r.json()).then(d => renderTsaStrip(d.tsa_throughput)).catch(() => {});
+}
+setInterval(refreshAirport, 60000);
+refreshAirport();
