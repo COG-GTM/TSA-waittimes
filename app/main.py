@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db, poller, weather_alerts
+from . import db, leaderboard, poller, weather_alerts
 from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
 from .travel_calendar import TravelPeriod, period_payload
 
@@ -146,6 +146,14 @@ JOIN sources s ON s.code = o.source_code
 ORDER BY o.checkpoint_id, o.fetched_at DESC
 """
 
+LEADERBOARD_BASELINE_SQL = """
+SELECT c.airport_iata, max(o.wait_seconds)
+FROM observations o JOIN checkpoints c ON c.id = o.checkpoint_id
+WHERE c.lane_type = 'standard' AND o.is_open AND o.wait_seconds IS NOT NULL
+  AND o.fetched_at >= %s AND o.fetched_at <= %s
+GROUP BY 1
+"""
+
 FAA_EVENTS_SQL = """
 SELECT airport_iata, event_type, reason, avg_delay_seconds, start_time, end_time, update_time
 FROM faa_airport_events
@@ -174,6 +182,26 @@ def _faa_event_dict(row: tuple, *, include_iata: bool = False) -> dict:
 
 def _faa_sort_key(event: dict) -> tuple[int, str]:
     return (-FAA_EVENT_SEVERITY.get(event["event_type"], 0), event.get("iata", ""))
+
+
+@app.get("/api/leaderboard")
+async def api_leaderboard():
+    assert db.pool is not None
+    now = datetime.now(UTC)
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("SELECT iata, name FROM airports")
+        names = {r[0]: r[1] for r in await cur.fetchall()}
+        await cur.execute(LATEST_OBS_SQL)
+        latest = await cur.fetchall()
+        await cur.execute(
+            LEADERBOARD_BASELINE_SQL,
+            (
+                now - leaderboard.BASELINE_AGE - leaderboard.BASELINE_TOLERANCE,
+                now - leaderboard.BASELINE_AGE + leaderboard.BASELINE_TOLERANCE,
+            ),
+        )
+        baseline = await cur.fetchall()
+    return JSONResponse(leaderboard.build(latest, baseline, names, now=now))
 
 
 @app.get("/api/summary")

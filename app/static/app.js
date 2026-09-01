@@ -114,3 +114,57 @@ function renderTravelBanner(tp) {
       " (" + esc(tp.start) + ").";
   }
 }
+
+function renderLeaderboard(data) {
+  const el = document.getElementById("leaderboard");
+  if (!el) return;
+  const sections = [
+    ["worst_standard", "Worst standard waits"],
+    ["worst_precheck", "Worst PreCheck waits"],
+    ["most_improved", "Most improved (3 hr)"],
+  ];
+  let html = '<div class="leaderboard-grid">';
+  for (const [key, title] of sections) {
+    const section = data[key] || { entries: [], quiet: true };
+    html += '<article class="leaderboard-card"><h2>' + title + "</h2>";
+    if (section.quiet) {
+      html += '<p class="leaderboard-quiet">Quiet right now — fewer than 3 airports reporting fresh waits.</p>';
+    }
+    if (section.entries && section.entries.length) {
+      html += "<ol>";
+      section.entries.forEach((entry) => {
+        const freshness = agoMinutes(entry.as_of || entry.fetched_at);
+        const freshnessText = freshness === null ? "" : freshness + " min ago";
+        const drop = key === "most_improved" && entry.drop_seconds > 0
+          ? '<span class="leaderboard-drop">−' + esc(fmtMin(entry.drop_seconds)) + "</span>"
+          : "";
+        html += '<li class="leaderboard-row"><div class="leaderboard-main"><a class="leaderboard-iata" href="/airport/' +
+          esc(entry.iata) + '">' + esc(entry.iata) + "</a> <span>" + esc(entry.name) +
+          '</span><div class="leaderboard-checkpoint">' + esc(entry.checkpoint) + " · " +
+          esc(entry.source) + '</div></div><div class="leaderboard-wait">' + esc(fmtMin(entry.wait_seconds)) +
+          " " + drop + '<small>' + esc(freshnessText) + "</small></div></li>";
+      });
+      html += "</ol>";
+    } else if (!section.quiet) {
+      html += '<p class="leaderboard-quiet">No fresh waits reported.</p>';
+    }
+    html += "</article>";
+  }
+  html += '</div><div class="leaderboard-footer">Fresh within 30 min · published airport feeds</div>';
+  el.innerHTML = html;
+}
+
+async function refreshLeaderboard() {
+  try {
+    const response = await fetch("/api/leaderboard");
+    if (!response.ok) return;
+    renderLeaderboard(await response.json());
+  } catch (_) {
+    // A failed refresh leaves the last successful snapshot visible.
+  }
+}
+
+if (document.getElementById("leaderboard")) {
+  refreshLeaderboard();
+  setInterval(refreshLeaderboard, 60000);
+}
