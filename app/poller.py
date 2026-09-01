@@ -134,20 +134,28 @@ async def poll_tsa_throughput(client: httpx.AsyncClient) -> None:
 
 
 _tasks: list[asyncio.Task] = []
+_client: httpx.AsyncClient | None = None
 
 
 async def start() -> None:
+    global _client
     await register_sources()
-    client = httpx.AsyncClient(
+    _client = httpx.AsyncClient(
         headers={"User-Agent": USER_AGENT},
         timeout=30,
         follow_redirects=True,
     )
     for s in SOURCES:
-        _tasks.append(asyncio.create_task(poll_source(s, client)))
-    _tasks.append(asyncio.create_task(poll_tsa_throughput(client)))
+        _tasks.append(asyncio.create_task(poll_source(s, _client)))
+    _tasks.append(asyncio.create_task(poll_tsa_throughput(_client)))
 
 
 async def stop() -> None:
+    global _client
     for t in _tasks:
         t.cancel()
+    await asyncio.gather(*_tasks, return_exceptions=True)
+    _tasks.clear()
+    if _client is not None:
+        await _client.aclose()
+        _client = None

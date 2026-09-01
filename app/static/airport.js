@@ -31,12 +31,12 @@ function render(data) {
     const waitCls = !cp.is_open ? "closed" : (cp.stale ? "stale" : "");
     const waitTxt = !cp.is_open ? "Closed" : fmtMin(cp.wait_seconds);
     return '<div class="cp-card">' +
-      '<div class="cp-name">' + cp.name +
-        '<span class="cp-lane">' + cp.lane_type + "</span>" +
+      '<div class="cp-name">' + esc(cp.name) +
+        '<span class="cp-lane">' + esc(cp.lane_type) + "</span>" +
         (cp.stale ? '<span class="stale-flag">STALE — no update in 30+ min</span>' : "") +
       "</div>" +
       '<div class="cp-wait ' + waitCls + '">' + waitTxt + "</div>" +
-      '<div class="cp-src">Source: <a href="' + cp.source_url + '" rel="noopener">' + cp.source + "</a><br>" +
+      '<div class="cp-src">Source: <a href="' + esc(cp.source_url) + '" rel="noopener">' + esc(cp.source) + "</a><br>" +
         asPublished(cp.published_at || cp.fetched_at) +
         (cp.published_at ? "" : " (fetch time; source does not publish a timestamp)") +
       "</div>" + sparkline(cp.history) + "</div>";

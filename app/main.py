@@ -155,6 +155,7 @@ async def api_airport(iata: str):
                        max(wait_seconds)
                 FROM observations
                 WHERE checkpoint_id = %s AND wait_seconds IS NOT NULL
+                  AND fetched_at > now() - interval '24 hours'
                 GROUP BY 1 ORDER BY 1
                 """,
                 (cp_id,),

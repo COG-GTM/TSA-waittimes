@@ -15,13 +15,13 @@ let liveLayer = L.layerGroup().addTo(map);
 let grayLayer = L.layerGroup().addTo(map);
 
 function popupHtml(a) {
-  let html = "<b>" + a.iata + "</b> — " + a.name + "<br>";
+  let html = "<b>" + esc(a.iata) + "</b> — " + esc(a.name) + "<br>";
   if (a.live) {
     html += '<div class="popup-wait">' + fmtMin(a.max_wait_seconds) + (a.stale ? " (stale)" : "") + "</div>";
     if (a.max_precheck_seconds !== undefined)
       html += "PreCheck: " + fmtMin(a.max_precheck_seconds) + "<br>";
-    html += '<div class="popup-src">' + a.source + "<br>" + asPublished(a.as_of || a.last_fetch) + "</div>";
-    html += '<a href="/airport/' + a.iata + '">Checkpoint detail →</a>';
+    html += '<div class="popup-src">' + esc(a.source) + "<br>" + asPublished(a.as_of || a.last_fetch) + "</div>";
+    html += '<a href="/airport/' + esc(a.iata) + '">Checkpoint detail →</a>';
   } else {
     html += '<span class="popup-src">No public wait-time data published</span>';
   }
@@ -50,7 +50,7 @@ function render(data) {
       const label = L.marker([a.lat, a.lon], {
         icon: L.divIcon({
           className: "wait-label",
-          html: '<span class="' + (a.stale ? "stale" : "") + '">' + a.iata + " " + fmtMin(wait) + "</span>",
+          html: '<span class="' + (a.stale ? "stale" : "") + '">' + esc(a.iata) + " " + fmtMin(wait) + "</span>",
         }),
         interactive: false,
       });
@@ -68,11 +68,11 @@ function render(data) {
 
   liveCards.sort((x, y) => (y.max_wait_seconds || 0) - (x.max_wait_seconds || 0));
   document.getElementById("live-list").innerHTML = liveCards.map(a =>
-    '<a class="live-card" href="/airport/' + a.iata + '">' +
+    '<a class="live-card" href="/airport/' + esc(a.iata) + '">' +
       '<span class="wait ' + (a.stale ? "stale" : "") + '">' + fmtMin(a.max_wait_seconds) + "</span>" +
-      '<span class="code">' + a.iata + "</span>" +
-      '<div class="meta">' + a.name + (a.stale ? " · STALE" : "") + "<br>" +
-      a.source + " · " + asPublished(a.as_of || a.last_fetch) + "</div></a>"
+      '<span class="code">' + esc(a.iata) + "</span>" +
+      '<div class="meta">' + esc(a.name) + (a.stale ? " · STALE" : "") + "<br>" +
+      esc(a.source) + " · " + asPublished(a.as_of || a.last_fetch) + "</div></a>"
   ).join("");
 }
 

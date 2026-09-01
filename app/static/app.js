@@ -1,3 +1,9 @@
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
 function fmtMin(sec) {
   if (sec === null || sec === undefined) return "–";
   return Math.round(sec / 60) + " min";
@@ -16,7 +22,7 @@ function asPublished(iso) {
 function renderTsaStrip(tsa) {
   const el = document.getElementById("tsa-strip");
   if (!el || !tsa) return;
-  let html = "National throughput " + tsa.date + ": <b>" +
+  let html = "National throughput " + esc(tsa.date) + ": <b>" +
     tsa.travelers.toLocaleString() + "</b> travelers";
   if (tsa.lastyear_travelers) {
     const delta = ((tsa.travelers - tsa.lastyear_travelers) / tsa.lastyear_travelers) * 100;
