@@ -94,17 +94,14 @@ async def api_summary():
             a["stale"] = a["stale"] and stale
             a.setdefault("source", attribution)
             a.setdefault("source_url", url)
-            if wait is not None and is_open and not stale:
-                key = {
-                    "standard": "max_wait_seconds",
-                    "precheck": "max_precheck_seconds",
-                }.get(lane)
-                if key is None:
-                    continue
-                if wait > a.get(key, -1):
-                    a[key] = wait
-                    if lane == "standard":
-                        a["as_of"] = _iso(pub_at or fetched_at)
+            key = {
+                "standard": "max_wait_seconds",
+                "precheck": "max_precheck_seconds",
+            }.get(lane)
+            if key and wait is not None and is_open and not stale and wait > a.get(key, -1):
+                a[key] = wait
+                if lane == "standard":
+                    a["as_of"] = _iso(pub_at or fetched_at)
             fetched_iso = _iso(fetched_at)
             if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
                 a["last_fetch"] = fetched_iso
