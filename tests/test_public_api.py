@@ -234,6 +234,40 @@ async def test_direct_clients_share_rate_limit_despite_fly_headers(
 
 
 @pytest.mark.asyncio
+async def test_rate_limiter_prunes_expired_entries(client, patched_loaders, monkeypatch):
+    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", True)
+    monkeypatch.setattr(public_api.time, "monotonic", lambda: 0.0)
+    await client.get("/api/v1/status", headers={"Fly-Client-IP": "203.0.113.10"})
+    await client.get("/api/v1/status", headers={"Fly-Client-IP": "203.0.113.11"})
+    assert set(public_api._rate_limits) == {"203.0.113.10", "203.0.113.11"}
+
+    monkeypatch.setattr(public_api.time, "monotonic", lambda: 61.0)
+    response = await client.get("/api/v1/status", headers={"Fly-Client-IP": "203.0.113.12"})
+
+    assert response.status_code == 200
+    assert set(public_api._rate_limits) == {"203.0.113.12"}
+
+
+@pytest.mark.asyncio
+async def test_rate_limiter_prunes_unique_clients_at_window_boundaries(
+    client, patched_loaders, monkeypatch
+):
+    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", True)
+    current_time = 0.0
+    monkeypatch.setattr(public_api.time, "monotonic", lambda: current_time)
+
+    for offset in range(3):
+        current_time = offset * (public_api.RATE_WINDOW_SECONDS + 1)
+        for client_number in range(10):
+            response = await client.get(
+                "/api/v1/status",
+                headers={"Fly-Client-IP": f"203.0.113.{offset * 10 + client_number}"},
+            )
+            assert response.status_code == 200
+        assert len(public_api._rate_limits) <= 10
+
+
+@pytest.mark.asyncio
 async def test_api_docs(client):
     response = await client.get("/api")
     assert response.status_code == 200

@@ -506,7 +506,8 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
                       AND EXISTS (
                           SELECT 1 FROM observations_hourly h
                           WHERE h.checkpoint_id = o2.checkpoint_id
-                            AND h.hour_bucket = date_trunc('hour', o2.fetched_at)
+                            AND o2.fetched_at >= h.hour_bucket
+                            AND o2.fetched_at < h.hour_bucket + interval '1 hour'
                       )
                     LIMIT %s
                 )
@@ -515,6 +516,7 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
             )
             count = max(cur.rowcount, 0)
             deleted["observations"] += count
+            await conn.commit()
             if count == 0:
                 break
 
@@ -531,6 +533,7 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
             )
             count = max(cur.rowcount, 0)
             deleted["faa_airport_events"] += count
+            await conn.commit()
             if count == 0:
                 break
 
@@ -547,6 +550,7 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
             )
             count = max(cur.rowcount, 0)
             deleted["weather_alerts"] += count
+            await conn.commit()
             if count == 0:
                 break
 
@@ -566,6 +570,7 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
             refs_cleared += max(cur.rowcount, 0)
             await cur.execute("DELETE FROM raw_payloads WHERE id = ANY(%s)", (ids,))
             deleted["raw_payloads"] += max(cur.rowcount, 0)
+            await conn.commit()
 
     summary = {
         "event": "retention_cleanup",

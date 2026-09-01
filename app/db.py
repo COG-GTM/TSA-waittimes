@@ -160,7 +160,13 @@ CREATE TABLE IF NOT EXISTS travel_periods (
 
 async def init() -> None:
     global pool
-    pool = AsyncConnectionPool(DATABASE_URL, min_size=1, max_size=8, open=False)
+    pool = AsyncConnectionPool(
+        DATABASE_URL,
+        kwargs={"options": "-c timezone=UTC"},
+        min_size=1,
+        max_size=8,
+        open=False,
+    )
     await pool.open()
     async with pool.connection() as conn:
         await conn.execute(SCHEMA)

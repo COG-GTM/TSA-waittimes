@@ -21,6 +21,7 @@ RATE_WINDOW_SECONDS = 60
 IATA_PATTERN = re.compile(r"^[A-Za-z]{3}$")
 TRUST_PROXY_CLIENT_IP = "FLY_APP_NAME" in os.environ
 _rate_limits: dict[str, tuple[float, int]] = {}
+_last_prune: float = 0.0
 
 v1_app = FastAPI(title="Wait Picture Public API v1")
 
@@ -34,12 +35,25 @@ async def not_found_handler(_request: Request, exc: HTTPException):
 
 
 def reset_rate_limiter() -> None:
+    global _last_prune
     _rate_limits.clear()
+    _last_prune = 0.0
 
 
 @v1_app.middleware("http")
 async def rate_limit(request: Request, call_next):
+    global _last_prune
     now = time.monotonic()
+    if now - _last_prune >= RATE_WINDOW_SECONDS:
+        cutoff = now - RATE_WINDOW_SECONDS
+        expired = [
+            client_ip
+            for client_ip, (window_start, _count) in _rate_limits.items()
+            if window_start < cutoff
+        ]
+        for client_ip in expired:
+            del _rate_limits[client_ip]
+        _last_prune = now
     if TRUST_PROXY_CLIENT_IP:
         client_ip = request.headers.get("fly-client-ip") or (
             request.client.host if request.client else "unknown"
