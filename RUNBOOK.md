@@ -39,6 +39,7 @@ TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
 | Source unhealthy, HTTP 401/403 | Airport rotated its public API key | Re-inspect the airport site's own requests; update the key in `adapters.py` |
 | Source unhealthy, parse errors | Feed shape changed | Check `raw_payloads` for that source; adjust the adapter |
 | All sources unhealthy | DB or egress problem | Check `fly logs`; verify `DATABASE_URL` |
+| Suspected feed change | Feed shape changed | `python scripts/probe_source.py <CODE>` — prints a live fetch and refreshes `tests/fixtures/<code>.json`; then run `pytest` |
 | TSA strip missing | tsa.gov blocking datacenter IPs | Non-fatal; retried every 30 min |
 
 ## Data provenance

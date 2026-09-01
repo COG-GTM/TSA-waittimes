@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "source": "IAH",
+  "captured_at": "2026-09-01T14:15:27.995660+00:00",
+  "public_page": "https://www.fly2houston.com/iah/security",
+  "attribution": "Houston Airport System (fly2houston.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://api.houstonairports.mobi/wait-times/checkpoint/iah",
+      "status": 200,
+      "content_type": "application/json",
+      "json": {
+        "data": {
+          "wait_times": [
+            {
+              "id": "IAHAN",
+              "lane": "main",
+              "name": "IAH Terminal A North Standard",
+              "openTime": "03:15",
+              "closeTime": "19:15",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 300,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271989,
+              "attributes": [
+                "clear",
+                "tsa-pre"
+              ],
+              "predictions": []
+            },
+            {
+              "id": "IAHANPC",
+              "lane": "main",
+              "name": "IAH Terminal A North PreCheck",
+              "openTime": "04:00",
+              "closeTime": "18:00",
+              "remark": "14 minutes",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 840,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271989,
+              "attributes": [
+                "tsa-pre"
+              ],
+              "predictions": []
+            },
+            {
+              "id": "IAHAS",
+              "lane": "main",
+              "name": "IAH Terminal A South Standard",
+              "openTime": "03:00",
+              "closeTime": "23:00",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 300,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271989,
+              "attributes": [],
+              "predictions": []
+            },
+            {
+              "id": "IAHCN",
+              "lane": "main",
+              "name": "IAH Terminal C North PreCheck",
+              "openTime": "04:00",
+              "closeTime": "22:00",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 180,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1785638888,
+              "attributes": [
+                "tsa-pre"
+              ],
+              "predictions": []
+            },
+            {
+              "id": "IAHCNP",
+              "lane": "main",
+              "name": "IAH Terminal C North Premier",
+              "openTime": "04:00",
+              "closeTime": "22:00",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 180,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271450,
+              "attributes": [],
+              "predictions": []
+            },
+            {
+              "id": "IAHCS",
+              "lane": "main",
+              "name": "IAH Terminal C South Standard",
+              "openTime": "04:00",
+              "closeTime": "19:30",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 480,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271989,
+              "attributes": [
+                "clear"
+              ],
+              "predictions": []
+            },
+            {
+              "id": "IAHD",
+              "lane": "main",
+              "name": "IAH Terminal D Standard",
+              "openTime": "07:00",
+              "closeTime": "22:30",
+              "remark": "10 minutes",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 600,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271930,
+              "attributes": [
+                "tsa-pre"
+              ],
+              "predictions": []
+            },
+            {
+              "id": "IAHE",
+              "lane": "main",
+              "name": "IAH Terminal E Standard",
+              "openTime": "04:00",
+              "closeTime": "23:59",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 420,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788271930,
+              "attributes": [],
+              "predictions": []
+            },
+            {
+              "id": "IAHEPC",
+              "lane": "main",
+              "name": "IAH Terminal E PreCheck",
+              "openTime": "04:00",
+              "closeTime": "19:30",
+              "remark": "Less than 10",
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 300,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788267429,
+              "attributes": [
+                "tsa-pre"
+              ],
+              "predictions": []
+            },
+            {
+              "id": "IAH_immigration_and_customs",
+              "lane": "FIS",
+              "name": "Int'l Arrivals Customs Checkpoint",
+              "openTime": "00:00",
+              "closeTime": "23:59",
+              "remark": null,
+              "isOpen": true,
+              "isDisplayable": true,
+              "waitSeconds": 120,
+              "minWaitSeconds": null,
+              "maxWaitSeconds": null,
+              "lastUpdatedTimestamp": 1788251890,
+              "attributes": [
+                "fis"
+              ],
+              "predictions": []
+            }
+          ]
+        },
+        "status": {
+          "code": 200,
+          "message": ""
+        }
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 10,
+    "lane_types": {
+      "precheck": 4,
+      "standard": 6
+    },
+    "open_count": 10,
+    "closed_count": 0,
+    "with_published_at": 10,
+    "null_wait_count": 0,
+    "max_wait_seconds": 840,
+    "observations": [
+      {
+        "checkpoint_name": "IAH Terminal A North Standard",
+        "lane_type": "standard",
+        "wait_seconds": 300,
+        "is_open": true,
+        "published_at": "2026-09-01T14:13:09+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal A North PreCheck",
+        "lane_type": "precheck",
+        "wait_seconds": 840,
+        "is_open": true,
+        "published_at": "2026-09-01T14:13:09+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal A South Standard",
+        "lane_type": "standard",
+        "wait_seconds": 300,
+        "is_open": true,
+        "published_at": "2026-09-01T14:13:09+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal C North PreCheck",
+        "lane_type": "precheck",
+        "wait_seconds": 180,
+        "is_open": true,
+        "published_at": "2026-08-02T02:48:08+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal C North Premier",
+        "lane_type": "precheck",
+        "wait_seconds": 180,
+        "is_open": true,
+        "published_at": "2026-09-01T14:04:10+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal C South Standard",
+        "lane_type": "standard",
+        "wait_seconds": 480,
+        "is_open": true,
+        "published_at": "2026-09-01T14:13:09+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal D Standard",
+        "lane_type": "standard",
+        "wait_seconds": 600,
+        "is_open": true,
+        "published_at": "2026-09-01T14:12:10+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal E Standard",
+        "lane_type": "standard",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": "2026-09-01T14:12:10+00:00"
+      },
+      {
+        "checkpoint_name": "IAH Terminal E PreCheck",
+        "lane_type": "precheck",
+        "wait_seconds": 300,
+        "is_open": true,
+        "published_at": "2026-09-01T12:57:09+00:00"
+      },
+      {
+        "checkpoint_name": "Int'l Arrivals Customs Checkpoint",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T08:38:10+00:00"
+      }
+    ]
+  }
+}

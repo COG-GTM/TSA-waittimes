@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "source": "LAS",
+  "captured_at": "2026-09-01T14:15:30.092627+00:00",
+  "public_page": "https://www.harryreidairport.com/security-wait-times",
+  "attribution": "Harry Reid International Airport (harryreidairport.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t2K25H6KA%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%223Ll9yq2riLZctX1CZ94FRgLcScJimgXx%22%7D%7D",
+      "status": 200,
+      "content_type": "application/json",
+      "json": [
+        {
+          "result": {
+            "data": {
+              "paths": {
+                "precheck": {
+                  "name": "TSA PreCheck\u00ae",
+                  "verified": false,
+                  "open": true,
+                  "waitTime": {
+                    "timestamp": 1788272100000,
+                    "value": 1
+                  }
+                },
+                "standard": {
+                  "name": "Standard",
+                  "verified": false,
+                  "open": true,
+                  "waitTime": {
+                    "timestamp": 1788272100000,
+                    "value": 1.5
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tGMD2ET8Y%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%223Ll9yq2riLZctX1CZ94FRgLcScJimgXx%22%7D%7D",
+      "status": 200,
+      "content_type": "application/json",
+      "json": [
+        {
+          "result": {
+            "data": {
+              "paths": {
+                "precheck": {
+                  "name": "TSA PreCheck\u00ae",
+                  "verified": false,
+                  "open": true,
+                  "waitTime": {
+                    "timestamp": 1788272100000,
+                    "value": 1.5681818181818181
+                  }
+                },
+                "standard": {
+                  "name": "Standard",
+                  "verified": false,
+                  "open": true,
+                  "waitTime": {
+                    "timestamp": 1788272070000,
+                    "value": 5.8
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t0CSXP4SK%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%223Ll9yq2riLZctX1CZ94FRgLcScJimgXx%22%7D%7D",
+      "status": 200,
+      "content_type": "application/json",
+      "json": [
+        {
+          "result": {
+            "data": {
+              "paths": {
+                "precheck": {
+                  "name": "TSA PreCheck\u00ae",
+                  "verified": false,
+                  "open": true,
+                  "waitTime": {
+                    "timestamp": 1788272070000,
+                    "value": 3
+                  }
+                },
+                "standard": {
+                  "name": "Standard",
+                  "verified": false,
+                  "open": true,
+                  "waitTime": {
+                    "timestamp": 1788272070000,
+                    "value": 2.3
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "observation_count": 6,
+    "lane_types": {
+      "precheck": 3,
+      "standard": 3
+    },
+    "open_count": 6,
+    "closed_count": 0,
+    "with_published_at": 6,
+    "null_wait_count": 0,
+    "max_wait_seconds": 348,
+    "observations": [
+      {
+        "checkpoint_name": "T1 - A/B Gates \u2014 TSA PreCheck\u00ae",
+        "lane_type": "precheck",
+        "wait_seconds": 60,
+        "is_open": true,
+        "published_at": "2026-09-01T14:15:00+00:00"
+      },
+      {
+        "checkpoint_name": "T1 - A/B Gates \u2014 Standard",
+        "lane_type": "standard",
+        "wait_seconds": 90,
+        "is_open": true,
+        "published_at": "2026-09-01T14:15:00+00:00"
+      },
+      {
+        "checkpoint_name": "T1 - C/D Gates \u2014 TSA PreCheck\u00ae",
+        "lane_type": "precheck",
+        "wait_seconds": 94,
+        "is_open": true,
+        "published_at": "2026-09-01T14:15:00+00:00"
+      },
+      {
+        "checkpoint_name": "T1 - C/D Gates \u2014 Standard",
+        "lane_type": "standard",
+        "wait_seconds": 348,
+        "is_open": true,
+        "published_at": "2026-09-01T14:14:30+00:00"
+      },
+      {
+        "checkpoint_name": "T3 - D/E Gates \u2014 TSA PreCheck\u00ae",
+        "lane_type": "precheck",
+        "wait_seconds": 180,
+        "is_open": true,
+        "published_at": "2026-09-01T14:14:30+00:00"
+      },
+      {
+        "checkpoint_name": "T3 - D/E Gates \u2014 Standard",
+        "lane_type": "standard",
+        "wait_seconds": 138,
+        "is_open": true,
+        "published_at": "2026-09-01T14:14:30+00:00"
+      }
+    ]
+  }
+}

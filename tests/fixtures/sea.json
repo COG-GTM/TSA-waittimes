@@ -1,0 +1,312 @@
+{
+  "version": 1,
+  "source": "SEA",
+  "captured_at": "2026-09-01T14:15:26.506143+00:00",
+  "public_page": "https://www.portseattle.org/sea-tac",
+  "attribution": "Port of Seattle (portseattle.org)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://www.portseattle.org/api/cwt/wait-times",
+      "status": 200,
+      "content_type": "application/json",
+      "json": [
+        {
+          "CheckpointID": 1,
+          "Name": "1",
+          "Order": 1,
+          "ArrowClassSuffix": "",
+          "IsOpen": true,
+          "WaitTimeMinutes": 6,
+          "PreCheck": 1,
+          "Options": [
+            {
+              "Name": "General",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Pre",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Spot Saver",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Premium",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Clear",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Visitor Pass",
+              "Availability": "Not Available"
+            }
+          ],
+          "IsDataAvailable": true,
+          "LastUpdated": "/Date(1788272115163)/",
+          "MinutesTillInvalid": 1,
+          "MinutesSinceLastUpdate": 0,
+          "QueueLength": 22
+        },
+        {
+          "CheckpointID": 2,
+          "Name": "2",
+          "Order": 2,
+          "ArrowClassSuffix": "",
+          "IsOpen": true,
+          "WaitTimeMinutes": 5,
+          "PreCheck": 0,
+          "Options": [
+            {
+              "Name": "General",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Pre",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Spot Saver",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Premium",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Clear",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Visitor Pass",
+              "Availability": "Not Available"
+            }
+          ],
+          "IsDataAvailable": false,
+          "LastUpdated": "/Date(1788105934917)/",
+          "MinutesTillInvalid": -2724,
+          "MinutesSinceLastUpdate": 2769,
+          "QueueLength": 241
+        },
+        {
+          "CheckpointID": 3,
+          "Name": "3",
+          "Order": 3,
+          "ArrowClassSuffix": "",
+          "IsOpen": true,
+          "WaitTimeMinutes": 10,
+          "PreCheck": 1,
+          "Options": [
+            {
+              "Name": "General",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Pre",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Spot Saver",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Premium",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Clear",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Visitor Pass",
+              "Availability": "Not Available"
+            }
+          ],
+          "IsDataAvailable": true,
+          "LastUpdated": "/Date(1788272115180)/",
+          "MinutesTillInvalid": 1,
+          "MinutesSinceLastUpdate": 0,
+          "QueueLength": 151
+        },
+        {
+          "CheckpointID": 4,
+          "Name": "4",
+          "Order": 4,
+          "ArrowClassSuffix": "",
+          "IsOpen": true,
+          "WaitTimeMinutes": 9,
+          "PreCheck": 0,
+          "Options": [
+            {
+              "Name": "General",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Pre",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Spot Saver",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Premium",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Clear",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Visitor Pass",
+              "Availability": "Available"
+            }
+          ],
+          "IsDataAvailable": true,
+          "LastUpdated": "/Date(1788272115210)/",
+          "MinutesTillInvalid": 1,
+          "MinutesSinceLastUpdate": 0,
+          "QueueLength": 209
+        },
+        {
+          "CheckpointID": 5,
+          "Name": "5",
+          "Order": 5,
+          "ArrowClassSuffix": "",
+          "IsOpen": true,
+          "WaitTimeMinutes": 4,
+          "PreCheck": 1,
+          "Options": [
+            {
+              "Name": "General",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Pre",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Spot Saver",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Premium",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Clear",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Visitor Pass",
+              "Availability": "Not Available"
+            }
+          ],
+          "IsDataAvailable": true,
+          "LastUpdated": "/Date(1788272115227)/",
+          "MinutesTillInvalid": 1,
+          "MinutesSinceLastUpdate": 0,
+          "QueueLength": 54
+        },
+        {
+          "CheckpointID": 6,
+          "Name": "6",
+          "Order": 6,
+          "ArrowClassSuffix": "",
+          "IsOpen": true,
+          "WaitTimeMinutes": 12,
+          "PreCheck": 1,
+          "Options": [
+            {
+              "Name": "General",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Pre",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Spot Saver",
+              "Availability": "Not Available"
+            },
+            {
+              "Name": "Premium",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Clear",
+              "Availability": "Available"
+            },
+            {
+              "Name": "Visitor Pass",
+              "Availability": "Not Available"
+            }
+          ],
+          "IsDataAvailable": true,
+          "LastUpdated": "/Date(1788272115257)/",
+          "MinutesTillInvalid": 1,
+          "MinutesSinceLastUpdate": 0,
+          "QueueLength": 88
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "observation_count": 6,
+    "lane_types": {
+      "standard": 6
+    },
+    "open_count": 6,
+    "closed_count": 0,
+    "with_published_at": 0,
+    "null_wait_count": 0,
+    "max_wait_seconds": 720,
+    "observations": [
+      {
+        "checkpoint_name": "Checkpoint 1",
+        "lane_type": "standard",
+        "wait_seconds": 360,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "Checkpoint 2",
+        "lane_type": "standard",
+        "wait_seconds": 300,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "Checkpoint 3",
+        "lane_type": "standard",
+        "wait_seconds": 600,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "Checkpoint 4",
+        "lane_type": "standard",
+        "wait_seconds": 540,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "Checkpoint 5",
+        "lane_type": "standard",
+        "wait_seconds": 240,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "Checkpoint 6",
+        "lane_type": "standard",
+        "wait_seconds": 720,
+        "is_open": true,
+        "published_at": null
+      }
+    ]
+  }
+}

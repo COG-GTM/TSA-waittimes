@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "source": "SLC",
+  "captured_at": "2026-09-01T14:15:29.533513+00:00",
+  "public_page": "https://slcairport.com/",
+  "attribution": "Salt Lake City Department of Airports (slcairport.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://slcairport.com/ajaxtsa/waittimes",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "json": {
+        "code": "SLC",
+        "name": "Salt Lake City International",
+        "city": "Salt Lake City",
+        "state": "UT",
+        "latitude": "40.7861",
+        "longitude": "-111.98099",
+        "utc": -7,
+        "rightnow": 16,
+        "rightnow_description": "15 minutes and 48 seconds",
+        "user_reported": 0,
+        "precheck": 1,
+        "faa_alerts": {
+          "ground_stops": {
+            "reason": "",
+            "end_time": ""
+          },
+          "ground_delays": {
+            "reason": "",
+            "average": ""
+          },
+          "general_delays": {
+            "reason": "",
+            "trend": ""
+          }
+        },
+        "estimated_hourly_times": [
+          {
+            "timeslot": "12 am - 1 am",
+            "waittime": 0,
+            "hour": 0
+          },
+          {
+            "timeslot": "1 am - 2 am",
+            "waittime": 0,
+            "hour": 1
+          },
+          {
+            "timeslot": "2 am - 3 am",
+            "waittime": 0,
+            "hour": 2
+          },
+          {
+            "timeslot": "3 am - 4 am",
+            "waittime": 0,
+            "hour": 3
+          },
+          {
+            "timeslot": "4 am - 5 am",
+            "waittime": 5.5,
+            "hour": 4
+          },
+          {
+            "timeslot": "5 am - 6 am",
+            "waittime": 14.5,
+            "hour": 5
+          },
+          {
+            "timeslot": "6 am - 7 am",
+            "waittime": 13.9,
+            "hour": 6
+          },
+          {
+            "timeslot": "7 am - 8 am",
+            "waittime": 15.8,
+            "hour": 7
+          },
+          {
+            "timeslot": "8 am - 9 am",
+            "waittime": 13.1,
+            "hour": 8
+          },
+          {
+            "timeslot": "9 am - 10 am",
+            "waittime": 15.1,
+            "hour": 9
+          },
+          {
+            "timeslot": "10 am - 11 am",
+            "waittime": 9,
+            "hour": 10
+          },
+          {
+            "timeslot": "11 am - 12 pm",
+            "waittime": 16,
+            "hour": 11
+          },
+          {
+            "timeslot": "12 pm - 1 pm",
+            "waittime": 7.6,
+            "hour": 12
+          },
+          {
+            "timeslot": "1 pm - 2 pm",
+            "waittime": 13.2,
+            "hour": 13
+          },
+          {
+            "timeslot": "2 pm - 3 pm",
+            "waittime": 17,
+            "hour": 14
+          },
+          {
+            "timeslot": "3 pm - 4 pm",
+            "waittime": 18,
+            "hour": 15
+          },
+          {
+            "timeslot": "4 pm - 5 pm",
+            "waittime": 10.7,
+            "hour": 16
+          },
+          {
+            "timeslot": "5 pm - 6 pm",
+            "waittime": 13.3,
+            "hour": 17
+          },
+          {
+            "timeslot": "6 pm - 7 pm",
+            "waittime": 7.8,
+            "hour": 18
+          },
+          {
+            "timeslot": "7 pm - 8 pm",
+            "waittime": 13,
+            "hour": 19
+          },
+          {
+            "timeslot": "8 pm - 9 pm",
+            "waittime": 8.7,
+            "hour": 20
+          },
+          {
+            "timeslot": "9 pm - 10 pm",
+            "waittime": 8.4,
+            "hour": 21
+          },
+          {
+            "timeslot": "10 pm - 11 pm",
+            "waittime": 3.6,
+            "hour": 22
+          },
+          {
+            "timeslot": "11 pm - 12 am",
+            "waittime": 1.8,
+            "hour": 23
+          }
+        ],
+        "precheck_checkpoints": {
+          "Terminal 1": {
+            "Checkpoint 1": "Open",
+            "Checkpoint 2": "Open"
+          }
+        }
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 1,
+    "lane_types": {
+      "standard": 1
+    },
+    "open_count": 1,
+    "closed_count": 0,
+    "with_published_at": 0,
+    "null_wait_count": 0,
+    "max_wait_seconds": 960,
+    "observations": [
+      {
+        "checkpoint_name": "Main Checkpoint",
+        "lane_type": "standard",
+        "wait_seconds": 960,
+        "is_open": true,
+        "published_at": null
+      }
+    ]
+  }
+}

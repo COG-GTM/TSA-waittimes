@@ -1,0 +1,4 @@
+# Development/test dependencies only. Runtime deps live in requirements.txt.
+-r requirements.txt
+pytest==8.3.4
+ruff==0.8.6
