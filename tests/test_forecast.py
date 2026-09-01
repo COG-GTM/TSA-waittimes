@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import httpx
 import pytest
@@ -87,8 +87,6 @@ def test_blend_weight() -> None:
 
 
 def test_hour_of_week_uses_utc() -> None:
-    from datetime import timezone
-
     eastern = datetime(2026, 9, 1, 13, 0, tzinfo=timezone(timedelta(hours=-4)))
     assert forecast.hour_of_week(eastern) == forecast.hour_of_week(NOW)
 
