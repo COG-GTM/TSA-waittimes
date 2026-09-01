@@ -3,10 +3,18 @@ import asyncio
 import json
 import logging
 import random
+from datetime import UTC, datetime
 
 import httpx
 
 from . import db
+from .faa_events import (
+    FAA_ATTRIBUTION,
+    FAA_PUBLIC_URL,
+    FAA_SOURCE_CODE,
+    REFRESH_SECONDS,
+    fetch_faa_events,
+)
 from .sources.adapters import SOURCES
 from .sources.base import USER_AGENT, FetchResult, Source
 from .tsa_throughput import fetch_tsa_throughput
@@ -14,6 +22,14 @@ from .tsa_throughput import fetch_tsa_throughput
 log = logging.getLogger("poller")
 
 MAX_BACKOFF = 900  # 15 min
+FAA_SOURCE = Source(
+    FAA_SOURCE_CODE,
+    "FAA National Airspace System Status",
+    FAA_PUBLIC_URL,
+    FAA_ATTRIBUTION,
+    REFRESH_SECONDS,
+    fetch_faa_events,
+)
 
 
 class EmptyPollError(RuntimeError):
@@ -23,7 +39,7 @@ class EmptyPollError(RuntimeError):
 async def register_sources() -> None:
     assert db.pool is not None
     async with db.pool.connection() as conn:
-        for s in SOURCES:
+        for s in (*SOURCES, FAA_SOURCE):
             await conn.execute(
                 """
                 INSERT INTO sources (code, name, url, attribution, refresh_seconds)
@@ -143,6 +159,68 @@ async def poll_tsa_throughput(client: httpx.AsyncClient) -> None:
             await asyncio.sleep(1800)
 
 
+async def poll_faa_events(client: httpx.AsyncClient) -> None:
+    failures = 0
+    while True:
+        try:
+            raw, events = await fetch_faa_events(client)
+            fetched_at = datetime.now(UTC)
+            assert db.pool is not None
+            async with db.pool.connection() as conn, conn.cursor() as cur:
+                await cur.execute(
+                    "INSERT INTO raw_payloads (source_code, payload) VALUES (%s, %s) RETURNING id",
+                    (FAA_SOURCE_CODE, json.dumps(raw, default=str)),
+                )
+                row = await cur.fetchone()
+                raw_id = row[0] if row else None
+                await cur.execute("SELECT iata FROM airports")
+                airport_iatas = {row[0] for row in await cur.fetchall()}
+                for event in events:
+                    if event.airport_iata not in airport_iatas:
+                        continue
+                    await cur.execute(
+                        """
+                        INSERT INTO faa_airport_events
+                            (airport_iata, event_type, reason, avg_delay_seconds,
+                             start_time, end_time, update_time, fetched_at, raw_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            event.airport_iata,
+                            event.event_type,
+                            event.reason,
+                            event.avg_delay_seconds,
+                            event.start_time,
+                            event.end_time,
+                            event.update_time,
+                            fetched_at,
+                            raw_id,
+                        ),
+                    )
+                await cur.execute(
+                    """
+                    INSERT INTO poll_health (source_code, last_success_at, last_attempt_at, consecutive_failures)
+                    VALUES (%s, now(), now(), 0)
+                    ON CONFLICT (source_code) DO UPDATE SET
+                        last_success_at = now(), last_attempt_at = now(), consecutive_failures = 0
+                    """,
+                    (FAA_SOURCE_CODE,),
+                )
+            failures = 0
+            log.info("polled %s: %d events", FAA_SOURCE_CODE, len(events))
+        except Exception as err:  # noqa: BLE001 - keep the loop alive no matter what
+            failures += 1
+            log.warning("poll %s failed (%d): %s", FAA_SOURCE_CODE, failures, err)
+            try:
+                await record_failure(FAA_SOURCE, err)
+            except Exception:
+                log.exception("failed to record failure for %s", FAA_SOURCE_CODE)
+        delay = REFRESH_SECONDS
+        if failures:
+            delay = min(REFRESH_SECONDS * (2 ** min(failures, 4)), MAX_BACKOFF)
+        await asyncio.sleep(delay + random.uniform(0, 5))
+
+
 _tasks: list[asyncio.Task] = []
 _client: httpx.AsyncClient | None = None
 
@@ -158,6 +236,7 @@ async def start() -> None:
     for s in SOURCES:
         _tasks.append(asyncio.create_task(poll_source(s, _client)))
     _tasks.append(asyncio.create_task(poll_tsa_throughput(_client)))
+    _tasks.append(asyncio.create_task(poll_faa_events(_client)))
 
 
 async def stop() -> None:

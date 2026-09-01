@@ -27,7 +27,9 @@ from tests.harness import (
 LANE_TYPES = {"standard", "precheck", "other"}
 MAX_PLAUSIBLE_WAIT_SECONDS = 6 * 3600
 SOURCES_BY_CODE = {s.code: s for s in SOURCES}
-FIXTURE_FILES = sorted(FIXTURE_DIR.glob("*.json"))
+FIXTURE_FILES = sorted(
+    path for path in FIXTURE_DIR.glob("*.json") if path.name != "faa_airport_events.json"
+)
 
 
 def _codes() -> list[str]:

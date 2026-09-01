@@ -4,6 +4,21 @@ function esc(s) {
   ));
 }
 
+const FAA_EVENT_LABELS = {
+  ground_stop: "FAA ground stop",
+  ground_delay: "FAA ground delay program",
+  departure_delay: "FAA departure delay",
+  arrival_delay: "FAA arrival delay",
+  closure: "FAA airport closure",
+};
+
+function faaEventText(ev) {
+  const label = FAA_EVENT_LABELS[ev.event_type] || "FAA event";
+  const reason = ev.reason ? ": " + ev.reason : "";
+  const average = ev.avg_delay_seconds ? ", avg " + Math.round(ev.avg_delay_seconds / 60) + " min" : "";
+  return label + reason + average;
+}
+
 function fmtMin(sec) {
   if (sec === null || sec === undefined) return "–";
   return Math.round(sec / 60) + " min";
