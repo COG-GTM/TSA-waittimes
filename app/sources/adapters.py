@@ -6,7 +6,7 @@ honest User-Agent, and polls no faster than once per minute.
 """
 import json
 import urllib.parse
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import httpx
 
@@ -20,7 +20,7 @@ def _ts(epoch: float | None) -> datetime | None:
         return None
     if epoch > 1e12:  # milliseconds
         epoch = epoch / 1000
-    return datetime.fromtimestamp(epoch, tz=UTC)
+    return datetime.fromtimestamp(epoch, tz=timezone.utc)
 
 
 def _lane(name: str) -> str:
