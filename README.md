@@ -39,6 +39,15 @@ uvicorn app.main:app --port 8080
 
 `DATABASE_URL` overrides the default local connection string.
 
+## Continuous deployment
+
+Every push to `main` deploys the application to Fly.io through the
+`.github/workflows/fly-deploy.yml` workflow. The repository must define a
+`FLY_API_TOKEN` secret with permission to deploy the Fly.io application.
+The canonical public hostname is `waitpicture.com` (also available at
+`www.waitpicture.com`). The legacy `tsadelays.com` and `www.tsadelays.com`
+hostnames return a 301 redirect to the canonical domain, handled in the app.
+
 ## Operations
 
 See [RUNBOOK.md](RUNBOOK.md).
