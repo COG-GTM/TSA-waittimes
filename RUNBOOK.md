@@ -38,8 +38,10 @@ TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
   request count does not scale with the airport list.
 - Airport → NWS zone mapping lives in `airport_nws_zones`, backfilled 150
   airports per cycle via `/points/{lat},{lon}` and refreshed every 90
-  days. Until the first backfill finishes the poll reports unhealthy rather
-  than pretending an empty match set is a success.
+  days. While any airport still lacks a cached zone the poll publishes the
+  alerts it can match but reports unhealthy (`NWS zones cached for N/M
+  airports`) — partial coverage silently under-reports, so it must not look
+  green. Backfill cycles keep the normal 600s cadence instead of backing off.
 - `weather_alerts` is rewritten every cycle, so an alert that ends simply
   disappears; provenance for each cycle is in `raw_payloads` under `NWS-ALERTS`.
 - Only aviation-relevant event types are stored (`RELEVANT_EVENTS` in

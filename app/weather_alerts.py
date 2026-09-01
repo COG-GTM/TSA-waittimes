@@ -93,6 +93,10 @@ SEVERITY_RANK: dict[str, int] = {
 }
 MAX_TEXT = 500
 
+# (lon, lat) vertices of one GeoJSON ring, and a polygon as (outer ring, holes).
+Ring = tuple[tuple[float, float], ...]
+Polygon = tuple[Ring, tuple[Ring, ...]]
+
 
 @dataclass(frozen=True)
 class AirportZones:
@@ -122,7 +126,7 @@ class Alert:
     expires: datetime | None
     ends: datetime | None
     zones: frozenset[str]
-    polygons: tuple[tuple[tuple[float, float], ...], ...]
+    polygons: tuple[Polygon, ...]
 
     @property
     def rank(self) -> int:
@@ -174,33 +178,51 @@ def parse_zones(iata: str, payload: Any) -> AirportZones | None:
     return zones if zones.codes else None
 
 
-def _rings(geometry: Any) -> tuple[tuple[tuple[float, float], ...], ...]:
-    """Outer rings of a GeoJSON Polygon/MultiPolygon as (lon, lat) tuples."""
+def _ring(raw: Any) -> Ring | None:
+    if not isinstance(raw, list):
+        return None
+    points = tuple(
+        (float(p[0]), float(p[1]))
+        for p in raw
+        if isinstance(p, list | tuple) and len(p) >= 2
+        and isinstance(p[0], int | float) and isinstance(p[1], int | float)
+    )
+    return points if len(points) >= 3 else None
+
+
+def _polygons(geometry: Any) -> tuple[Polygon, ...]:
+    """GeoJSON Polygon/MultiPolygon as (outer ring, interior rings) in (lon, lat)."""
     if not isinstance(geometry, dict):
         return ()
     gtype = geometry.get("type")
     coords = geometry.get("coordinates")
-    raw_rings: list[Any] = []
-    if gtype == "Polygon" and isinstance(coords, list) and coords:
-        raw_rings = [coords[0]]
+    if gtype == "Polygon":
+        raw_polys: list[Any] = [coords]
     elif gtype == "MultiPolygon" and isinstance(coords, list):
-        raw_rings = [poly[0] for poly in coords if isinstance(poly, list) and poly]
-    rings: list[tuple[tuple[float, float], ...]] = []
-    for ring in raw_rings:
-        if not isinstance(ring, list):
+        raw_polys = list(coords)
+    else:
+        return ()
+    polygons: list[Polygon] = []
+    for raw in raw_polys:
+        if not isinstance(raw, list) or not raw:
             continue
-        points = tuple(
-            (float(p[0]), float(p[1]))
-            for p in ring
-            if isinstance(p, list | tuple) and len(p) >= 2
-            and isinstance(p[0], int | float) and isinstance(p[1], int | float)
-        )
-        if len(points) >= 3:
-            rings.append(points)
-    return tuple(rings)
+        outer = _ring(raw[0])
+        if outer is None:
+            continue
+        holes = tuple(h for h in (_ring(r) for r in raw[1:]) if h is not None)
+        polygons.append((outer, holes))
+    return tuple(polygons)
 
 
-def point_in_ring(lon: float, lat: float, ring: tuple[tuple[float, float], ...]) -> bool:
+def point_in_polygon(lon: float, lat: float, polygon: Polygon) -> bool:
+    """Inside the outer ring and outside every hole the alert excludes."""
+    outer, holes = polygon
+    if not point_in_ring(lon, lat, outer):
+        return False
+    return not any(point_in_ring(lon, lat, hole) for hole in holes)
+
+
+def point_in_ring(lon: float, lat: float, ring: Ring) -> bool:
     """Ray-casting test; rings are small NWS warning polygons, so planar math is fine."""
     inside = False
     n = len(ring)
@@ -253,7 +275,7 @@ def parse_alert(feature: Any) -> Alert | None:
         expires=_dt(props.get("expires")),
         ends=_dt(props.get("ends")),
         zones=frozenset(zones),
-        polygons=_rings(feature.get("geometry")),
+        polygons=_polygons(feature.get("geometry")),
     )
 
 
@@ -286,12 +308,14 @@ def match_alerts(
         for code in alert.zones:
             for iata in by_zone.get(code, ()):
                 hit[iata] = "zone"
-        for ring in alert.polygons:
-            for iata in zones_by_airport:
+        # Geometry is matched against every airport we have coordinates for, not
+        # just the zone-resolved ones: polygon-only alerts must still land while
+        # the zone cache is being backfilled.
+        for polygon in alert.polygons:
+            for iata, (lat, lon) in coords.items():
                 if iata in hit:
                     continue
-                point = coords.get(iata)
-                if point is not None and point_in_ring(point[1], point[0], ring):
+                if point_in_polygon(lon, lat, polygon):
                     hit[iata] = "polygon"
         for iata, basis in hit.items():
             matched.setdefault(iata, []).append((alert, basis))
@@ -301,15 +325,20 @@ def match_alerts(
 
 
 def _dedupe(entries: list[tuple[Alert, str]]) -> list[tuple[Alert, str]]:
-    """One row per event type: offices reissue statements, keeping the newest.
+    """Collapse reissues of the same product, keeping the newest.
+
+    A reissue repeats the event, the issuing office and the covered zones, so
+    that triple is the key: two distinct warnings of the same type (different
+    office or different area) stay as separate rows.
 
     Ordered most severe first so the API's headline alert is entries[0].
     """
-    newest: dict[str, tuple[Alert, str]] = {}
+    newest: dict[tuple[str, str | None, frozenset[str]], tuple[Alert, str]] = {}
     for alert, basis in entries:
-        current = newest.get(alert.event)
+        key = (alert.event, alert.sender_name, alert.zones)
+        current = newest.get(key)
         if current is None or _issued(alert) > _issued(current[0]):
-            newest[alert.event] = (alert, basis)
+            newest[key] = (alert, basis)
     return sorted(newest.values(), key=lambda e: (-e[0].rank, e[0].event))
 
 
@@ -345,6 +374,19 @@ async def load_zone_cache() -> dict[str, AirportZones]:
             row[0]: AirportZones(airport_iata=row[0], forecast_zone=row[1], county_zone=row[2], fire_zone=row[3])
             for row in await cur.fetchall()
         }
+
+
+async def zone_coverage() -> tuple[int, int]:
+    """(airports with a cached NWS zone, airports in total)."""
+    assert db.pool is not None
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute(
+            """
+            SELECT (SELECT count(*) FROM airport_nws_zones), (SELECT count(*) FROM airports)
+            """
+        )
+        row = await cur.fetchone()
+        return (int(row[0]), int(row[1])) if row else (0, 0)
 
 
 async def load_coords() -> dict[str, tuple[float, float]]:

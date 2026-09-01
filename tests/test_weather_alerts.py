@@ -127,7 +127,7 @@ def test_matches_are_justified_by_zone_or_polygon(
             if basis == "zone":
                 assert alert.zones & zones[iata].codes
             else:
-                assert any(wx.point_in_ring(lon, lat, ring) for ring in alert.polygons)
+                assert any(wx.point_in_polygon(lon, lat, poly) for poly in alert.polygons)
 
 
 def test_alerts_are_ordered_most_severe_first(matched: dict[str, list[tuple[wx.Alert, str]]]) -> None:
@@ -147,8 +147,8 @@ def test_reissued_statements_collapse_to_the_newest(
     assert len(reissued) > 1
     matched = wx.match_alerts(alerts, zones, coords, now=captured_at)
     for entries in matched.values():
-        events = [a.event for a, _ in entries]
-        assert len(events) == len(set(events))
+        keys = [(a.event, a.sender_name, a.zones) for a, _ in entries]
+        assert len(keys) == len(set(keys))
         for alert, _ in entries:
             same_event = [
                 other for other in reissued
@@ -223,6 +223,35 @@ def test_polygon_matching_is_inside_only() -> None:
     assert wx.point_in_ring(-99.5, 40.5, ring)
     assert not wx.point_in_ring(-98.5, 40.5, ring)
     assert not wx.point_in_ring(-99.5, 42.0, ring)
+
+
+def _square(x1: float, y1: float, x2: float, y2: float) -> list[list[float]]:
+    return [[x1, y1], [x2, y1], [x2, y2], [x1, y2], [x1, y1]]
+
+
+def test_polygon_holes_exclude_the_point() -> None:
+    geometry = {
+        "type": "Polygon",
+        "coordinates": [_square(-100.0, 40.0, -98.0, 42.0), _square(-99.5, 40.5, -99.0, 41.0)],
+    }
+    (polygon,) = wx._polygons(geometry)
+    assert polygon[1], "interior ring was discarded"
+    assert wx.point_in_polygon(-98.5, 41.5, polygon)
+    assert not wx.point_in_polygon(-99.25, 40.75, polygon)
+
+
+def test_multipolygon_holes_are_per_component() -> None:
+    geometry = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [_square(-100.0, 40.0, -98.0, 42.0), _square(-99.5, 40.5, -99.0, 41.0)],
+            [_square(-90.0, 30.0, -88.0, 32.0)],
+        ],
+    }
+    first, second = wx._polygons(geometry)
+    assert not wx.point_in_polygon(-99.25, 40.75, first)
+    assert wx.point_in_polygon(-89.0, 31.0, second)
+    assert not second[1]
 
 
 def test_fetch_alerts_sends_the_documented_query() -> None:

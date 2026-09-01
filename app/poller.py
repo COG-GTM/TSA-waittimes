@@ -159,6 +159,10 @@ async def poll_tsa_throughput(client: httpx.AsyncClient) -> None:
             await asyncio.sleep(1800)
 
 
+class ZoneBackfillIncomplete(RuntimeError):
+    """Some airports still have no cached NWS zone, so coverage is partial."""
+
+
 async def poll_weather_alerts(client: httpx.AsyncClient) -> None:
     """One national api.weather.gov request per cycle, matched to cached airport zones."""
     source = weather_alerts.SOURCE
@@ -167,6 +171,7 @@ async def poll_weather_alerts(client: httpx.AsyncClient) -> None:
         try:
             await weather_alerts.refresh_zone_cache(client)
             zones = await weather_alerts.load_zone_cache()
+            cached, total = await weather_alerts.zone_coverage()
             if not zones:
                 raise EmptyPollError(f"{source.code}: no airport NWS zones resolved yet")
             payload = await weather_alerts.fetch_alerts(client)
@@ -180,14 +185,23 @@ async def poll_weather_alerts(client: httpx.AsyncClient) -> None:
             matched = weather_alerts.match_alerts(alerts, zones, coords)
             raw_id = await store_raw(source, _matched_raw(matched))
             stored = await weather_alerts.store_alerts(matched, raw_id)
-            await mark_poll_success(source)
-            failures = 0
             log.info(
                 "polled %s: %d relevant alerts, %d airports affected (%d rows)",
                 source.code, len(alerts), len(matched), stored,
             )
+            # Alerts for the zones we do know are published, but a partially
+            # backfilled cache silently under-reports, so it is not a healthy poll.
+            if cached < total:
+                raise ZoneBackfillIncomplete(
+                    f"{source.code}: NWS zones cached for {cached}/{total} airports"
+                )
+            await mark_poll_success(source)
+            failures = 0
         except Exception as err:  # noqa: BLE001 - keep the loop alive no matter what
-            failures += 1
+            # Backing off during the backfill would only delay reaching full
+            # coverage, so an incomplete cache keeps the normal cadence.
+            if not isinstance(err, ZoneBackfillIncomplete):
+                failures += 1
             log.warning("poll %s failed (%d): %s", source.code, failures, err)
             try:
                 await record_failure(source, err)
