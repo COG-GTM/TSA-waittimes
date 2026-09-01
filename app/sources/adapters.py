@@ -95,8 +95,16 @@ def _den_wait_seconds(wait: str | None) -> int | None:
         return None
 
 
-# ---------------------------------------------------------------- Airport Labs vendor (MCO / IAH / HOU / DFW)
-async def _airportlabs(client: httpx.AsyncClient, url: str, key: str, version: str, origin: str) -> FetchResult:
+# ---------------------------------------------------------------- Airport Labs vendor (MCO / IAH / HOU / DFW / CLT / CVG)
+async def _airportlabs(
+    client: httpx.AsyncClient,
+    url: str,
+    key: str,
+    version: str,
+    origin: str,
+    *,
+    collection: str = "wait_times",
+) -> FetchResult:
     r = await client.get(
         url,
         headers={
@@ -111,14 +119,20 @@ async def _airportlabs(client: httpx.AsyncClient, url: str, key: str, version: s
     r.raise_for_status()
     data = r.json()
     obs = []
-    for cp in data.get("data", {}).get("wait_times", []):
+    for cp in data.get("data", {}).get(collection, []):
         if not cp.get("isDisplayable", True):
             continue
         lane = cp.get("lane") or ""
+        name = cp.get("name") or "Checkpoint"
+        attrs = cp.get("attributes")
+        precheck = (
+            _lane(lane, name) == "precheck"
+            or (isinstance(attrs, dict) and bool(attrs.get("preCheck")))
+        )
         obs.append(
             Observation(
-                cp.get("name") or "Checkpoint",
-                _lane(lane, cp.get("name")),
+                name,
+                "precheck" if precheck else ("other" if _lane(lane, name) == "other" else "standard"),
                 cp.get("waitSeconds"),
                 bool(cp.get("isOpen", True)),
                 _ts(cp.get("lastUpdatedTimestamp")),
@@ -152,6 +166,21 @@ async def fetch_dfw(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.dfwairport.mobi/wait-times/checkpoint/DFW",
         "87856E0636AA4BF282150FCBE1AD63DE", "170", "https://www.dfwairport.com",
+    )
+
+
+async def fetch_clt(client: httpx.AsyncClient) -> FetchResult:
+    return await _airportlabs(
+        client, "https://api.cltairport.mobi/wait-times/checkpoint/CLT",
+        "5ccb418715f9428ca6cb4df1635d4815", "130", "https://www.cltairport.com",
+    )
+
+
+async def fetch_cvg(client: httpx.AsyncClient) -> FetchResult:
+    return await _airportlabs(
+        client, "https://api.cvgairport.mobi/checkpoints/CVG",
+        "b6461a439f1047ac950a920866b86fef", "100", "https://www.cvgairport.com",
+        collection="checkpoints",
     )
 
 
@@ -410,36 +439,6 @@ async def fetch_pit(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=data, observations=obs)
 
 
-# ---------------------------------------------------------------- CVG (cvgairport.mobi checkpoints API used by cvgairport.com)
-async def fetch_cvg(client: httpx.AsyncClient) -> FetchResult:
-    r = await client.get(
-        "https://api.cvgairport.mobi/checkpoints/CVG",
-        headers={
-            **HEADERS,
-            "api-key": "b6461a439f1047ac950a920866b86fef",
-            "api-version": "100",
-            "Content-Type": "application/json",
-            "Origin": "https://www.cvgairport.com",
-            "Referer": "https://www.cvgairport.com/",
-        },
-    )
-    r.raise_for_status()
-    data = r.json()
-    obs = []
-    for cp in data.get("data", {}).get("checkpoints", []):
-        lane = cp.get("lane") or ""
-        obs.append(
-            Observation(
-                cp.get("name") or "Checkpoint",
-                _lane(lane, cp.get("name")),
-                cp.get("waitSeconds"),
-                bool(cp.get("isOpen", True)),
-                _ts(cp.get("lastUpdatedTimestamp")),
-            )
-        )
-    return FetchResult(raw=data, observations=obs)
-
-
 SOURCES: list[Source] = [
     Source("SEA", "Port of Seattle — SEA checkpoint wait times", "https://www.portseattle.org/sea-tac", "Port of Seattle (portseattle.org)", 120, fetch_sea),
     Source("DEN", "Denver International Airport — security wait times", "https://www.flydenver.com/security/", "Denver International Airport (flydenver.com)", 120, fetch_den),
@@ -447,6 +446,8 @@ SOURCES: list[Source] = [
     Source("IAH", "Houston Airports — IAH checkpoint wait times", "https://www.fly2houston.com/iah/security", "Houston Airport System (fly2houston.com)", 120, fetch_iah),
     Source("HOU", "Houston Airports — HOU checkpoint wait times", "https://www.fly2houston.com/hou/security", "Houston Airport System (fly2houston.com)", 120, fetch_hou),
     Source("DFW", "DFW International Airport — security wait times", "https://www.dfwairport.com/security/", "DFW International Airport (dfwairport.com)", 120, fetch_dfw),
+    Source("CLT", "Charlotte Douglas International Airport — security wait times", "https://www.cltairport.com/airport-info/security/", "Charlotte Douglas International Airport (cltairport.com)", 120, fetch_clt),
+    Source("CVG", "Cincinnati/Northern Kentucky International Airport — security wait times", "https://www.cvgairport.com/security/", "Kenton County Airport Board (cvgairport.com)", 120, fetch_cvg),
     Source("SLC", "Salt Lake City International Airport — TSA wait times", "https://slcairport.com/", "Salt Lake City Department of Airports (slcairport.com)", 120, fetch_slc),
     Source("LAS", "Harry Reid International Airport — security wait times", "https://www.harryreidairport.com/security-wait-times", "Harry Reid International Airport (harryreidairport.com)", 120, fetch_las),
     Source("JFK", "John F. Kennedy International Airport — security wait times", "https://www.jfkairport.com/", "Port Authority of New York and New Jersey (jfkairport.com)", 120, fetch_jfk),
@@ -454,5 +455,4 @@ SOURCES: list[Source] = [
     Source("EWR", "Newark Liberty International Airport — security wait times", "https://www.newarkairport.com/", "Port Authority of New York and New Jersey (newarkairport.com)", 120, fetch_ewr),
     Source("BOS", "Boston Logan International Airport — security wait times", "https://www.massport.com/logan-airport/", "Massachusetts Port Authority (massport.com)", 120, fetch_bos),
     Source("PIT", "Pittsburgh International Airport — security wait times", "https://flypittsburgh.com/pittsburgh-international-airport/security/", "Allegheny County Airport Authority (flypittsburgh.com)", 120, fetch_pit),
-    Source("CVG", "Cincinnati/Northern Kentucky International Airport — security wait times", "https://www.cvgairport.com/security/", "Kenton County Airport Board (cvgairport.com)", 120, fetch_cvg),
 ]
