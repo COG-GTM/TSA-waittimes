@@ -94,12 +94,14 @@ async def api_summary():
             a["stale"] = a["stale"] and stale
             a.setdefault("source", attribution)
             a.setdefault("source_url", url)
-            if wait is not None and is_open and not stale:
-                key = "max_wait_seconds" if lane == "standard" else "max_precheck_seconds"
-                if wait > a.get(key, -1):
-                    a[key] = wait
-                    if lane == "standard":
-                        a["as_of"] = _iso(pub_at or fetched_at)
+            key = {
+                "standard": "max_wait_seconds",
+                "precheck": "max_precheck_seconds",
+            }.get(lane)
+            if key and wait is not None and is_open and not stale and wait > a.get(key, -1):
+                a[key] = wait
+                if lane == "standard":
+                    a["as_of"] = _iso(pub_at or fetched_at)
             fetched_iso = _iso(fetched_at)
             if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
                 a["last_fetch"] = fetched_iso
@@ -151,6 +153,7 @@ async def api_airport(iata: str):
         )
         checkpoints = []
         now = datetime.now(UTC)
+        latest_checkpoints = []
         for cp_id, cp_name, lane in await cur.fetchall():
             await cur.execute(
                 """
@@ -162,6 +165,16 @@ async def api_airport(iata: str):
                 (cp_id,),
             )
             latest = await cur.fetchone()
+            if latest is not None:
+                latest_checkpoints.append((cp_id, cp_name, lane, latest))
+        airport_latest = max(
+            (latest[3] for _, _, _, latest in latest_checkpoints),
+            default=None,
+        )
+        for cp_id, cp_name, lane, latest in latest_checkpoints:
+            wait, is_open, pub_at, fetched_at, attribution, src_url = latest
+            if airport_latest is not None and (airport_latest - fetched_at).total_seconds() > 24 * 60 * 60:
+                continue
             await cur.execute(
                 """
                 SELECT extract(epoch FROM date_trunc('minute', fetched_at))::bigint AS m,
@@ -174,9 +187,6 @@ async def api_airport(iata: str):
                 (cp_id,),
             )
             history = [[m, w] for m, w in await cur.fetchall()]
-            if latest is None:
-                continue
-            wait, is_open, pub_at, fetched_at, attribution, src_url = latest
             checkpoints.append({
                 "name": cp_name,
                 "lane_type": lane,
