@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import analytics, db, forecast, poller, public_api, queries
+from . import analytics, db, forecast, leaderboard, poller, public_api, queries
 from .faa_events import FAA_ATTRIBUTION
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -91,6 +91,41 @@ def _validated_iata(iata: str) -> str:
     if not IATA_RE.fullmatch(normalized):
         raise HTTPException(404, "unknown airport")
     return normalized
+
+LEADERBOARD_BASELINE_SQL = """
+SELECT airport_iata, max(wait_seconds)
+FROM (
+    SELECT DISTINCT ON (o.checkpoint_id) c.airport_iata, o.wait_seconds
+    FROM observations o JOIN checkpoints c ON c.id = o.checkpoint_id
+    WHERE c.lane_type = 'standard' AND o.is_open AND o.wait_seconds IS NOT NULL
+      AND o.fetched_at >= %s AND o.fetched_at <= %s
+    ORDER BY o.checkpoint_id, abs(extract(epoch FROM (o.fetched_at - %s)))
+) nearest
+GROUP BY 1
+"""
+
+
+
+@app.get("/api/leaderboard")
+async def api_leaderboard():
+    assert db.pool is not None
+    now = datetime.now(UTC)
+    target = now - leaderboard.BASELINE_AGE
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("SELECT iata, name FROM airports")
+        names = {r[0]: r[1] for r in await cur.fetchall()}
+        await cur.execute(queries.LATEST_OBS_SQL)
+        latest = await cur.fetchall()
+        await cur.execute(
+            LEADERBOARD_BASELINE_SQL,
+            (
+                target - leaderboard.BASELINE_TOLERANCE,
+                target + leaderboard.BASELINE_TOLERANCE,
+                target,
+            ),
+        )
+        baseline = await cur.fetchall()
+    return JSONResponse(leaderboard.build(latest, baseline, names, now=now))
 
 
 @app.get("/api/summary")
