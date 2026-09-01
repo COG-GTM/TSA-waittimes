@@ -36,6 +36,24 @@ throughput years from 2019 through the last completed year. It waits briefly
 for the app to come up, pauses between years, and logs failures without
 affecting the web process.
 
+## Weather alerts (NWS-ALERTS)
+
+- One national `https://api.weather.gov/alerts/active` request every 600s; the
+  request count does not scale with the airport list.
+- Airport → NWS zone mapping lives in `airport_nws_zones`, backfilled 150
+  airports per cycle via `/points/{lat},{lon}` and refreshed every 90
+  days. While any airport still lacks a cached zone the poll publishes the
+  alerts it can match but reports unhealthy (`NWS zones cached for N/M
+  airports`) — partial coverage silently under-reports, so it must not look
+  green. Backfill cycles keep the normal 600s cadence instead of backing off.
+- `weather_alerts` is rewritten every cycle, so an alert that ends simply
+  disappears; provenance for each cycle is in `raw_payloads` under `NWS-ALERTS`.
+- Only aviation-relevant event types are stored (`RELEVANT_EVENTS` in
+  `app/weather_alerts.py`); marine, hydrologic-advisory, heat, air-quality,
+  fire-weather and non-weather civil messages are dropped.
+- Refresh the offline fixture after a feed change with
+  `python scripts/probe_weather_alerts.py`, then run `pytest`.
+
 ## Common issues
 
 | Symptom | Likely cause | Action |

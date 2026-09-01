@@ -84,6 +84,38 @@ CREATE TABLE IF NOT EXISTS poll_health (
     consecutive_failures INTEGER NOT NULL DEFAULT 0
 );
 
+-- NWS forecast/county zone for each airport, resolved once via api.weather.gov/points.
+CREATE TABLE IF NOT EXISTS airport_nws_zones (
+    airport_iata TEXT PRIMARY KEY REFERENCES airports(iata),
+    forecast_zone TEXT,
+    county_zone TEXT,
+    fire_zone TEXT,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Currently active NWS alerts matched to an airport; rewritten every poll cycle.
+CREATE TABLE IF NOT EXISTS weather_alerts (
+    airport_iata TEXT NOT NULL REFERENCES airports(iata),
+    alert_id TEXT NOT NULL,
+    event TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    urgency TEXT,
+    certainty TEXT,
+    headline TEXT,
+    area_desc TEXT,
+    sender_name TEXT,
+    alert_url TEXT,
+    effective TIMESTAMPTZ,
+    onset TIMESTAMPTZ,
+    expires TIMESTAMPTZ,
+    ends TIMESTAMPTZ,
+    match_basis TEXT NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    raw_id BIGINT REFERENCES raw_payloads(id),
+    PRIMARY KEY (airport_iata, alert_id)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_alerts_airport ON weather_alerts (airport_iata);
+
 CREATE TABLE IF NOT EXISTS tsa_throughput (
     date DATE NOT NULL,
     travelers BIGINT NOT NULL,

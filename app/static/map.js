@@ -16,6 +16,10 @@ let grayLayer = L.layerGroup().addTo(map);
 
 function popupHtml(a) {
   let html = "<b>" + esc(a.iata) + "</b> — " + esc(a.name) + "<br>";
+  if (a.weather_alert) {
+    html += '<div class="popup-wx">' + alertBadge(a.weather_alert) +
+      '<div class="wx-src">National Weather Service (weather.gov)</div></div>';
+  }
   if (a.live) {
     html += '<div class="popup-wait">' + fmtMin(a.max_wait_seconds) + (a.stale ? " (stale)" : "") + "</div>";
     if (a.max_precheck_seconds !== undefined)
@@ -74,6 +78,7 @@ function render(data) {
     '<a class="live-card" href="/airport/' + esc(a.iata) + '">' +
       '<span class="wait ' + (a.stale ? "stale" : "") + '">' + fmtMin(a.max_wait_seconds) + "</span>" +
       '<span class="code">' + esc(a.iata) + "</span>" +
+      alertBadge(a.weather_alert) +
       '<div class="meta">' + esc(a.name) + (a.stale ? " · STALE" : "") + "<br>" +
       esc(a.source) + " · " + asPublished(a.as_of || a.last_fetch) +
       (a.faa_event
