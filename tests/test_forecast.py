@@ -17,8 +17,17 @@ def points_from(values: list[tuple[int, int]]) -> list[forecast.ObsPoint]:
 def profile_bucket(
     mean: float, samples: int, day_offsets: list[int], scope: str = "exact"
 ) -> forecast.ProfileBucket:
-    dates = frozenset(NOW.date() - timedelta(days=offset) for offset in day_offsets)
-    return forecast.ProfileBucket(mean, samples, dates, scope)
+    hours = frozenset(
+        (NOW - timedelta(days=offset)).replace(minute=0, second=0, microsecond=0)
+        for offset in day_offsets
+    )
+    return forecast.ProfileBucket(mean, samples, hours, scope)
+
+
+def profile_support(
+    mean: float, samples: int, occurrences: int, scope: str
+) -> forecast.ProfileSupport:
+    return forecast.ProfileSupport(mean, samples, occurrences, scope)
 
 
 def steady_points(wait_seconds: int = 600) -> list[forecast.ObsPoint]:
@@ -36,7 +45,7 @@ def test_steady_forecast() -> None:
     assert result.confidence == "medium"
     assert [h.wait_seconds for h in result.horizons] == [600, 600, 600]
     assert [h.confidence for h in result.horizons] == ["high", "high", "medium"]
-    assert result.basis["profile_days"] >= 3
+    assert result.basis["profile_occurrences"] >= 3
     assert result.basis["profile_samples"] >= 18
     assert result.basis["trend_seconds_per_hour"] == 0
 
@@ -150,17 +159,17 @@ def test_forecast_helpers_exclude_future_points() -> None:
 def test_profile_lookup_widens_and_falls_back() -> None:
     exact, exact_bucket = forecast.profile_lookup({10: profile_bucket(900.0, 3, [0, 7])}, 10)
     assert exact == 900.0
-    assert exact_bucket == profile_bucket(900.0, 3, [0, 7])
+    assert exact_bucket == profile_support(900.0, 3, 2, "exact")
     neighbor, neighbor_bucket = forecast.profile_lookup(
         {9: profile_bucket(600.0, 2, [0, 7]), 11: profile_bucket(1200.0, 2, [0, 7])},
         10,
     )
     assert neighbor == 900.0
-    assert neighbor_bucket == profile_bucket(900.0, 4, [0, 7], "nearby")
+    assert neighbor_bucket == profile_support(900.0, 4, 2, "nearby")
     profile = {20: profile_bucket(600.0, 6, [0]), 40: profile_bucket(1200.0, 6, [7])}
     global_mean, global_bucket = forecast.profile_lookup(profile, 80)
     assert global_mean == 900.0
-    assert global_bucket == profile_bucket(900.0, 12, [0, 7], "global")
+    assert global_bucket == profile_support(900.0, 12, 2, "global")
     assert forecast.profile_lookup({20: profile_bucket(600.0, 2, [0])}, 80) == (None, None)
 
 
@@ -168,15 +177,15 @@ def test_profile_lookup_widens_and_falls_back() -> None:
     ("kwargs", "expected"),
     [
         (
-            {"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 3, "bucket_scope": "exact", "horizon_minutes": 30},
+            {"recent_count": 6, "latest_age_minutes": 10, "bucket_occurrences": 3, "bucket_scope": "exact", "horizon_minutes": 30},
             "high",
         ),
         (
-            {"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 1, "bucket_scope": "exact", "horizon_minutes": 120},
+            {"recent_count": 6, "latest_age_minutes": 10, "bucket_occurrences": 1, "bucket_scope": "exact", "horizon_minutes": 120},
             "medium",
         ),
         (
-            {"recent_count": 2, "latest_age_minutes": 10, "bucket_days": 1, "bucket_scope": "exact", "horizon_minutes": 30},
+            {"recent_count": 2, "latest_age_minutes": 10, "bucket_occurrences": 1, "bucket_scope": "exact", "horizon_minutes": 30},
             "low",
         ),
     ],
@@ -190,7 +199,7 @@ def test_slope_is_clamped() -> None:
     assert forecast.trend_slope(recent, NOW) == forecast.MAX_SLOPE_SECONDS_PER_MINUTE
 
 
-def test_profile_counts_distinct_utc_days() -> None:
+def test_profile_counts_distinct_occurrences() -> None:
     same_bucket_different_days = [
         forecast.ObsPoint(NOW - timedelta(days=7 * index), 600)
         for index in range(3)
@@ -198,7 +207,7 @@ def test_profile_counts_distinct_utc_days() -> None:
     profile = forecast.hour_of_week_profile(same_bucket_different_days)
     bucket = profile[forecast.hour_of_week(NOW)]
     assert bucket.samples == 3
-    assert bucket.days == 3
+    assert forecast.bucket_occurrences(bucket.hours, forecast.hour_of_week(NOW)) == 3
 
     same_day_many_polls = [
         forecast.ObsPoint(NOW + timedelta(minutes=10 * index), 600)
@@ -207,7 +216,56 @@ def test_profile_counts_distinct_utc_days() -> None:
     same_day_profile = forecast.hour_of_week_profile(same_day_many_polls)
     same_day_bucket = same_day_profile[forecast.hour_of_week(NOW)]
     assert same_day_bucket.samples == 6
-    assert same_day_bucket.days == 1
+    assert forecast.bucket_occurrences(same_day_bucket.hours, forecast.hour_of_week(NOW)) == 1
+
+
+def test_nearby_profile_collapses_same_weekend_boundary() -> None:
+    sunday = datetime(2026, 8, 30, 23, 0, tzinfo=UTC)
+    points = [
+        forecast.ObsPoint(sunday, 600),
+        forecast.ObsPoint(sunday + timedelta(hours=1), 600),
+    ]
+    profile = forecast.hour_of_week_profile(points)
+    nearby = forecast._pooled_bucket(profile, [167, 0, 1], "nearby")
+
+    assert nearby is not None
+    assert forecast.bucket_occurrences(nearby.hours, 0) == 1
+    assert forecast.profile_lookup(profile, 0) == (None, None)
+
+
+def test_nearby_profile_counts_distinct_weekend_occurrences() -> None:
+    weekends = [
+        datetime(2026, 8, 23, 23, 0, tzinfo=UTC),
+        datetime(2026, 8, 30, 23, 0, tzinfo=UTC),
+    ]
+    points = [
+        forecast.ObsPoint(sunday + timedelta(hours=offset), 600)
+        for sunday in weekends
+        for offset in (0, 1)
+    ]
+    profile = forecast.hour_of_week_profile(points)
+    nearby = forecast._pooled_bucket(profile, [167, 0, 1], "nearby")
+    mean, support = forecast.profile_lookup(profile, 0)
+
+    assert nearby is not None
+    assert forecast.bucket_occurrences(nearby.hours, 0) == 2
+    assert mean == 600
+    assert support is not None
+    assert support.occurrences == 2
+
+
+def test_exact_profile_counts_three_weekly_occurrences() -> None:
+    points = [
+        forecast.ObsPoint(NOW - timedelta(days=7 * index), 600)
+        for index in range(3)
+    ]
+    profile = forecast.hour_of_week_profile(points)
+    mean, support = forecast.profile_lookup(profile, forecast.hour_of_week(NOW))
+
+    assert mean == 600
+    assert support is not None
+    assert support.scope == "exact"
+    assert support.occurrences == 3
 
 
 def test_many_samples_on_one_day_are_not_strong_profile_support() -> None:
@@ -220,11 +278,11 @@ def test_many_samples_on_one_day_are_not_strong_profile_support() -> None:
     assert mean == 600
     assert bucket is not None
     assert bucket.samples == 12
-    assert bucket.days == 1
+    assert bucket.occurrences == 1
     assert forecast.confidence_label(
         recent_count=0,
         latest_age_minutes=None,
-        bucket_days=bucket.days,
+        bucket_occurrences=bucket.occurrences,
         bucket_scope=bucket.scope,
         horizon_minutes=30,
     ) == "low"
@@ -241,11 +299,11 @@ def test_global_profile_support_is_not_strong() -> None:
     assert mean == 900.0
     assert bucket is not None
     assert bucket.scope == "global"
-    assert bucket.days == 3
+    assert bucket.occurrences == 3
     assert forecast.confidence_label(
         recent_count=0,
         latest_age_minutes=None,
-        bucket_days=bucket.days,
+        bucket_occurrences=bucket.occurrences,
         bucket_scope=bucket.scope,
         horizon_minutes=30,
     ) == "low"
@@ -307,7 +365,7 @@ def test_basis_uses_one_weakest_profile_bucket() -> None:
     assert global_value is not None
     assert global_bucket is not None
     assert global_bucket.scope == "global"
-    assert result.basis["profile_days"] == global_bucket.days
+    assert result.basis["profile_occurrences"] == global_bucket.occurrences
     assert result.basis["profile_samples"] == global_bucket.samples
     assert result.basis["profile_scope"] == global_bucket.scope
 

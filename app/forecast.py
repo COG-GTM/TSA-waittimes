@@ -2,8 +2,9 @@
 
 The forecast combines the recent level and direction of an airport's
 standard-lane observations with an hour-of-week profile built from distinct
-UTC calendar days over the recent history. Recent observations matter most
-for the nearest horizon, but are excluded from the trend when they are stale.
+UTC weekly occurrences over the recent history. Recent observations matter
+most for the nearest horizon, but are excluded from the trend when they are
+stale.
 Observations after the forecast's reference time are discarded before any
 forecast input is calculated.
 """
@@ -13,7 +14,7 @@ from __future__ import annotations
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 HORIZON_MINUTES: tuple[int, ...] = (30, 60, 120)
@@ -24,8 +25,9 @@ CACHE_TTL_SECONDS = 300
 FRESH_MINUTES = 20
 MIN_RECENT_POINTS = 2
 MIN_PROFILE_SAMPLES = 12
+MIN_BUCKET_OCCURRENCES = 2
 STRONG_RECENT_POINTS = 6
-STRONG_BUCKET_DAYS = 3
+STRONG_BUCKET_OCCURRENCES = 3
 MAX_WAIT_SECONDS = 7200
 MAX_SLOPE_SECONDS_PER_MINUTE = 20.0
 TREND_STALE_MINUTES = 30
@@ -65,7 +67,7 @@ class Forecast:
 class ForecastCursor(Protocol):
     """The async cursor operations needed by the forecast query layer."""
 
-    async def execute(self, query: str, params: tuple[str, datetime]) -> object:
+    async def execute(self, query: str, params: tuple[Any, ...]) -> object:
         ...
 
     async def fetchone(self) -> tuple[Any, ...] | None:
@@ -81,12 +83,18 @@ class ProfileBucket:
 
     mean: float
     samples: int
-    dates: frozenset[date]
+    hours: frozenset[datetime]
     scope: str
 
-    @property
-    def days(self) -> int:
-        return len(self.dates)
+
+@dataclass(frozen=True)
+class ProfileSupport:
+    """Summary of observations supporting one profile lookup."""
+
+    mean: float
+    samples: int
+    occurrences: int
+    scope: str
 
 
 FORECAST_SQL = """
@@ -113,9 +121,15 @@ WITH latest AS (
       AND c.lane_type = 'standard'
       AND o.fetched_at > %s
     ORDER BY o.checkpoint_id, o.fetched_at DESC
+), newest AS (
+    SELECT max(fetched_at) AS newest_fetched_at FROM latest
 )
-SELECT max(fetched_at) AS latest_fetched_at, bool_or(is_open) AS any_open
-FROM latest
+SELECT newest.newest_fetched_at,
+       bool_or(latest.is_open) FILTER (
+           WHERE latest.fetched_at >= newest.newest_fetched_at - %s
+       ) AS any_open
+FROM latest CROSS JOIN newest
+GROUP BY newest.newest_fetched_at
 """
 
 METHOD_NOTES = {
@@ -187,20 +201,31 @@ def hour_of_week(dt: datetime) -> int:
     return utc_dt.weekday() * 24 + utc_dt.hour
 
 
+def bucket_occurrences(hours: frozenset[datetime], bucket: int) -> int:
+    """Count distinct occurrences of `bucket` that these sample hours belong to."""
+
+    keys: set[datetime] = set()
+    for hour in hours:
+        delta = (bucket - hour_of_week(hour) + 84) % 168 - 84
+        keys.add(hour + timedelta(hours=delta))
+    return len(keys)
+
+
 def hour_of_week_profile(points: Sequence[ObsPoint]) -> dict[int, ProfileBucket]:
     """Aggregate all observations by UTC hour-of-week bucket."""
 
     buckets: dict[int, list[int]] = {}
-    dates: dict[int, set[date]] = {}
+    hours: dict[int, set[datetime]] = {}
     for point in points:
-        bucket = hour_of_week(point.at)
+        utc_hour = point.at.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+        bucket = hour_of_week(utc_hour)
         buckets.setdefault(bucket, []).append(point.wait_seconds)
-        dates.setdefault(bucket, set()).add(point.at.astimezone(UTC).date())
+        hours.setdefault(bucket, set()).add(utc_hour)
     return {
         bucket: ProfileBucket(
             mean=sum(values) / len(values),
             samples=len(values),
-            dates=frozenset(dates[bucket]),
+            hours=frozenset(hours[bucket]),
             scope="exact",
         )
         for bucket, values in buckets.items()
@@ -214,35 +239,42 @@ def _pooled_bucket(
     samples = sum(value.samples for value in values)
     if samples <= 0:
         return None
-    pooled_dates = frozenset(date_value for value in values for date_value in value.dates)
+    pooled_hours = frozenset(hour for value in values for hour in value.hours)
     return ProfileBucket(
         mean=sum(value.mean * value.samples for value in values) / samples,
         samples=samples,
-        dates=pooled_dates,
+        hours=pooled_hours,
         scope=scope,
     )
 
 
 def profile_lookup(
     profile: dict[int, ProfileBucket], bucket: int
-) -> tuple[float | None, ProfileBucket | None]:
+) -> tuple[float | None, ProfileSupport | None]:
     """Look up a bucket, widening to nearby buckets or the whole profile."""
 
     exact = profile.get(bucket)
-    if exact is not None and exact.days >= 2:
-        return exact.mean, ProfileBucket(exact.mean, exact.samples, exact.dates, "exact")
+    if exact is not None:
+        occurrences = bucket_occurrences(exact.hours, bucket)
+        if occurrences >= MIN_BUCKET_OCCURRENCES:
+            return exact.mean, ProfileSupport(exact.mean, exact.samples, occurrences, "exact")
 
     nearby_buckets = [(bucket + offset) % 168 for offset in (-1, 0, 1)]
     nearby = _pooled_bucket(profile, nearby_buckets, "nearby")
-    if nearby is not None and nearby.days >= 2:
-        return nearby.mean, nearby
+    if nearby is not None:
+        occurrences = bucket_occurrences(nearby.hours, bucket)
+        if occurrences >= MIN_BUCKET_OCCURRENCES:
+            return nearby.mean, ProfileSupport(nearby.mean, nearby.samples, occurrences, "nearby")
 
     total_samples = sum(value.samples for value in profile.values())
     if total_samples >= MIN_PROFILE_SAMPLES:
         all_buckets = list(profile)
         global_bucket = _pooled_bucket(profile, all_buckets, "global")
         if global_bucket is not None:
-            return global_bucket.mean, global_bucket
+            occurrences = bucket_occurrences(global_bucket.hours, bucket)
+            return global_bucket.mean, ProfileSupport(
+                global_bucket.mean, global_bucket.samples, occurrences, "global"
+            )
     return None, None
 
 
@@ -256,7 +288,7 @@ def confidence_label(
     *,
     recent_count: int,
     latest_age_minutes: float | None,
-    bucket_days: int,
+    bucket_occurrences: int,
     bucket_scope: str,
     horizon_minutes: int,
 ) -> str:
@@ -264,7 +296,9 @@ def confidence_label(
 
     fresh = latest_age_minutes is not None and latest_age_minutes <= FRESH_MINUTES
     strong_recent = fresh and recent_count >= STRONG_RECENT_POINTS
-    strong_profile = bucket_days >= STRONG_BUCKET_DAYS and bucket_scope != "global"
+    strong_profile = (
+        bucket_occurrences >= STRONG_BUCKET_OCCURRENCES and bucket_scope != "global"
+    )
     if strong_recent and strong_profile and horizon_minutes <= 60:
         return "high"
     if strong_recent or strong_profile:
@@ -315,7 +349,7 @@ def build_forecast(
         "latest_observation_at": latest.at.astimezone(UTC).isoformat() if latest else None,
         "latest_observation_age_minutes": round(latest_age) if latest_age is not None else None,
         "window_minutes": RECENT_WINDOW_MINUTES,
-        "profile_days": 0,
+        "profile_occurrences": 0,
         "profile_samples": 0,
         "profile_scope": None,
         "standard_lanes_open": lanes_open,
@@ -341,7 +375,7 @@ def build_forecast(
     method = "blend" if have_trend and have_profile else "trend_only" if have_trend else "profile_only"
     horizons: list[HorizonForecast] = []
     labels: list[str] = []
-    profile_support: ProfileBucket | None = None
+    profile_support: ProfileSupport | None = None
     scope_rank = {"exact": 0, "nearby": 1, "global": 2}
     for horizon in HORIZON_MINUTES:
         valid_at = now + timedelta(minutes=horizon)
@@ -355,7 +389,7 @@ def build_forecast(
             or scope_rank[profile_bucket.scope] > scope_rank[profile_support.scope]
             or (
                 scope_rank[profile_bucket.scope] == scope_rank[profile_support.scope]
-                and profile_bucket.days < profile_support.days
+                and profile_bucket.occurrences < profile_support.occurrences
             )
         ):
             profile_support = profile_bucket
@@ -373,7 +407,7 @@ def build_forecast(
         label = confidence_label(
             recent_count=len(recent),
             latest_age_minutes=latest_age,
-            bucket_days=profile_bucket.days if profile_bucket is not None else 0,
+            bucket_occurrences=profile_bucket.occurrences if profile_bucket is not None else 0,
             bucket_scope=profile_bucket.scope if profile_bucket is not None else "",
             horizon_minutes=horizon,
         )
@@ -389,7 +423,7 @@ def build_forecast(
         )
 
     if profile_support is not None:
-        basis["profile_days"] = profile_support.days
+        basis["profile_occurrences"] = profile_support.occurrences
         basis["profile_samples"] = profile_support.samples
         basis["profile_scope"] = profile_support.scope
     return Forecast(
@@ -418,7 +452,10 @@ async def load_lane_state(cur: ForecastCursor, iata: str, now: datetime) -> bool
     """Load whether any standard checkpoint is currently open."""
 
     cutoff = now - timedelta(days=HISTORY_DAYS)
-    await cur.execute(LANE_STATE_SQL, (iata, cutoff))
+    await cur.execute(
+        LANE_STATE_SQL,
+        (iata, cutoff, timedelta(minutes=TREND_STALE_MINUTES)),
+    )
     row = await cur.fetchone()
     if row is None or row[1] is None:
         return None
