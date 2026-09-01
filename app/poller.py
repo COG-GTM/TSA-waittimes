@@ -53,6 +53,7 @@ async def store_result(source: Source, result: FetchResult) -> None:
                 (source.code, ob.checkpoint_name, ob.lane_type),
             )
             cp_row = await cur.fetchone()
+            assert cp_row is not None
             await cur.execute(
                 """
                 INSERT INTO observations

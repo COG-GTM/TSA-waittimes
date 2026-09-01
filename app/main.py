@@ -2,7 +2,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -58,7 +58,7 @@ async def security_headers(request: Request, call_next):
 
 
 def _iso(dt: datetime | None) -> str | None:
-    return dt.astimezone(timezone.utc).isoformat() if dt else None
+    return dt.astimezone(UTC).isoformat() if dt else None
 
 
 LATEST_OBS_SQL = """
@@ -83,7 +83,7 @@ async def api_summary():
             for r in await cur.fetchall()
         }
         await cur.execute(LATEST_OBS_SQL)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for iata, name, lane, wait, is_open, pub_at, fetched_at, attribution, url in await cur.fetchall():
             a = airports.get(iata)
             if a is None:
@@ -124,7 +124,7 @@ async def api_summary():
             "source": "TSA checkpoint travel numbers (tsa.gov/travel/passenger-volumes)",
         }
     return JSONResponse({
-        "generated_at": _iso(datetime.now(timezone.utc)),
+        "generated_at": _iso(datetime.now(UTC)),
         "live_count": live,
         "no_data_count": len(airports) - live,
         "airports": list(airports.values()),
@@ -150,7 +150,7 @@ async def api_airport(iata: str):
             (iata,),
         )
         checkpoints = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for cp_id, cp_name, lane in await cur.fetchall():
             await cur.execute(
                 """
@@ -190,7 +190,7 @@ async def api_airport(iata: str):
                 "history": history,
             })
     return JSONResponse({"airport": airport, "checkpoints": checkpoints,
-                         "generated_at": _iso(datetime.now(timezone.utc))})
+                         "generated_at": _iso(datetime.now(UTC))})
 
 
 @app.get("/healthz")
@@ -207,8 +207,10 @@ async def healthz():
         )
         rows = await cur.fetchall()
         await cur.execute("SELECT count(*) FROM observations")
-        obs_count = (await cur.fetchone())[0]
-    now = datetime.now(timezone.utc)
+        obs_row = await cur.fetchone()
+        assert obs_row is not None
+        obs_count = obs_row[0]
+    now = datetime.now(UTC)
     sources = [
         {
             "source": code,
