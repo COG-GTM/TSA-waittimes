@@ -42,7 +42,9 @@ function renderTravelBanner(tp) {
     el.innerHTML = "<b>" + esc(label) + ": " + esc(tp.name) +
       "</b> — expect longer waits. " + esc(tp.note);
   } else {
-    el.innerHTML = "Upcoming: <b>" + esc(tp.name) + "</b> begins in " +
-      Number(tp.days_until) + " day(s) (" + esc(tp.start) + ").";
+    const days = Number(tp.days_until);
+    el.innerHTML = "Upcoming: <b>" + esc(tp.name) + "</b> begins " +
+      (days === 0 ? "today" : "in " + days + (days === 1 ? " day" : " days")) +
+      " (" + esc(tp.start) + ").";
   }
 }
