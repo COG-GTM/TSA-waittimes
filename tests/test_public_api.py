@@ -207,7 +207,10 @@ async def test_rate_limit_and_reset(client, patched_loaders):
 
 
 @pytest.mark.asyncio
-async def test_fly_client_ips_have_independent_rate_limits(client, patched_loaders):
+async def test_fly_client_ips_have_independent_rate_limits(
+    client, patched_loaders, monkeypatch
+):
+    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", True)
     first_ip = {"Fly-Client-IP": "203.0.113.10"}
     second_ip = {"Fly-Client-IP": "203.0.113.11"}
     responses = [await client.get("/api/v1/status", headers=first_ip) for _ in range(60)]
@@ -215,6 +218,19 @@ async def test_fly_client_ips_have_independent_rate_limits(client, patched_loade
     assert (await client.get("/api/v1/status", headers=first_ip)).status_code == 429
     other_ip = await client.get("/api/v1/status", headers=second_ip)
     assert other_ip.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_direct_clients_share_rate_limit_despite_fly_headers(
+    client, patched_loaders, monkeypatch
+):
+    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", False)
+    first_ip = {"Fly-Client-IP": "203.0.113.10"}
+    second_ip = {"Fly-Client-IP": "203.0.113.11"}
+    responses = [await client.get("/api/v1/status", headers=first_ip) for _ in range(60)]
+    assert all(response.status_code == 200 for response in responses)
+    limited = await client.get("/api/v1/status", headers=second_ip)
+    assert limited.status_code == 429
 
 
 @pytest.mark.asyncio

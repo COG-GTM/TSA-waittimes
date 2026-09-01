@@ -1,5 +1,6 @@
 """Versioned public API and embeddable airport widget."""
 import html
+import os
 import re
 import time
 from datetime import UTC, datetime
@@ -18,6 +19,7 @@ DATA_NOTICE = (
 RATE_LIMIT = 60
 RATE_WINDOW_SECONDS = 60
 IATA_PATTERN = re.compile(r"^[A-Za-z]{3}$")
+TRUST_PROXY_CLIENT_IP = "FLY_APP_NAME" in os.environ
 _rate_limits: dict[str, tuple[float, int]] = {}
 
 v1_app = FastAPI(title="Wait Picture Public API v1")
@@ -38,9 +40,12 @@ def reset_rate_limiter() -> None:
 @v1_app.middleware("http")
 async def rate_limit(request: Request, call_next):
     now = time.monotonic()
-    client_ip = request.headers.get("fly-client-ip") or (
-        request.client.host if request.client else "unknown"
-    )
+    if TRUST_PROXY_CLIENT_IP:
+        client_ip = request.headers.get("fly-client-ip") or (
+            request.client.host if request.client else "unknown"
+        )
+    else:
+        client_ip = request.client.host if request.client else "unknown"
     window_start, count = _rate_limits.get(client_ip, (now, 0))
     if now - window_start >= RATE_WINDOW_SECONDS:
         window_start, count = now, 0
