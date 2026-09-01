@@ -1,10 +1,11 @@
 from datetime import UTC, datetime, timedelta
+from typing import Self
 from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi import HTTPException
 
-from app import analytics, main
+from app import analytics, db, main, poller
 
 
 def test_hour_bucket_rejects_naive_datetime() -> None:
@@ -111,3 +112,61 @@ async def test_typical_endpoint_rejects_invalid_iata_without_echoing_input() -> 
         await main.api_airport_typical(submitted)
     assert exc_info.value.status_code == 404
     assert submitted not in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_roll_up_hours_masks_waits_from_closed_checkpoints(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    hour = datetime(2026, 9, 1, 13, tzinfo=UTC)
+
+    class Cursor:
+        def __init__(self) -> None:
+            self.query = ""
+            self.upsert_query = ""
+            self.upsert_params: list[tuple[object, ...]] = []
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def execute(self, query: str, params: tuple[object, ...]) -> None:
+            self.query = query
+
+        async def fetchall(self) -> list[tuple[str, int, str, datetime, int | None]]:
+            return [
+                ("SEA", 7, "standard", hour, 600),
+                ("SEA", 7, "standard", hour, None),
+            ]
+
+        async def executemany(self, query: str, params: list[tuple[object, ...]]) -> None:
+            self.upsert_query = query
+            self.upsert_params = params
+
+    class Connection:
+        def __init__(self, cursor: Cursor) -> None:
+            self._cursor = cursor
+
+        def cursor(self) -> Cursor:
+            return self._cursor
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+    class Pool:
+        def __init__(self, connection: Connection) -> None:
+            self._connection = connection
+
+        def connection(self) -> Connection:
+            return self._connection
+
+    cursor = Cursor()
+    monkeypatch.setattr(db, "pool", Pool(Connection(cursor)))
+    assert await poller.roll_up_hours([hour]) == 1
+    assert "CASE WHEN o.is_open THEN o.wait_seconds" in cursor.query
+    assert cursor.upsert_params[0][4:7] == (600, 600, 1)

@@ -373,7 +373,9 @@ async def roll_up_hours(hours: Sequence[datetime]) -> int:
         for hour in hours:
             await cur.execute(
                 """
-                SELECT c.airport_iata, o.checkpoint_id, c.lane_type, o.fetched_at, o.wait_seconds
+                SELECT c.airport_iata, o.checkpoint_id, c.lane_type, o.fetched_at,
+                       -- Closed lanes are aggregated as null waits, not zeros.
+                       CASE WHEN o.is_open THEN o.wait_seconds END
                 FROM observations o
                 JOIN checkpoints c ON c.id = o.checkpoint_id
                 WHERE o.fetched_at >= %s AND o.fetched_at < %s
