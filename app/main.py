@@ -34,13 +34,6 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE, "static")), name="
 app.mount("/api/v1", public_api.v1_app)
 templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
 
-# Compatibility aliases for callers of the pre-refactor helpers.
-_today = queries.today
-
-
-async def _travel_period(cur) -> dict | None:
-    return await queries.travel_period(cur, _today())
-
 
 @app.middleware("http")
 async def canonical_host_redirect(request: Request, call_next):
