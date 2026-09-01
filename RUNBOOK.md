@@ -114,10 +114,13 @@ NULL in all three tables, then deletes the payload rows.
 Each successful cleanup emits exactly one JSON log line, for example:
 
 ```text
-{"event":"retention_cleanup","started_at":"2026-09-01T12:00:00+00:00","duration_ms":842,"cutoffs":{"observations":"2026-06-03T12:00:00+00:00","raw_payloads":"2026-08-18T12:00:00+00:00","faa_airport_events":"2026-03-05T12:00:00+00:00","weather_alerts":"2026-03-05T12:00:00+00:00"},"deleted":{"observations":1200,"raw_payloads":900,"faa_airport_events":3,"weather_alerts":8},"raw_payload_refs_cleared":1200}
+{"event": "retention_cleanup", "started_at": "2026-09-01T12:00:00+00:00", "duration_ms": 842, "cutoffs": {"observations": "2026-06-03T12:00:00+00:00", "raw_payloads": "2026-08-18T12:00:00+00:00", "faa_airport_events": "2026-03-05T12:00:00+00:00", "weather_alerts": "2026-03-05T12:00:00+00:00"}, "deleted": {"observations": 1200, "raw_payloads": 900, "faa_airport_events": 3, "weather_alerts": 8}, "raw_payload_refs_cleared": 1200}
 ```
 
 On Fly, use `fly secrets set` to tune the retention windows, rollup cadence,
 lookback, or batch size via the `RETENTION_*`, `ROLLUP_*`,
 `CLEANUP_INTERVAL_SECONDS`, and `CLEANUP_BATCH_LIMIT` environment variables.
+Each table is deleted in batches of `CLEANUP_BATCH_LIMIT` (default 50000) with
+at most 20 passes per table per run, so a very large first cleanup drains over
+successive runs rather than in one long transaction.
 Grep logs with `fly logs | grep '"event": "retention_cleanup"'`.

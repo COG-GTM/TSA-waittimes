@@ -194,9 +194,10 @@ async def _typical_buckets(cur, iata: str) -> list[analytics.TypicalBucket]:
     return analytics.typical_from_hours(await cur.fetchall())
 
 
-async def _airport_exists(cur, iata: str) -> bool:
-    await cur.execute("SELECT 1 FROM airports WHERE iata = %s", (iata,))
-    return await cur.fetchone() is not None
+async def _airport_name(cur, iata: str) -> tuple[str, str] | None:
+    await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
+    row = await cur.fetchone()
+    return (row[0], row[1]) if row is not None else None
 
 
 def _validated_iata(iata: str) -> str:
@@ -438,11 +439,9 @@ async def api_airport_typical(iata: str):
     iata = _validated_iata(iata)
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
-        if not await _airport_exists(cur, iata):
+        airport_row = await _airport_name(cur, iata)
+        if airport_row is None:
             raise HTTPException(404, "unknown airport")
-        await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
-        airport_row = await cur.fetchone()
-        assert airport_row is not None
         buckets = await _typical_buckets(cur, iata)
     payload_buckets = [
         {
