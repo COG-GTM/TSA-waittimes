@@ -1,0 +1,128 @@
+[
+  {
+    "name": "Spring break",
+    "start": "2026-03-15",
+    "end": "2026-04-15",
+    "intensity": "elevated",
+    "note": "Mid-March to mid-April spring break season \u2014 elevated leisure traffic, varies by school district."
+  },
+  {
+    "name": "Memorial Day weekend",
+    "start": "2026-05-22",
+    "end": "2026-05-25",
+    "intensity": "elevated",
+    "note": "Friday through Memorial Day Monday."
+  },
+  {
+    "name": "Independence Day",
+    "start": "2026-07-01",
+    "end": "2026-07-07",
+    "intensity": "elevated",
+    "note": "Week around the Fourth of July."
+  },
+  {
+    "name": "Labor Day weekend",
+    "start": "2026-09-04",
+    "end": "2026-09-07",
+    "intensity": "elevated",
+    "note": "Friday through Labor Day Monday."
+  },
+  {
+    "name": "Thanksgiving",
+    "start": "2026-11-24",
+    "end": "2026-11-29",
+    "intensity": "peak",
+    "note": "Tuesday before Thanksgiving through the Sunday after \u2014 the busiest checkpoint week of the year."
+  },
+  {
+    "name": "Winter holidays",
+    "start": "2026-12-20",
+    "end": "2027-01-02",
+    "intensity": "peak",
+    "note": "Christmas through New Year's Day travel period."
+  },
+  {
+    "name": "Spring break",
+    "start": "2027-03-15",
+    "end": "2027-04-15",
+    "intensity": "elevated",
+    "note": "Mid-March to mid-April spring break season \u2014 elevated leisure traffic, varies by school district."
+  },
+  {
+    "name": "Memorial Day weekend",
+    "start": "2027-05-28",
+    "end": "2027-05-31",
+    "intensity": "elevated",
+    "note": "Friday through Memorial Day Monday."
+  },
+  {
+    "name": "Independence Day",
+    "start": "2027-07-01",
+    "end": "2027-07-07",
+    "intensity": "elevated",
+    "note": "Week around the Fourth of July."
+  },
+  {
+    "name": "Labor Day weekend",
+    "start": "2027-09-03",
+    "end": "2027-09-06",
+    "intensity": "elevated",
+    "note": "Friday through Labor Day Monday."
+  },
+  {
+    "name": "Thanksgiving",
+    "start": "2027-11-23",
+    "end": "2027-11-28",
+    "intensity": "peak",
+    "note": "Tuesday before Thanksgiving through the Sunday after \u2014 the busiest checkpoint week of the year."
+  },
+  {
+    "name": "Winter holidays",
+    "start": "2027-12-20",
+    "end": "2028-01-02",
+    "intensity": "peak",
+    "note": "Christmas through New Year's Day travel period."
+  },
+  {
+    "name": "Spring break",
+    "start": "2028-03-15",
+    "end": "2028-04-15",
+    "intensity": "elevated",
+    "note": "Mid-March to mid-April spring break season \u2014 elevated leisure traffic, varies by school district."
+  },
+  {
+    "name": "Memorial Day weekend",
+    "start": "2028-05-26",
+    "end": "2028-05-29",
+    "intensity": "elevated",
+    "note": "Friday through Memorial Day Monday."
+  },
+  {
+    "name": "Independence Day",
+    "start": "2028-07-01",
+    "end": "2028-07-07",
+    "intensity": "elevated",
+    "note": "Week around the Fourth of July."
+  },
+  {
+    "name": "Labor Day weekend",
+    "start": "2028-09-01",
+    "end": "2028-09-04",
+    "intensity": "elevated",
+    "note": "Friday through Labor Day Monday."
+  },
+  {
+    "name": "Thanksgiving",
+    "start": "2028-11-21",
+    "end": "2028-11-26",
+    "intensity": "peak",
+    "note": "Tuesday before Thanksgiving through the Sunday after \u2014 the busiest checkpoint week of the year."
+  },
+  {
+    "name": "Winter holidays",
+    "start": "2028-12-20",
+    "end": "2029-01-02",
+    "intensity": "peak",
+    "note": "Christmas through New Year's Day travel period."
+  }
+]

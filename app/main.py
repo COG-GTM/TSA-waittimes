@@ -2,7 +2,8 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -10,12 +11,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import db, poller
+from .travel_calendar import TravelPeriod, period_payload
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 STALE_SECONDS = 30 * 60
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
+EASTERN = ZoneInfo("America/New_York")
 
 
 @asynccontextmanager
@@ -59,6 +62,35 @@ async def security_headers(request: Request, call_next):
 
 def _iso(dt: datetime | None) -> str | None:
     return dt.astimezone(UTC).isoformat() if dt else None
+
+
+def _today() -> date:
+    return datetime.now(UTC).astimezone(EASTERN).date()
+
+
+async def _travel_period(cur) -> dict | None:
+    today = _today()
+    await cur.execute(
+        """
+        SELECT name, start_date, end_date, intensity, note
+        FROM travel_periods
+        WHERE end_date >= %s
+        ORDER BY start_date, name
+        LIMIT 1
+        """,
+        (today,),
+    )
+    row = await cur.fetchone()
+    if row is None:
+        return None
+    period = TravelPeriod(
+        name=row[0],
+        start=row[1],
+        end=row[2],
+        intensity=row[3],
+        note=row[4],
+    )
+    return period_payload(period, today)
 
 
 LATEST_OBS_SQL = """
@@ -105,6 +137,7 @@ async def api_summary():
             fetched_iso = _iso(fetched_at)
             if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
                 a["last_fetch"] = fetched_iso
+        travel_period = await _travel_period(cur)
         await cur.execute(
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
@@ -131,6 +164,7 @@ async def api_summary():
         "no_data_count": len(airports) - live,
         "airports": list(airports.values()),
         "tsa_throughput": tsa,
+        "travel_period": travel_period,
     })
 
 
@@ -144,6 +178,7 @@ async def api_airport(iata: str):
         if row is None:
             raise HTTPException(404, "unknown airport")
         airport = {"iata": row[0], "name": row[1], "city": row[2], "state": row[3], "lat": row[4], "lon": row[5]}
+        travel_period = await _travel_period(cur)
         await cur.execute(
             """
             SELECT c.id, c.name, c.lane_type FROM checkpoints c
@@ -200,6 +235,7 @@ async def api_airport(iata: str):
                 "history": history,
             })
     return JSONResponse({"airport": airport, "checkpoints": checkpoints,
+                         "travel_period": travel_period,
                          "generated_at": _iso(datetime.now(UTC))})
 
 

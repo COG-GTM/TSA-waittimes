@@ -5,6 +5,8 @@ import os
 
 from psycopg_pool import AsyncConnectionPool
 
+from .travel_calendar import load_periods
+
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/waits")
 
 pool: AsyncConnectionPool | None = None
@@ -71,6 +73,15 @@ CREATE TABLE IF NOT EXISTS tsa_throughput (
     fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (date)
 );
+
+CREATE TABLE IF NOT EXISTS travel_periods (
+    name TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    intensity TEXT NOT NULL CHECK (intensity IN ('elevated', 'peak')),
+    note TEXT NOT NULL,
+    PRIMARY KEY (name, start_date)
+);
 """
 
 
@@ -81,6 +92,7 @@ async def init() -> None:
     async with pool.connection() as conn:
         await conn.execute(SCHEMA)
     await seed_airports()
+    await seed_travel_periods()
 
 
 async def close() -> None:
@@ -108,4 +120,20 @@ async def seed_airports() -> None:
                     lat = EXCLUDED.lat, lon = EXCLUDED.lon, hub = EXCLUDED.hub
                 """,
                 (a["iata"], a["name"], a["city"], a["state"], a["lat"], a["lon"], a["hub"]),
+            )
+
+
+async def seed_travel_periods() -> None:
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "travel_calendar.json")
+    periods = await asyncio.to_thread(load_periods, path)
+    assert pool is not None
+    async with pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("DELETE FROM travel_periods")
+        for period in periods:
+            await cur.execute(
+                """
+                INSERT INTO travel_periods (name, start_date, end_date, intensity, note)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (period.name, period.start, period.end, period.intensity, period.note),
             )
