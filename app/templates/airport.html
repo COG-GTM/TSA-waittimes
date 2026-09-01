@@ -5,7 +5,10 @@
   <a class="back" href="/">&larr; National map</a>
   <h1 id="airport-title">{{ iata }}</h1>
   <div class="airport-sub" id="airport-sub"></div>
+  <div id="airport-rank" class="airport-rank"></div>
 </section>
+<div id="faa-banner"></div>
+<section id="wx-alerts" class="wx-alerts"></section>
 <section id="checkpoints" class="checkpoints" data-iata="{{ iata }}"></section>
 {% endblock %}
 {% block scripts %}<script src="/static/airport.js"></script>{% endblock %}

@@ -1,9 +1,15 @@
 """Database pool and schema management."""
 import asyncio
 import json
+import logging
 import os
 
 from psycopg_pool import AsyncConnectionPool
+
+from .enplanements import ENPLANEMENTS_PATH, iata_for_locid, load_enplanements
+from .travel_calendar import load_periods
+
+log = logging.getLogger("db")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/waits")
 
@@ -35,6 +41,20 @@ CREATE TABLE IF NOT EXISTS raw_payloads (
     payload JSONB NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS faa_airport_events (
+    id BIGSERIAL PRIMARY KEY,
+    airport_iata TEXT NOT NULL REFERENCES airports(iata),
+    event_type TEXT NOT NULL,
+    reason TEXT,
+    avg_delay_seconds INTEGER,
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
+    update_time TIMESTAMPTZ,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    raw_id BIGINT REFERENCES raw_payloads(id)
+);
+CREATE INDEX IF NOT EXISTS idx_faa_events_time ON faa_airport_events (fetched_at DESC);
+
 CREATE TABLE IF NOT EXISTS checkpoints (
     id SERIAL PRIMARY KEY,
     airport_iata TEXT NOT NULL REFERENCES airports(iata),
@@ -65,11 +85,62 @@ CREATE TABLE IF NOT EXISTS poll_health (
     consecutive_failures INTEGER NOT NULL DEFAULT 0
 );
 
+-- NWS forecast/county zone for each airport, resolved once via api.weather.gov/points.
+CREATE TABLE IF NOT EXISTS airport_nws_zones (
+    airport_iata TEXT PRIMARY KEY REFERENCES airports(iata),
+    forecast_zone TEXT,
+    county_zone TEXT,
+    fire_zone TEXT,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Currently active NWS alerts matched to an airport; rewritten every poll cycle.
+CREATE TABLE IF NOT EXISTS weather_alerts (
+    airport_iata TEXT NOT NULL REFERENCES airports(iata),
+    alert_id TEXT NOT NULL,
+    event TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    urgency TEXT,
+    certainty TEXT,
+    headline TEXT,
+    area_desc TEXT,
+    sender_name TEXT,
+    alert_url TEXT,
+    effective TIMESTAMPTZ,
+    onset TIMESTAMPTZ,
+    expires TIMESTAMPTZ,
+    ends TIMESTAMPTZ,
+    match_basis TEXT NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    raw_id BIGINT REFERENCES raw_payloads(id),
+    PRIMARY KEY (airport_iata, alert_id)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_alerts_airport ON weather_alerts (airport_iata);
+
 CREATE TABLE IF NOT EXISTS tsa_throughput (
     date DATE NOT NULL,
     travelers BIGINT NOT NULL,
     fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (date)
+);
+CREATE TABLE IF NOT EXISTS airport_enplanements (
+    airport_iata TEXT NOT NULL,
+    year INTEGER NOT NULL,
+    enplanements BIGINT NOT NULL,
+    national_rank INTEGER,
+    hub TEXT,
+    source_name TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    PRIMARY KEY (airport_iata, year)
+);
+
+CREATE TABLE IF NOT EXISTS travel_periods (
+    name TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    intensity TEXT NOT NULL CHECK (intensity IN ('elevated', 'peak')),
+    note TEXT NOT NULL,
+    PRIMARY KEY (name, start_date)
 );
 """
 
@@ -81,6 +152,8 @@ async def init() -> None:
     async with pool.connection() as conn:
         await conn.execute(SCHEMA)
     await seed_airports()
+    await seed_enplanements()
+    await seed_travel_periods()
 
 
 async def close() -> None:
@@ -108,4 +181,68 @@ async def seed_airports() -> None:
                     lat = EXCLUDED.lat, lon = EXCLUDED.lon, hub = EXCLUDED.hub
                 """,
                 (a["iata"], a["name"], a["city"], a["state"], a["lat"], a["lon"], a["hub"]),
+            )
+async def seed_enplanements() -> None:
+    try:
+        data = await asyncio.to_thread(load_enplanements)
+        if data is None:
+            log.warning("enplanements data file is missing: %s", ENPLANEMENTS_PATH)
+            return
+        year = data["year"]
+        source_name = data["source_name"]
+        source_url = data["source_url"]
+        airports = data["airports"]
+        if not isinstance(year, int) or isinstance(year, bool) or not isinstance(source_name, str) or not isinstance(source_url, str):
+            raise TypeError("invalid enplanements metadata")
+        if not isinstance(airports, list):
+            raise TypeError("invalid enplanements airports")
+        assert pool is not None
+        async with pool.connection() as conn, conn.cursor() as cur:
+            seeded_codes: list[str] = []
+            for airport in airports:
+                if not isinstance(airport, dict):
+                    raise TypeError("invalid enplanements airport record")
+                locid = airport["locid"]
+                if not isinstance(locid, str):
+                    raise TypeError("invalid enplanements airport locid")
+                airport_iata = iata_for_locid(locid)
+                seeded_codes.append(airport_iata)
+                await cur.execute(
+                    """
+                    INSERT INTO airport_enplanements
+                        (airport_iata, year, enplanements, national_rank, hub, source_name, source_url)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (airport_iata, year) DO UPDATE SET
+                        enplanements = EXCLUDED.enplanements, national_rank = EXCLUDED.national_rank,
+                        hub = EXCLUDED.hub, source_name = EXCLUDED.source_name, source_url = EXCLUDED.source_url
+                    """,
+                    (
+                        airport_iata, year, airport["enplanements"], airport["rank"], airport["hub"],
+                        source_name, source_url,
+                    ),
+                )
+            await cur.execute(
+                """
+                DELETE FROM airport_enplanements
+                WHERE year = %s AND airport_iata <> ALL(%s)
+                """,
+                (year, seeded_codes),
+            )
+    except Exception as err:  # noqa: BLE001 - invalid optional data must not break startup
+        log.warning("could not seed enplanements: %s", err)
+
+
+async def seed_travel_periods() -> None:
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "travel_calendar.json")
+    periods = await asyncio.to_thread(load_periods, path)
+    assert pool is not None
+    async with pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("DELETE FROM travel_periods")
+        for period in periods:
+            await cur.execute(
+                """
+                INSERT INTO travel_periods (name, start_date, end_date, intensity, note)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (period.name, period.start, period.end, period.intensity, period.note),
             )

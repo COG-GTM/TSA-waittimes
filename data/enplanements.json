@@ -1,0 +1,3087 @@
+{
+  "year": 2024,
+  "source_name": "FAA CY2024 Commercial Service Enplanements (all commercial service airports)",
+  "source_page": "https://www.faa.gov/airports/planning_capacity/passenger_allcargo_stats/passenger",
+  "source_url": "https://www.faa.gov/airports/planning_capacity/passenger_allcargo_stats/passenger/arp-cy2024-commercial-service-enplanements.xlsx",
+  "retrieved_at": "2026-09-01T16:13:17.848517+00:00",
+  "airports": [
+    {
+      "locid": "ATL",
+      "rank": 1,
+      "enplanements": 52511402,
+      "hub": "L"
+    },
+    {
+      "locid": "DFW",
+      "rank": 2,
+      "enplanements": 42351316,
+      "hub": "L"
+    },
+    {
+      "locid": "DEN",
+      "rank": 3,
+      "enplanements": 40012895,
+      "hub": "L"
+    },
+    {
+      "locid": "ORD",
+      "rank": 4,
+      "enplanements": 38575693,
+      "hub": "L"
+    },
+    {
+      "locid": "LAX",
+      "rank": 5,
+      "enplanements": 37760834,
+      "hub": "L"
+    },
+    {
+      "locid": "JFK",
+      "rank": 6,
+      "enplanements": 31466102,
+      "hub": "L"
+    },
+    {
+      "locid": "CLT",
+      "rank": 7,
+      "enplanements": 28523822,
+      "hub": "L"
+    },
+    {
+      "locid": "LAS",
+      "rank": 8,
+      "enplanements": 28244966,
+      "hub": "L"
+    },
+    {
+      "locid": "MCO",
+      "rank": 9,
+      "enplanements": 27859783,
+      "hub": "L"
+    },
+    {
+      "locid": "MIA",
+      "rank": 10,
+      "enplanements": 26588002,
+      "hub": "L"
+    },
+    {
+      "locid": "PHX",
+      "rank": 11,
+      "enplanements": 25595723,
+      "hub": "L"
+    },
+    {
+      "locid": "SEA",
+      "rank": 12,
+      "enplanements": 25414592,
+      "hub": "L"
+    },
+    {
+      "locid": "SFO",
+      "rank": 13,
+      "enplanements": 25078968,
+      "hub": "L"
+    },
+    {
+      "locid": "EWR",
+      "rank": 14,
+      "enplanements": 24544320,
+      "hub": "L"
+    },
+    {
+      "locid": "IAH",
+      "rank": 15,
+      "enplanements": 23349157,
+      "hub": "L"
+    },
+    {
+      "locid": "BOS",
+      "rank": 16,
+      "enplanements": 21090721,
+      "hub": "L"
+    },
+    {
+      "locid": "MSP",
+      "rank": 17,
+      "enplanements": 18054481,
+      "hub": "L"
+    },
+    {
+      "locid": "FLL",
+      "rank": 18,
+      "enplanements": 17096131,
+      "hub": "L"
+    },
+    {
+      "locid": "LGA",
+      "rank": 19,
+      "enplanements": 16715567,
+      "hub": "L"
+    },
+    {
+      "locid": "DTW",
+      "rank": 20,
+      "enplanements": 16110696,
+      "hub": "L"
+    },
+    {
+      "locid": "PHL",
+      "rank": 21,
+      "enplanements": 15102261,
+      "hub": "L"
+    },
+    {
+      "locid": "SLC",
+      "rank": 22,
+      "enplanements": 13543570,
+      "hub": "L"
+    },
+    {
+      "locid": "BWI",
+      "rank": 23,
+      "enplanements": 13221461,
+      "hub": "L"
+    },
+    {
+      "locid": "IAD",
+      "rank": 24,
+      "enplanements": 13003234,
+      "hub": "L"
+    },
+    {
+      "locid": "SAN",
+      "rank": 25,
+      "enplanements": 12780013,
+      "hub": "L"
+    },
+    {
+      "locid": "DCA",
+      "rank": 26,
+      "enplanements": 12750892,
+      "hub": "L"
+    },
+    {
+      "locid": "TPA",
+      "rank": 27,
+      "enplanements": 12075591,
+      "hub": "L"
+    },
+    {
+      "locid": "BNA",
+      "rank": 28,
+      "enplanements": 12058688,
+      "hub": "L"
+    },
+    {
+      "locid": "AUS",
+      "rank": 29,
+      "enplanements": 10678073,
+      "hub": "L"
+    },
+    {
+      "locid": "HNL",
+      "rank": 30,
+      "enplanements": 10449022,
+      "hub": "L"
+    },
+    {
+      "locid": "MDW",
+      "rank": 31,
+      "enplanements": 10360093,
+      "hub": "L"
+    },
+    {
+      "locid": "DAL",
+      "rank": 32,
+      "enplanements": 8654991,
+      "hub": "M"
+    },
+    {
+      "locid": "PDX",
+      "rank": 33,
+      "enplanements": 8639088,
+      "hub": "M"
+    },
+    {
+      "locid": "STL",
+      "rank": 34,
+      "enplanements": 7807362,
+      "hub": "M"
+    },
+    {
+      "locid": "RDU",
+      "rank": 35,
+      "enplanements": 7584394,
+      "hub": "M"
+    },
+    {
+      "locid": "HOU",
+      "rank": 36,
+      "enplanements": 7116967,
+      "hub": "M"
+    },
+    {
+      "locid": "SMF",
+      "rank": 37,
+      "enplanements": 6679426,
+      "hub": "M"
+    },
+    {
+      "locid": "MSY",
+      "rank": 38,
+      "enplanements": 6537092,
+      "hub": "M"
+    },
+    {
+      "locid": "SJU",
+      "rank": 39,
+      "enplanements": 6490669,
+      "hub": "M"
+    },
+    {
+      "locid": "MCI",
+      "rank": 40,
+      "enplanements": 5915078,
+      "hub": "M"
+    },
+    {
+      "locid": "SJC",
+      "rank": 41,
+      "enplanements": 5822019,
+      "hub": "M"
+    },
+    {
+      "locid": "SAT",
+      "rank": 42,
+      "enplanements": 5466684,
+      "hub": "M"
+    },
+    {
+      "locid": "RSW",
+      "rank": 43,
+      "enplanements": 5425293,
+      "hub": "M"
+    },
+    {
+      "locid": "SNA",
+      "rank": 44,
+      "enplanements": 5370273,
+      "hub": "M"
+    },
+    {
+      "locid": "OAK",
+      "rank": 45,
+      "enplanements": 5292736,
+      "hub": "M"
+    },
+    {
+      "locid": "IND",
+      "rank": 46,
+      "enplanements": 5181947,
+      "hub": "M"
+    },
+    {
+      "locid": "CLE",
+      "rank": 47,
+      "enplanements": 4950345,
+      "hub": "M"
+    },
+    {
+      "locid": "PIT",
+      "rank": 48,
+      "enplanements": 4862376,
+      "hub": "M"
+    },
+    {
+      "locid": "CVG",
+      "rank": 49,
+      "enplanements": 4500414,
+      "hub": "M"
+    },
+    {
+      "locid": "CMH",
+      "rank": 50,
+      "enplanements": 4387395,
+      "hub": "M"
+    },
+    {
+      "locid": "PBI",
+      "rank": 51,
+      "enplanements": 4127211,
+      "hub": "M"
+    },
+    {
+      "locid": "JAX",
+      "rank": 52,
+      "enplanements": 3749791,
+      "hub": "M"
+    },
+    {
+      "locid": "ONT",
+      "rank": 53,
+      "enplanements": 3494554,
+      "hub": "M"
+    },
+    {
+      "locid": "OGG",
+      "rank": 54,
+      "enplanements": 3415615,
+      "hub": "M"
+    },
+    {
+      "locid": "BUR",
+      "rank": 55,
+      "enplanements": 3383237,
+      "hub": "M"
+    },
+    {
+      "locid": "BDL",
+      "rank": 56,
+      "enplanements": 3285194,
+      "hub": "M"
+    },
+    {
+      "locid": "CHS",
+      "rank": 57,
+      "enplanements": 3115194,
+      "hub": "M"
+    },
+    {
+      "locid": "MKE",
+      "rank": 58,
+      "enplanements": 3104054,
+      "hub": "M"
+    },
+    {
+      "locid": "ANC",
+      "rank": 59,
+      "enplanements": 2767856,
+      "hub": "M"
+    },
+    {
+      "locid": "ABQ",
+      "rank": 60,
+      "enplanements": 2690218,
+      "hub": "M"
+    },
+    {
+      "locid": "OMA",
+      "rank": 61,
+      "enplanements": 2583212,
+      "hub": "M"
+    },
+    {
+      "locid": "BUF",
+      "rank": 62,
+      "enplanements": 2499295,
+      "hub": "M"
+    },
+    {
+      "locid": "BOI",
+      "rank": 63,
+      "enplanements": 2475370,
+      "hub": "M"
+    },
+    {
+      "locid": "RIC",
+      "rank": 64,
+      "enplanements": 2456422,
+      "hub": "S"
+    },
+    {
+      "locid": "ORF",
+      "rank": 65,
+      "enplanements": 2444897,
+      "hub": "S"
+    },
+    {
+      "locid": "MEM",
+      "rank": 66,
+      "enplanements": 2439366,
+      "hub": "S"
+    },
+    {
+      "locid": "RNO",
+      "rank": 67,
+      "enplanements": 2377780,
+      "hub": "S"
+    },
+    {
+      "locid": "SDF",
+      "rank": 68,
+      "enplanements": 2343305,
+      "hub": "S"
+    },
+    {
+      "locid": "OKC",
+      "rank": 69,
+      "enplanements": 2243575,
+      "hub": "S"
+    },
+    {
+      "locid": "SRQ",
+      "rank": 70,
+      "enplanements": 2112417,
+      "hub": "S"
+    },
+    {
+      "locid": "ELP",
+      "rank": 71,
+      "enplanements": 2071894,
+      "hub": "S"
+    },
+    {
+      "locid": "GRR",
+      "rank": 72,
+      "enplanements": 2065053,
+      "hub": "S"
+    },
+    {
+      "locid": "GEG",
+      "rank": 73,
+      "enplanements": 2064142,
+      "hub": "S"
+    },
+    {
+      "locid": "LGB",
+      "rank": 74,
+      "enplanements": 2031810,
+      "hub": "S"
+    },
+    {
+      "locid": "KOA",
+      "rank": 75,
+      "enplanements": 2023899,
+      "hub": "S"
+    },
+    {
+      "locid": "SAV",
+      "rank": 76,
+      "enplanements": 2020753,
+      "hub": "S"
+    },
+    {
+      "locid": "PVD",
+      "rank": 77,
+      "enplanements": 1984916,
+      "hub": "S"
+    },
+    {
+      "locid": "TUS",
+      "rank": 78,
+      "enplanements": 1959789,
+      "hub": "S"
+    },
+    {
+      "locid": "MYR",
+      "rank": 79,
+      "enplanements": 1894929,
+      "hub": "S"
+    },
+    {
+      "locid": "LIH",
+      "rank": 80,
+      "enplanements": 1776627,
+      "hub": "S"
+    },
+    {
+      "locid": "TYS",
+      "rank": 81,
+      "enplanements": 1639080,
+      "hub": "S"
+    },
+    {
+      "locid": "TUL",
+      "rank": 82,
+      "enplanements": 1627181,
+      "hub": "S"
+    },
+    {
+      "locid": "PSP",
+      "rank": 83,
+      "enplanements": 1617586,
+      "hub": "S"
+    },
+    {
+      "locid": "BHM",
+      "rank": 84,
+      "enplanements": 1596510,
+      "hub": "S"
+    },
+    {
+      "locid": "DSM",
+      "rank": 85,
+      "enplanements": 1555454,
+      "hub": "S"
+    },
+    {
+      "locid": "PNS",
+      "rank": 86,
+      "enplanements": 1528204,
+      "hub": "S"
+    },
+    {
+      "locid": "ALB",
+      "rank": 87,
+      "enplanements": 1490673,
+      "hub": "S"
+    },
+    {
+      "locid": "SYR",
+      "rank": 88,
+      "enplanements": 1486554,
+      "hub": "S"
+    },
+    {
+      "locid": "SFB",
+      "rank": 89,
+      "enplanements": 1412954,
+      "hub": "S"
+    },
+    {
+      "locid": "GSP",
+      "rank": 90,
+      "enplanements": 1412702,
+      "hub": "S"
+    },
+    {
+      "locid": "ROC",
+      "rank": 91,
+      "enplanements": 1331837,
+      "hub": "S"
+    },
+    {
+      "locid": "BZN",
+      "rank": 92,
+      "enplanements": 1321790,
+      "hub": "S"
+    },
+    {
+      "locid": "FAT",
+      "rank": 93,
+      "enplanements": 1318250,
+      "hub": "S"
+    },
+    {
+      "locid": "COS",
+      "rank": 94,
+      "enplanements": 1248261,
+      "hub": "S"
+    },
+    {
+      "locid": "PIE",
+      "rank": 95,
+      "enplanements": 1228048,
+      "hub": "S"
+    },
+    {
+      "locid": "PWM",
+      "rank": 96,
+      "enplanements": 1221913,
+      "hub": "S"
+    },
+    {
+      "locid": "HPN",
+      "rank": 97,
+      "enplanements": 1182384,
+      "hub": "S"
+    },
+    {
+      "locid": "VPS",
+      "rank": 98,
+      "enplanements": 1164880,
+      "hub": "S"
+    },
+    {
+      "locid": "MSN",
+      "rank": 99,
+      "enplanements": 1156399,
+      "hub": "S"
+    },
+    {
+      "locid": "LIT",
+      "rank": 100,
+      "enplanements": 1145693,
+      "hub": "S"
+    },
+    {
+      "locid": "XNA",
+      "rank": 101,
+      "enplanements": 1123106,
+      "hub": "S"
+    },
+    {
+      "locid": "AVL",
+      "rank": 102,
+      "enplanements": 1096465,
+      "hub": "S"
+    },
+    {
+      "locid": "GSO",
+      "rank": 103,
+      "enplanements": 985563,
+      "hub": "S"
+    },
+    {
+      "locid": "IWA",
+      "rank": 104,
+      "enplanements": 978296,
+      "hub": "S"
+    },
+    {
+      "locid": "PGD",
+      "rank": 105,
+      "enplanements": 957136,
+      "hub": "S"
+    },
+    {
+      "locid": "GUM",
+      "rank": 106,
+      "enplanements": 932832,
+      "hub": "S"
+    },
+    {
+      "locid": "ECP",
+      "rank": 107,
+      "enplanements": 918470,
+      "hub": "S"
+    },
+    {
+      "locid": "ICT",
+      "rank": 108,
+      "enplanements": 885585,
+      "hub": "S"
+    },
+    {
+      "locid": "EUG",
+      "rank": 109,
+      "enplanements": 824952,
+      "hub": "S"
+    },
+    {
+      "locid": "STT",
+      "rank": 110,
+      "enplanements": 821945,
+      "hub": "S"
+    },
+    {
+      "locid": "HSV",
+      "rank": 111,
+      "enplanements": 804665,
+      "hub": "S"
+    },
+    {
+      "locid": "LEX",
+      "rank": 112,
+      "enplanements": 776297,
+      "hub": "S"
+    },
+    {
+      "locid": "MAF",
+      "rank": 113,
+      "enplanements": 761865,
+      "hub": "S"
+    },
+    {
+      "locid": "CID",
+      "rank": 114,
+      "enplanements": 759978,
+      "hub": "S"
+    },
+    {
+      "locid": "EYW",
+      "rank": 115,
+      "enplanements": 740762,
+      "hub": "S"
+    },
+    {
+      "locid": "ILM",
+      "rank": 116,
+      "enplanements": 737065,
+      "hub": "S"
+    },
+    {
+      "locid": "MDT",
+      "rank": 117,
+      "enplanements": 727163,
+      "hub": "S"
+    },
+    {
+      "locid": "SGF",
+      "rank": 118,
+      "enplanements": 702338,
+      "hub": "S"
+    },
+    {
+      "locid": "FSD",
+      "rank": 119,
+      "enplanements": 701353,
+      "hub": "S"
+    },
+    {
+      "locid": "SBA",
+      "rank": 120,
+      "enplanements": 696396,
+      "hub": "S"
+    },
+    {
+      "locid": "ISP",
+      "rank": 121,
+      "enplanements": 682804,
+      "hub": "S"
+    },
+    {
+      "locid": "ITO",
+      "rank": 122,
+      "enplanements": 680640,
+      "hub": "S"
+    },
+    {
+      "locid": "BTV",
+      "rank": 123,
+      "enplanements": 670636,
+      "hub": "S"
+    },
+    {
+      "locid": "CAE",
+      "rank": 124,
+      "enplanements": 654460,
+      "hub": "S"
+    },
+    {
+      "locid": "MHT",
+      "rank": 125,
+      "enplanements": 633257,
+      "hub": "S"
+    },
+    {
+      "locid": "MFE",
+      "rank": 126,
+      "enplanements": 625670,
+      "hub": "S"
+    },
+    {
+      "locid": "DAY",
+      "rank": 127,
+      "enplanements": 624995,
+      "hub": "S"
+    },
+    {
+      "locid": "JAN",
+      "rank": 128,
+      "enplanements": 616695,
+      "hub": "S"
+    },
+    {
+      "locid": "HRL",
+      "rank": 129,
+      "enplanements": 603561,
+      "hub": "S"
+    },
+    {
+      "locid": "RDM",
+      "rank": 130,
+      "enplanements": 601152,
+      "hub": "S"
+    },
+    {
+      "locid": "HVN",
+      "rank": 131,
+      "enplanements": 589409,
+      "hub": "S"
+    },
+    {
+      "locid": "FAI",
+      "rank": 132,
+      "enplanements": 574012,
+      "hub": "S"
+    },
+    {
+      "locid": "LBB",
+      "rank": 133,
+      "enplanements": 563180,
+      "hub": "S"
+    },
+    {
+      "locid": "CHA",
+      "rank": 134,
+      "enplanements": 557741,
+      "hub": "S"
+    },
+    {
+      "locid": "FAR",
+      "rank": 135,
+      "enplanements": 552860,
+      "hub": "S"
+    },
+    {
+      "locid": "ATW",
+      "rank": 136,
+      "enplanements": 540349,
+      "hub": "S"
+    },
+    {
+      "locid": "JAC",
+      "rank": 137,
+      "enplanements": 518754,
+      "hub": "S"
+    },
+    {
+      "locid": "MSO",
+      "rank": 138,
+      "enplanements": 511553,
+      "hub": "S"
+    },
+    {
+      "locid": "GPI",
+      "rank": 139,
+      "enplanements": 503816,
+      "hub": "S"
+    },
+    {
+      "locid": "MFR",
+      "rank": 140,
+      "enplanements": 503733,
+      "hub": "S"
+    },
+    {
+      "locid": "ACY",
+      "rank": 141,
+      "enplanements": 489848,
+      "hub": "N"
+    },
+    {
+      "locid": "PSC",
+      "rank": 142,
+      "enplanements": 476639,
+      "hub": "N"
+    },
+    {
+      "locid": "BIL",
+      "rank": 143,
+      "enplanements": 475334,
+      "hub": "N"
+    },
+    {
+      "locid": "TLH",
+      "rank": 144,
+      "enplanements": 469318,
+      "hub": "N"
+    },
+    {
+      "locid": "PVU",
+      "rank": 145,
+      "enplanements": 455219,
+      "hub": "N"
+    },
+    {
+      "locid": "SBN",
+      "rank": 146,
+      "enplanements": 454920,
+      "hub": "N"
+    },
+    {
+      "locid": "ABE",
+      "rank": 147,
+      "enplanements": 447899,
+      "hub": "N"
+    },
+    {
+      "locid": "JNU",
+      "rank": 148,
+      "enplanements": 436457,
+      "hub": "N"
+    },
+    {
+      "locid": "GPT",
+      "rank": 149,
+      "enplanements": 424624,
+      "hub": "N"
+    },
+    {
+      "locid": "FWA",
+      "rank": 150,
+      "enplanements": 424491,
+      "hub": "N"
+    },
+    {
+      "locid": "BTR",
+      "rank": 151,
+      "enplanements": 419446,
+      "hub": "N"
+    },
+    {
+      "locid": "RAP",
+      "rank": 152,
+      "enplanements": 418183,
+      "hub": "N"
+    },
+    {
+      "locid": "AMA",
+      "rank": 153,
+      "enplanements": 402315,
+      "hub": "N"
+    },
+    {
+      "locid": "TVC",
+      "rank": 154,
+      "enplanements": 393108,
+      "hub": "N"
+    },
+    {
+      "locid": "STS",
+      "rank": 155,
+      "enplanements": 382556,
+      "hub": "N"
+    },
+    {
+      "locid": "ROA",
+      "rank": 156,
+      "enplanements": 382103,
+      "hub": "N"
+    },
+    {
+      "locid": "CAK",
+      "rank": 157,
+      "enplanements": 380232,
+      "hub": "N"
+    },
+    {
+      "locid": "BGR",
+      "rank": 158,
+      "enplanements": 376456,
+      "hub": "N"
+    },
+    {
+      "locid": "CRP",
+      "rank": 159,
+      "enplanements": 369393,
+      "hub": "N"
+    },
+    {
+      "locid": "SBP",
+      "rank": 160,
+      "enplanements": 366428,
+      "hub": "N"
+    },
+    {
+      "locid": "BQN",
+      "rank": 161,
+      "enplanements": 360645,
+      "hub": "N"
+    },
+    {
+      "locid": "SHV",
+      "rank": 162,
+      "enplanements": 352281,
+      "hub": "N"
+    },
+    {
+      "locid": "CHO",
+      "rank": 163,
+      "enplanements": 351138,
+      "hub": "N"
+    },
+    {
+      "locid": "ASE",
+      "rank": 164,
+      "enplanements": 349781,
+      "hub": "N"
+    },
+    {
+      "locid": "MLB",
+      "rank": 165,
+      "enplanements": 348283,
+      "hub": "N"
+    },
+    {
+      "locid": "PIA",
+      "rank": 166,
+      "enplanements": 343114,
+      "hub": "N"
+    },
+    {
+      "locid": "GRB",
+      "rank": 167,
+      "enplanements": 338127,
+      "hub": "N"
+    },
+    {
+      "locid": "DAB",
+      "rank": 168,
+      "enplanements": 337763,
+      "hub": "N"
+    },
+    {
+      "locid": "MLI",
+      "rank": 169,
+      "enplanements": 326888,
+      "hub": "N"
+    },
+    {
+      "locid": "MOB",
+      "rank": 170,
+      "enplanements": 314406,
+      "hub": "N"
+    },
+    {
+      "locid": "MRY",
+      "rank": 171,
+      "enplanements": 305434,
+      "hub": "N"
+    },
+    {
+      "locid": "IDA",
+      "rank": 172,
+      "enplanements": 301674,
+      "hub": "N"
+    },
+    {
+      "locid": "AGS",
+      "rank": 173,
+      "enplanements": 299141,
+      "hub": "N"
+    },
+    {
+      "locid": "BIS",
+      "rank": 174,
+      "enplanements": 295900,
+      "hub": "N"
+    },
+    {
+      "locid": "GNV",
+      "rank": 175,
+      "enplanements": 290563,
+      "hub": "N"
+    },
+    {
+      "locid": "FNT",
+      "rank": 176,
+      "enplanements": 285088,
+      "hub": "N"
+    },
+    {
+      "locid": "EGE",
+      "rank": 177,
+      "enplanements": 282849,
+      "hub": "N"
+    },
+    {
+      "locid": "PAE",
+      "rank": 178,
+      "enplanements": 275996,
+      "hub": "N"
+    },
+    {
+      "locid": "GJT",
+      "rank": 179,
+      "enplanements": 270935,
+      "hub": "N"
+    },
+    {
+      "locid": "BLI",
+      "rank": 180,
+      "enplanements": 266703,
+      "hub": "N"
+    },
+    {
+      "locid": "STX",
+      "rank": 181,
+      "enplanements": 265243,
+      "hub": "N"
+    },
+    {
+      "locid": "MTJ",
+      "rank": 182,
+      "enplanements": 264973,
+      "hub": "N"
+    },
+    {
+      "locid": "LFT",
+      "rank": 183,
+      "enplanements": 264471,
+      "hub": "N"
+    },
+    {
+      "locid": "DRO",
+      "rank": 184,
+      "enplanements": 250640,
+      "hub": "N"
+    },
+    {
+      "locid": "TTN",
+      "rank": 185,
+      "enplanements": 241950,
+      "hub": "N"
+    },
+    {
+      "locid": "GSN",
+      "rank": 186,
+      "enplanements": 234042,
+      "hub": "N"
+    },
+    {
+      "locid": "TRI",
+      "rank": 187,
+      "enplanements": 229860,
+      "hub": "N"
+    },
+    {
+      "locid": "HDN",
+      "rank": 188,
+      "enplanements": 226830,
+      "hub": "N"
+    },
+    {
+      "locid": "AVP",
+      "rank": 189,
+      "enplanements": 219572,
+      "hub": "N"
+    },
+    {
+      "locid": "AEX",
+      "rank": 190,
+      "enplanements": 204603,
+      "hub": "N"
+    },
+    {
+      "locid": "CRW",
+      "rank": 191,
+      "enplanements": 202303,
+      "hub": "N"
+    },
+    {
+      "locid": "BFL",
+      "rank": 192,
+      "enplanements": 195148,
+      "hub": "N"
+    },
+    {
+      "locid": "MGM",
+      "rank": 193,
+      "enplanements": 193746,
+      "hub": "N"
+    },
+    {
+      "locid": "EVV",
+      "rank": 194,
+      "enplanements": 189706,
+      "hub": "N"
+    },
+    {
+      "locid": "BRO",
+      "rank": 195,
+      "enplanements": 188157,
+      "hub": "N"
+    },
+    {
+      "locid": "GTF",
+      "rank": 196,
+      "enplanements": 186778,
+      "hub": "N"
+    },
+    {
+      "locid": "SAF",
+      "rank": 197,
+      "enplanements": 180248,
+      "hub": "N"
+    },
+    {
+      "locid": "LRD",
+      "rank": 198,
+      "enplanements": 172726,
+      "hub": "N"
+    },
+    {
+      "locid": "MOT",
+      "rank": 199,
+      "enplanements": 169463,
+      "hub": "N"
+    },
+    {
+      "locid": "FAY",
+      "rank": 200,
+      "enplanements": 168117,
+      "hub": "N"
+    },
+    {
+      "locid": "BET",
+      "rank": 201,
+      "enplanements": 165846,
+      "hub": "N"
+    },
+    {
+      "locid": "BMI",
+      "rank": 202,
+      "enplanements": 161971,
+      "hub": "N"
+    },
+    {
+      "locid": "SGU",
+      "rank": 203,
+      "enplanements": 161201,
+      "hub": "N"
+    },
+    {
+      "locid": "ACK",
+      "rank": 204,
+      "enplanements": 154173,
+      "hub": "N"
+    },
+    {
+      "locid": "BLV",
+      "rank": 205,
+      "enplanements": 152632,
+      "hub": "N"
+    },
+    {
+      "locid": "KTN",
+      "rank": 206,
+      "enplanements": 152082,
+      "hub": "N"
+    },
+    {
+      "locid": "OAJ",
+      "rank": 207,
+      "enplanements": 145901,
+      "hub": "N"
+    },
+    {
+      "locid": "SWF",
+      "rank": 208,
+      "enplanements": 143310,
+      "hub": "N"
+    },
+    {
+      "locid": "LCK",
+      "rank": 209,
+      "enplanements": 143035,
+      "hub": "N"
+    },
+    {
+      "locid": "PSE",
+      "rank": 210,
+      "enplanements": 137553,
+      "hub": "N"
+    },
+    {
+      "locid": "DLH",
+      "rank": 211,
+      "enplanements": 135966,
+      "hub": "N"
+    },
+    {
+      "locid": "UNV",
+      "rank": 212,
+      "enplanements": 134128,
+      "hub": "N"
+    },
+    {
+      "locid": "ACV",
+      "rank": 213,
+      "enplanements": 133682,
+      "hub": "N"
+    },
+    {
+      "locid": "RFD",
+      "rank": 214,
+      "enplanements": 132154,
+      "hub": "N"
+    },
+    {
+      "locid": "JQF",
+      "rank": 215,
+      "enplanements": 132000,
+      "hub": "N"
+    },
+    {
+      "locid": "LNK",
+      "rank": 216,
+      "enplanements": 129968,
+      "hub": "N"
+    },
+    {
+      "locid": "ILG",
+      "rank": 217,
+      "enplanements": 125071,
+      "hub": "N"
+    },
+    {
+      "locid": "LAN",
+      "rank": 218,
+      "enplanements": 123608,
+      "hub": "N"
+    },
+    {
+      "locid": "SUN",
+      "rank": 219,
+      "enplanements": 121123,
+      "hub": "N"
+    },
+    {
+      "locid": "GRK",
+      "rank": 221,
+      "enplanements": 117523,
+      "hub": "N"
+    },
+    {
+      "locid": "ORH",
+      "rank": 222,
+      "enplanements": 112872,
+      "hub": "N"
+    },
+    {
+      "locid": "MBS",
+      "rank": 223,
+      "enplanements": 110822,
+      "hub": "N"
+    },
+    {
+      "locid": "HXD",
+      "rank": 224,
+      "enplanements": 108775,
+      "hub": "N"
+    },
+    {
+      "locid": "MLU",
+      "rank": 225,
+      "enplanements": 105274,
+      "hub": "N"
+    },
+    {
+      "locid": "COU",
+      "rank": 226,
+      "enplanements": 103081,
+      "hub": "N"
+    },
+    {
+      "locid": "HLN",
+      "rank": 227,
+      "enplanements": 101591,
+      "hub": "N"
+    },
+    {
+      "locid": "PSM",
+      "rank": 228,
+      "enplanements": 100298,
+      "hub": "N"
+    },
+    {
+      "locid": "XWA",
+      "rank": 229,
+      "enplanements": 99735,
+      "hub": "N"
+    },
+    {
+      "locid": "CPR",
+      "rank": 230,
+      "enplanements": 99658,
+      "hub": "N"
+    },
+    {
+      "locid": "RST",
+      "rank": 231,
+      "enplanements": 98537,
+      "hub": "N"
+    },
+    {
+      "locid": "SIT",
+      "rank": 232,
+      "enplanements": 98066,
+      "hub": "N"
+    },
+    {
+      "locid": "SCC",
+      "rank": 233,
+      "enplanements": 96967,
+      "hub": "N"
+    },
+    {
+      "locid": "ABI",
+      "rank": 234,
+      "enplanements": 94579,
+      "hub": "N"
+    },
+    {
+      "locid": "HTS",
+      "rank": 235,
+      "enplanements": 93330,
+      "hub": "N"
+    },
+    {
+      "locid": "PBG",
+      "rank": 236,
+      "enplanements": 92960,
+      "hub": "N"
+    },
+    {
+      "locid": "AZO",
+      "rank": 237,
+      "enplanements": 92510,
+      "hub": "N"
+    },
+    {
+      "locid": "GFK",
+      "rank": 238,
+      "enplanements": 92482,
+      "hub": "N"
+    },
+    {
+      "locid": "LCH",
+      "rank": 239,
+      "enplanements": 90791,
+      "hub": "N"
+    },
+    {
+      "locid": "CWA",
+      "rank": 240,
+      "enplanements": 90087,
+      "hub": "N"
+    },
+    {
+      "locid": "RDD",
+      "rank": 241,
+      "enplanements": 88676,
+      "hub": "N"
+    },
+    {
+      "locid": "VRB",
+      "rank": 242,
+      "enplanements": 88608,
+      "hub": "N"
+    },
+    {
+      "locid": "EWN",
+      "rank": 243,
+      "enplanements": 86653,
+      "hub": "N"
+    },
+    {
+      "locid": "CMI",
+      "rank": 244,
+      "enplanements": 86626,
+      "hub": "N"
+    },
+    {
+      "locid": "ADQ",
+      "rank": 245,
+      "enplanements": 86579,
+      "hub": "N"
+    },
+    {
+      "locid": "MHK",
+      "rank": 246,
+      "enplanements": 85901,
+      "hub": "N"
+    },
+    {
+      "locid": "ELM",
+      "rank": 247,
+      "enplanements": 85696,
+      "hub": "N"
+    },
+    {
+      "locid": "NYL",
+      "rank": 248,
+      "enplanements": 85227,
+      "hub": "N"
+    },
+    {
+      "locid": "MKK",
+      "rank": 249,
+      "enplanements": 84029,
+      "hub": "N"
+    },
+    {
+      "locid": "MVY",
+      "rank": 250,
+      "enplanements": 83419,
+      "hub": "N"
+    },
+    {
+      "locid": "LYH",
+      "rank": 251,
+      "enplanements": 81477,
+      "hub": "N"
+    },
+    {
+      "locid": "FLG",
+      "rank": 252,
+      "enplanements": 79081,
+      "hub": "N"
+    },
+    {
+      "locid": "LBE",
+      "rank": 253,
+      "enplanements": 76437,
+      "hub": "N"
+    },
+    {
+      "locid": "ENA",
+      "rank": 254,
+      "enplanements": 75395,
+      "hub": "N"
+    },
+    {
+      "locid": "ITH",
+      "rank": 255,
+      "enplanements": 69613,
+      "hub": "N"
+    },
+    {
+      "locid": "OME",
+      "rank": 256,
+      "enplanements": 69593,
+      "hub": "N"
+    },
+    {
+      "locid": "PHF",
+      "rank": 258,
+      "enplanements": 68787,
+      "hub": "N"
+    },
+    {
+      "locid": "CLL",
+      "rank": 259,
+      "enplanements": 68316,
+      "hub": "N"
+    },
+    {
+      "locid": "GRI",
+      "rank": 260,
+      "enplanements": 67747,
+      "hub": "N"
+    },
+    {
+      "locid": "TOL",
+      "rank": 261,
+      "enplanements": 66614,
+      "hub": "N"
+    },
+    {
+      "locid": "PUW",
+      "rank": 262,
+      "enplanements": 64580,
+      "hub": "N"
+    },
+    {
+      "locid": "SCK",
+      "rank": 263,
+      "enplanements": 63668,
+      "hub": "N"
+    },
+    {
+      "locid": "CSG",
+      "rank": 264,
+      "enplanements": 63422,
+      "hub": "N"
+    },
+    {
+      "locid": "OTZ",
+      "rank": 265,
+      "enplanements": 60547,
+      "hub": "N"
+    },
+    {
+      "locid": "SBY",
+      "rank": 266,
+      "enplanements": 60442,
+      "hub": "N"
+    },
+    {
+      "locid": "BVU",
+      "rank": 267,
+      "enplanements": 59617,
+      "hub": "N"
+    },
+    {
+      "locid": "FSM",
+      "rank": 268,
+      "enplanements": 59250,
+      "hub": "N"
+    },
+    {
+      "locid": "IAG",
+      "rank": 269,
+      "enplanements": 59119,
+      "hub": "N"
+    },
+    {
+      "locid": "GUC",
+      "rank": 270,
+      "enplanements": 58804,
+      "hub": "N"
+    },
+    {
+      "locid": "LWS",
+      "rank": 271,
+      "enplanements": 55467,
+      "hub": "N"
+    },
+    {
+      "locid": "ACT",
+      "rank": 272,
+      "enplanements": 53849,
+      "hub": "N"
+    },
+    {
+      "locid": "SPI",
+      "rank": 273,
+      "enplanements": 51784,
+      "hub": "N"
+    },
+    {
+      "locid": "TYR",
+      "rank": 274,
+      "enplanements": 51296,
+      "hub": "N"
+    },
+    {
+      "locid": "SJT",
+      "rank": 275,
+      "enplanements": 49493,
+      "hub": "N"
+    },
+    {
+      "locid": "ROW",
+      "rank": 276,
+      "enplanements": 48740,
+      "hub": "N"
+    },
+    {
+      "locid": "GTR",
+      "rank": 277,
+      "enplanements": 47323,
+      "hub": "N"
+    },
+    {
+      "locid": "ERI",
+      "rank": 278,
+      "enplanements": 46810,
+      "hub": "N"
+    },
+    {
+      "locid": "VLD",
+      "rank": 279,
+      "enplanements": 46744,
+      "hub": "N"
+    },
+    {
+      "locid": "LAW",
+      "rank": 281,
+      "enplanements": 45031,
+      "hub": "N"
+    },
+    {
+      "locid": "PPG",
+      "rank": 282,
+      "enplanements": 44656,
+      "hub": "N"
+    },
+    {
+      "locid": "SAW",
+      "rank": 283,
+      "enplanements": 44574,
+      "hub": "N"
+    },
+    {
+      "locid": "EAT",
+      "rank": 284,
+      "enplanements": 44459,
+      "hub": "N"
+    },
+    {
+      "locid": "BRW",
+      "rank": 285,
+      "enplanements": 43364,
+      "hub": "N"
+    },
+    {
+      "locid": "BQK",
+      "rank": 286,
+      "enplanements": 42771,
+      "hub": "N"
+    },
+    {
+      "locid": "PGV",
+      "rank": 287,
+      "enplanements": 42318,
+      "hub": "N"
+    },
+    {
+      "locid": "CKB",
+      "rank": 288,
+      "enplanements": 42288,
+      "hub": "N"
+    },
+    {
+      "locid": "HGR",
+      "rank": 289,
+      "enplanements": 41508,
+      "hub": "N"
+    },
+    {
+      "locid": "YKM",
+      "rank": 290,
+      "enplanements": 41471,
+      "hub": "N"
+    },
+    {
+      "locid": "LSE",
+      "rank": 291,
+      "enplanements": 40608,
+      "hub": "N"
+    },
+    {
+      "locid": "DHN",
+      "rank": 292,
+      "enplanements": 39339,
+      "hub": "N"
+    },
+    {
+      "locid": "AKN",
+      "rank": 293,
+      "enplanements": 39289,
+      "hub": "N"
+    },
+    {
+      "locid": "VQS",
+      "rank": 294,
+      "enplanements": 37756,
+      "hub": "N"
+    },
+    {
+      "locid": "COD",
+      "rank": 295,
+      "enplanements": 37437,
+      "hub": "N"
+    },
+    {
+      "locid": "ALW",
+      "rank": 296,
+      "enplanements": 36873,
+      "hub": "N"
+    },
+    {
+      "locid": "TXK",
+      "rank": 297,
+      "enplanements": 36307,
+      "hub": "N"
+    },
+    {
+      "locid": "GGG",
+      "rank": 298,
+      "enplanements": 35057,
+      "hub": "N"
+    },
+    {
+      "locid": "SWO",
+      "rank": 299,
+      "enplanements": 34729,
+      "hub": "N"
+    },
+    {
+      "locid": "DLG",
+      "rank": 300,
+      "enplanements": 34656,
+      "hub": "N"
+    },
+    {
+      "locid": "BPT",
+      "rank": 301,
+      "enplanements": 33907,
+      "hub": "N"
+    },
+    {
+      "locid": "MRI",
+      "rank": 302,
+      "enplanements": 32601,
+      "hub": "N"
+    },
+    {
+      "locid": "TWF",
+      "rank": 303,
+      "enplanements": 31734,
+      "hub": "N"
+    },
+    {
+      "locid": "GCK",
+      "rank": 304,
+      "enplanements": 31167,
+      "hub": "N"
+    },
+    {
+      "locid": "PLN",
+      "rank": 305,
+      "enplanements": 31060,
+      "hub": "N"
+    },
+    {
+      "locid": "TNI",
+      "rank": 306,
+      "enplanements": 30538,
+      "hub": "N"
+    },
+    {
+      "locid": "GCC",
+      "rank": 307,
+      "enplanements": 30321,
+      "hub": "N"
+    },
+    {
+      "locid": "ABY",
+      "rank": 308,
+      "enplanements": 30295,
+      "hub": "N"
+    },
+    {
+      "locid": "SPS",
+      "rank": 309,
+      "enplanements": 29702,
+      "hub": "N"
+    },
+    {
+      "locid": "1G4",
+      "rank": 310,
+      "enplanements": 29597,
+      "hub": "N"
+    },
+    {
+      "locid": "SHR",
+      "rank": 311,
+      "enplanements": 29471,
+      "hub": "N"
+    },
+    {
+      "locid": "BFI",
+      "rank": 312,
+      "enplanements": 28769,
+      "hub": "N"
+    },
+    {
+      "locid": "BJI",
+      "rank": 314,
+      "enplanements": 28536,
+      "hub": "N"
+    },
+    {
+      "locid": "SUX",
+      "rank": 315,
+      "enplanements": 28299,
+      "hub": "N"
+    },
+    {
+      "locid": "SLE",
+      "rank": 316,
+      "enplanements": 28119,
+      "hub": "N"
+    },
+    {
+      "locid": "CYS",
+      "rank": 317,
+      "enplanements": 27602,
+      "hub": "N"
+    },
+    {
+      "locid": "HOM",
+      "rank": 318,
+      "enplanements": 27482,
+      "hub": "N"
+    },
+    {
+      "locid": "CIU",
+      "rank": 319,
+      "enplanements": 26482,
+      "hub": "N"
+    },
+    {
+      "locid": "HOB",
+      "rank": 320,
+      "enplanements": 26212,
+      "hub": "N"
+    },
+    {
+      "locid": "DIK",
+      "rank": 321,
+      "enplanements": 26146,
+      "hub": "N"
+    },
+    {
+      "locid": "CMX",
+      "rank": 322,
+      "enplanements": 25833,
+      "hub": "N"
+    },
+    {
+      "locid": "HYA",
+      "rank": 323,
+      "enplanements": 25626,
+      "hub": "N"
+    },
+    {
+      "locid": "PRC",
+      "rank": 324,
+      "enplanements": 25316,
+      "hub": "N"
+    },
+    {
+      "locid": "PSG",
+      "rank": 325,
+      "enplanements": 25209,
+      "hub": "N"
+    },
+    {
+      "locid": "LNY",
+      "rank": 326,
+      "enplanements": 25186,
+      "hub": "N"
+    },
+    {
+      "locid": "RHI",
+      "rank": 328,
+      "enplanements": 24826,
+      "hub": "N"
+    },
+    {
+      "locid": "FLO",
+      "rank": 329,
+      "enplanements": 24728,
+      "hub": "N"
+    },
+    {
+      "locid": "PIH",
+      "rank": 330,
+      "enplanements": 24610,
+      "hub": "N"
+    },
+    {
+      "locid": "BGM",
+      "rank": 331,
+      "enplanements": 24496,
+      "hub": "N"
+    },
+    {
+      "locid": "LAL",
+      "rank": 332,
+      "enplanements": 24185,
+      "hub": "N"
+    },
+    {
+      "locid": "STC",
+      "rank": 333,
+      "enplanements": 23885,
+      "hub": "N"
+    },
+    {
+      "locid": "ABR",
+      "rank": 334,
+      "enplanements": 23705,
+      "hub": "N"
+    },
+    {
+      "locid": "SLN",
+      "rank": 335,
+      "enplanements": 23456,
+      "hub": "N"
+    },
+    {
+      "locid": "ART",
+      "rank": 336,
+      "enplanements": 23188,
+      "hub": "N"
+    },
+    {
+      "locid": "DUT",
+      "rank": 337,
+      "enplanements": 22712,
+      "hub": "N"
+    },
+    {
+      "locid": "PGA",
+      "rank": 338,
+      "enplanements": 22400,
+      "hub": "N"
+    },
+    {
+      "locid": "EAU",
+      "rank": 339,
+      "enplanements": 22289,
+      "hub": "N"
+    },
+    {
+      "locid": "PQI",
+      "rank": 342,
+      "enplanements": 21633,
+      "hub": "N"
+    },
+    {
+      "locid": "RIW",
+      "rank": 343,
+      "enplanements": 21624,
+      "hub": "N"
+    },
+    {
+      "locid": "RKS",
+      "rank": 344,
+      "enplanements": 21541,
+      "hub": "N"
+    },
+    {
+      "locid": "OTH",
+      "rank": 345,
+      "enplanements": 20495,
+      "hub": "N"
+    },
+    {
+      "locid": "SBD",
+      "rank": 346,
+      "enplanements": 20147,
+      "hub": "N"
+    },
+    {
+      "locid": "RVR",
+      "rank": 347,
+      "enplanements": 19681,
+      "hub": "N"
+    },
+    {
+      "locid": "IMT",
+      "rank": 348,
+      "enplanements": 19483,
+      "hub": "N"
+    },
+    {
+      "locid": "LAR",
+      "rank": 349,
+      "enplanements": 19061,
+      "hub": "N"
+    },
+    {
+      "locid": "CDV",
+      "rank": 350,
+      "enplanements": 18641,
+      "hub": "N"
+    },
+    {
+      "locid": "JLN",
+      "rank": 351,
+      "enplanements": 18362,
+      "hub": "N"
+    },
+    {
+      "locid": "JST",
+      "rank": 352,
+      "enplanements": 17690,
+      "hub": "N"
+    },
+    {
+      "locid": "CRQ",
+      "rank": 353,
+      "enplanements": 17434,
+      "hub": "N"
+    },
+    {
+      "locid": "ESC",
+      "rank": 354,
+      "enplanements": 17120,
+      "hub": "N"
+    },
+    {
+      "locid": "MCN",
+      "rank": 355,
+      "enplanements": 17020,
+      "hub": "N"
+    },
+    {
+      "locid": "MEI",
+      "rank": 356,
+      "enplanements": 17003,
+      "hub": "N"
+    },
+    {
+      "locid": "SIG",
+      "rank": 357,
+      "enplanements": 16844,
+      "hub": "N"
+    },
+    {
+      "locid": "LBF",
+      "rank": 359,
+      "enplanements": 16537,
+      "hub": "N"
+    },
+    {
+      "locid": "BRD",
+      "rank": 360,
+      "enplanements": 16255,
+      "hub": "N"
+    },
+    {
+      "locid": "AKW",
+      "rank": 361,
+      "enplanements": 16224,
+      "hub": "N"
+    },
+    {
+      "locid": "TUP",
+      "rank": 362,
+      "enplanements": 16194,
+      "hub": "N"
+    },
+    {
+      "locid": "BTM",
+      "rank": 363,
+      "enplanements": 15773,
+      "hub": "N"
+    },
+    {
+      "locid": "OGD",
+      "rank": 365,
+      "enplanements": 15582,
+      "hub": "N"
+    },
+    {
+      "locid": "PIB",
+      "rank": 366,
+      "enplanements": 15575,
+      "hub": "N"
+    },
+    {
+      "locid": "HYS",
+      "rank": 368,
+      "enplanements": 15002,
+      "hub": "N"
+    },
+    {
+      "locid": "PIR",
+      "rank": 369,
+      "enplanements": 14887,
+      "hub": "N"
+    },
+    {
+      "locid": "INL",
+      "rank": 370,
+      "enplanements": 14842,
+      "hub": "N"
+    },
+    {
+      "locid": "CPX",
+      "rank": 371,
+      "enplanements": 14663,
+      "hub": "N"
+    },
+    {
+      "locid": "WRG",
+      "rank": 373,
+      "enplanements": 14560,
+      "hub": "N"
+    },
+    {
+      "locid": "ATY",
+      "rank": 375,
+      "enplanements": 14134,
+      "hub": "N"
+    },
+    {
+      "locid": "EAR",
+      "rank": 376,
+      "enplanements": 14130,
+      "hub": "N"
+    },
+    {
+      "locid": "VCT",
+      "rank": 377,
+      "enplanements": 14006,
+      "hub": "N"
+    },
+    {
+      "locid": "BFF",
+      "rank": 378,
+      "enplanements": 13841,
+      "hub": "N"
+    },
+    {
+      "locid": "MWA",
+      "rank": 379,
+      "enplanements": 13816,
+      "hub": "N"
+    },
+    {
+      "locid": "SMX",
+      "rank": 381,
+      "enplanements": 13525,
+      "hub": "N"
+    },
+    {
+      "locid": "PAH",
+      "rank": 382,
+      "enplanements": 13456,
+      "hub": "N"
+    },
+    {
+      "locid": "RKD",
+      "rank": 383,
+      "enplanements": 13309,
+      "hub": "N"
+    },
+    {
+      "locid": "FHR",
+      "rank": 385,
+      "enplanements": 12898,
+      "hub": "N"
+    },
+    {
+      "locid": "EKO",
+      "rank": 386,
+      "enplanements": 12881,
+      "hub": "N"
+    },
+    {
+      "locid": "DEC",
+      "rank": 387,
+      "enplanements": 12747,
+      "hub": "N"
+    },
+    {
+      "locid": "WST",
+      "rank": 388,
+      "enplanements": 12320,
+      "hub": "N"
+    },
+    {
+      "locid": "ALS",
+      "rank": 389,
+      "enplanements": 12232,
+      "hub": "N"
+    },
+    {
+      "locid": "CVN",
+      "rank": 390,
+      "enplanements": 12033,
+      "hub": "N"
+    },
+    {
+      "locid": "ALO",
+      "rank": 391,
+      "enplanements": 12006,
+      "hub": "N"
+    },
+    {
+      "locid": "YAK",
+      "rank": 392,
+      "enplanements": 11923,
+      "hub": "N"
+    },
+    {
+      "locid": "BID",
+      "rank": 394,
+      "enplanements": 11867,
+      "hub": "N"
+    },
+    {
+      "locid": "CDC",
+      "rank": 395,
+      "enplanements": 11855,
+      "hub": "N"
+    },
+    {
+      "locid": "GAL",
+      "rank": 396,
+      "enplanements": 11852,
+      "hub": "N"
+    },
+    {
+      "locid": "HIB",
+      "rank": 397,
+      "enplanements": 11294,
+      "hub": "N"
+    },
+    {
+      "locid": "TBN",
+      "rank": 398,
+      "enplanements": 11276,
+      "hub": "N"
+    },
+    {
+      "locid": "APN",
+      "rank": 400,
+      "enplanements": 11150,
+      "hub": "N"
+    },
+    {
+      "locid": "BHB",
+      "rank": 401,
+      "enplanements": 11042,
+      "hub": "N"
+    },
+    {
+      "locid": "LEB",
+      "rank": 402,
+      "enplanements": 10934,
+      "hub": "N"
+    },
+    {
+      "locid": "TEX",
+      "rank": 403,
+      "enplanements": 10721,
+      "hub": "N"
+    },
+    {
+      "locid": "GRO",
+      "rank": 404,
+      "enplanements": 10717,
+      "hub": "N"
+    },
+    {
+      "locid": "CNY",
+      "rank": 405,
+      "enplanements": 10625,
+      "hub": "N"
+    },
+    {
+      "locid": "VEL",
+      "rank": 406,
+      "enplanements": 10578,
+      "hub": "N"
+    },
+    {
+      "locid": "FXE",
+      "rank": 407,
+      "enplanements": 10493,
+      "hub": "N"
+    },
+    {
+      "locid": "BIH",
+      "rank": 409,
+      "enplanements": 10119,
+      "hub": "N"
+    },
+    {
+      "locid": "GST",
+      "rank": 410,
+      "enplanements": 10074,
+      "hub": "N"
+    },
+    {
+      "locid": "ENM",
+      "rank": 412,
+      "enplanements": 9854,
+      "hub": null
+    },
+    {
+      "locid": "WYS",
+      "rank": 413,
+      "enplanements": 9569,
+      "hub": null
+    },
+    {
+      "locid": "JMS",
+      "rank": 414,
+      "enplanements": 9516,
+      "hub": null
+    },
+    {
+      "locid": "ORS",
+      "rank": 415,
+      "enplanements": 9512,
+      "hub": null
+    },
+    {
+      "locid": "CGI",
+      "rank": 416,
+      "enplanements": 9493,
+      "hub": null
+    },
+    {
+      "locid": "DVL",
+      "rank": 417,
+      "enplanements": 9488,
+      "hub": null
+    },
+    {
+      "locid": "MAZ",
+      "rank": 418,
+      "enplanements": 9207,
+      "hub": null
+    },
+    {
+      "locid": "LWB",
+      "rank": 419,
+      "enplanements": 9011,
+      "hub": null
+    },
+    {
+      "locid": "OWB",
+      "rank": 421,
+      "enplanements": 8835,
+      "hub": null
+    },
+    {
+      "locid": "CEZ",
+      "rank": 422,
+      "enplanements": 8820,
+      "hub": null
+    },
+    {
+      "locid": "SHD",
+      "rank": 423,
+      "enplanements": 8762,
+      "hub": null
+    },
+    {
+      "locid": "TVF",
+      "rank": 424,
+      "enplanements": 8675,
+      "hub": null
+    },
+    {
+      "locid": "LNS",
+      "rank": 425,
+      "enplanements": 8417,
+      "hub": null
+    },
+    {
+      "locid": "DDC",
+      "rank": 426,
+      "enplanements": 8300,
+      "hub": null
+    },
+    {
+      "locid": "LBL",
+      "rank": 429,
+      "enplanements": 8181,
+      "hub": null
+    },
+    {
+      "locid": "CEC",
+      "rank": 430,
+      "enplanements": 8027,
+      "hub": null
+    },
+    {
+      "locid": "MGW",
+      "rank": 431,
+      "enplanements": 8017,
+      "hub": null
+    },
+    {
+      "locid": "FOD",
+      "rank": 433,
+      "enplanements": 7733,
+      "hub": null
+    },
+    {
+      "locid": "BFM",
+      "rank": 434,
+      "enplanements": 7633,
+      "hub": null
+    },
+    {
+      "locid": "MSL",
+      "rank": 436,
+      "enplanements": 7373,
+      "hub": null
+    },
+    {
+      "locid": "SDY",
+      "rank": 437,
+      "enplanements": 7331,
+      "hub": null
+    },
+    {
+      "locid": "IWD",
+      "rank": 438,
+      "enplanements": 7091,
+      "hub": null
+    },
+    {
+      "locid": "PVC",
+      "rank": 439,
+      "enplanements": 7033,
+      "hub": null
+    },
+    {
+      "locid": "UNK",
+      "rank": 440,
+      "enplanements": 7030,
+      "hub": null
+    },
+    {
+      "locid": "MBL",
+      "rank": 441,
+      "enplanements": 6968,
+      "hub": null
+    },
+    {
+      "locid": "SVC",
+      "rank": 442,
+      "enplanements": 6915,
+      "hub": null
+    },
+    {
+      "locid": "GLH",
+      "rank": 443,
+      "enplanements": 6582,
+      "hub": null
+    },
+    {
+      "locid": "PDT",
+      "rank": 444,
+      "enplanements": 6579,
+      "hub": null
+    },
+    {
+      "locid": "MCW",
+      "rank": 445,
+      "enplanements": 6564,
+      "hub": null
+    },
+    {
+      "locid": "HHR",
+      "rank": 448,
+      "enplanements": 6417,
+      "hub": null
+    },
+    {
+      "locid": "HNS",
+      "rank": 450,
+      "enplanements": 6362,
+      "hub": null
+    },
+    {
+      "locid": "OGS",
+      "rank": 451,
+      "enplanements": 6269,
+      "hub": null
+    },
+    {
+      "locid": "W33",
+      "rank": 452,
+      "enplanements": 6167,
+      "hub": null
+    },
+    {
+      "locid": "DBQ",
+      "rank": 453,
+      "enplanements": 6078,
+      "hub": null
+    },
+    {
+      "locid": "CXF",
+      "rank": 455,
+      "enplanements": 5985,
+      "hub": null
+    },
+    {
+      "locid": "BKW",
+      "rank": 457,
+      "enplanements": 5918,
+      "hub": null
+    },
+    {
+      "locid": "AQH",
+      "rank": 459,
+      "enplanements": 5733,
+      "hub": null
+    },
+    {
+      "locid": "HNH",
+      "rank": 460,
+      "enplanements": 5667,
+      "hub": null
+    },
+    {
+      "locid": "LAF",
+      "rank": 461,
+      "enplanements": 5647,
+      "hub": null
+    },
+    {
+      "locid": "IRK",
+      "rank": 462,
+      "enplanements": 5611,
+      "hub": null
+    },
+    {
+      "locid": "DUJ",
+      "rank": 463,
+      "enplanements": 5584,
+      "hub": null
+    },
+    {
+      "locid": "ANI",
+      "rank": 464,
+      "enplanements": 5579,
+      "hub": null
+    },
+    {
+      "locid": "ILI",
+      "rank": 465,
+      "enplanements": 5544,
+      "hub": null
+    },
+    {
+      "locid": "FYU",
+      "rank": 466,
+      "enplanements": 5492,
+      "hub": null
+    },
+    {
+      "locid": "VAK",
+      "rank": 468,
+      "enplanements": 5426,
+      "hub": null
+    },
+    {
+      "locid": "MSS",
+      "rank": 469,
+      "enplanements": 5375,
+      "hub": null
+    },
+    {
+      "locid": "AUG",
+      "rank": 471,
+      "enplanements": 5241,
+      "hub": null
+    },
+    {
+      "locid": "AOO",
+      "rank": 472,
+      "enplanements": 5151,
+      "hub": null
+    },
+    {
+      "locid": "IIK",
+      "rank": 475,
+      "enplanements": 4978,
+      "hub": null
+    },
+    {
+      "locid": "SLK",
+      "rank": 476,
+      "enplanements": 4930,
+      "hub": null
+    },
+    {
+      "locid": "MCE",
+      "rank": 478,
+      "enplanements": 4858,
+      "hub": null
+    },
+    {
+      "locid": "HPB",
+      "rank": 480,
+      "enplanements": 4801,
+      "hub": null
+    },
+    {
+      "locid": "SGY",
+      "rank": 482,
+      "enplanements": 4607,
+      "hub": null
+    },
+    {
+      "locid": "RUT",
+      "rank": 483,
+      "enplanements": 4519,
+      "hub": null
+    },
+    {
+      "locid": "PKB",
+      "rank": 485,
+      "enplanements": 4356,
+      "hub": null
+    },
+    {
+      "locid": "SOV",
+      "rank": 486,
+      "enplanements": 4309,
+      "hub": null
+    },
+    {
+      "locid": "KSM",
+      "rank": 487,
+      "enplanements": 4250,
+      "hub": null
+    },
+    {
+      "locid": "AIA",
+      "rank": 488,
+      "enplanements": 4207,
+      "hub": null
+    },
+    {
+      "locid": "IPL",
+      "rank": 490,
+      "enplanements": 4183,
+      "hub": null
+    },
+    {
+      "locid": "LUP",
+      "rank": 491,
+      "enplanements": 4174,
+      "hub": null
+    },
+    {
+      "locid": "WLK",
+      "rank": 492,
+      "enplanements": 4154,
+      "hub": null
+    },
+    {
+      "locid": "UIN",
+      "rank": 493,
+      "enplanements": 4112,
+      "hub": null
+    },
+    {
+      "locid": "CNM",
+      "rank": 494,
+      "enplanements": 4076,
+      "hub": null
+    },
+    {
+      "locid": "WTK",
+      "rank": 495,
+      "enplanements": 4062,
+      "hub": null
+    },
+    {
+      "locid": "HRO",
+      "rank": 496,
+      "enplanements": 4032,
+      "hub": null
+    },
+    {
+      "locid": "Z09",
+      "rank": 498,
+      "enplanements": 4028,
+      "hub": null
+    },
+    {
+      "locid": "PHO",
+      "rank": 499,
+      "enplanements": 3998,
+      "hub": null
+    },
+    {
+      "locid": "BRL",
+      "rank": 500,
+      "enplanements": 3951,
+      "hub": null
+    },
+    {
+      "locid": "MUE",
+      "rank": 501,
+      "enplanements": 3903,
+      "hub": null
+    },
+    {
+      "locid": "BVK",
+      "rank": 502,
+      "enplanements": 3835,
+      "hub": null
+    },
+    {
+      "locid": "SCM",
+      "rank": 504,
+      "enplanements": 3719,
+      "hub": null
+    },
+    {
+      "locid": "D76",
+      "rank": 505,
+      "enplanements": 3715,
+      "hub": null
+    },
+    {
+      "locid": "MOU",
+      "rank": 507,
+      "enplanements": 3678,
+      "hub": null
+    },
+    {
+      "locid": "SOW",
+      "rank": 508,
+      "enplanements": 3655,
+      "hub": null
+    },
+    {
+      "locid": "MMH",
+      "rank": 510,
+      "enplanements": 3632,
+      "hub": null
+    },
+    {
+      "locid": "KWT",
+      "rank": 511,
+      "enplanements": 3587,
+      "hub": null
+    },
+    {
+      "locid": "CDB",
+      "rank": 512,
+      "enplanements": 3543,
+      "hub": null
+    },
+    {
+      "locid": "BFD",
+      "rank": 513,
+      "enplanements": 3521,
+      "hub": null
+    },
+    {
+      "locid": "A61",
+      "rank": 515,
+      "enplanements": 3474,
+      "hub": null
+    },
+    {
+      "locid": "0AK",
+      "rank": 516,
+      "enplanements": 3469,
+      "hub": null
+    },
+    {
+      "locid": "Z13",
+      "rank": 517,
+      "enplanements": 3448,
+      "hub": null
+    },
+    {
+      "locid": "AUK",
+      "rank": 518,
+      "enplanements": 3430,
+      "hub": null
+    },
+    {
+      "locid": "AWI",
+      "rank": 519,
+      "enplanements": 3416,
+      "hub": null
+    },
+    {
+      "locid": "MKL",
+      "rank": 520,
+      "enplanements": 3383,
+      "hub": null
+    },
+    {
+      "locid": "AFE",
+      "rank": 521,
+      "enplanements": 3372,
+      "hub": null
+    },
+    {
+      "locid": "OOK",
+      "rank": 522,
+      "enplanements": 3342,
+      "hub": null
+    },
+    {
+      "locid": "CFK",
+      "rank": 523,
+      "enplanements": 3330,
+      "hub": null
+    },
+    {
+      "locid": "16A",
+      "rank": 524,
+      "enplanements": 3329,
+      "hub": null
+    },
+    {
+      "locid": "HOT",
+      "rank": 525,
+      "enplanements": 3303,
+      "hub": null
+    },
+    {
+      "locid": "HLA",
+      "rank": 526,
+      "enplanements": 3291,
+      "hub": null
+    },
+    {
+      "locid": "SHH",
+      "rank": 527,
+      "enplanements": 3282,
+      "hub": null
+    },
+    {
+      "locid": "AKP",
+      "rank": 528,
+      "enplanements": 3255,
+      "hub": null
+    },
+    {
+      "locid": "SVA",
+      "rank": 529,
+      "enplanements": 3199,
+      "hub": null
+    },
+    {
+      "locid": "OLF",
+      "rank": 530,
+      "enplanements": 3183,
+      "hub": null
+    },
+    {
+      "locid": "HVR",
+      "rank": 532,
+      "enplanements": 3095,
+      "hub": null
+    },
+    {
+      "locid": "TOG",
+      "rank": 533,
+      "enplanements": 3082,
+      "hub": null
+    },
+    {
+      "locid": "DUY",
+      "rank": 534,
+      "enplanements": 3077,
+      "hub": null
+    },
+    {
+      "locid": "SDP",
+      "rank": 535,
+      "enplanements": 3075,
+      "hub": null
+    },
+    {
+      "locid": "2A9",
+      "rank": 536,
+      "enplanements": 3069,
+      "hub": null
+    },
+    {
+      "locid": "KVL",
+      "rank": 537,
+      "enplanements": 3039,
+      "hub": null
+    },
+    {
+      "locid": "GGW",
+      "rank": 538,
+      "enplanements": 2970,
+      "hub": null
+    },
+    {
+      "locid": "EEK",
+      "rank": 540,
+      "enplanements": 2920,
+      "hub": null
+    },
+    {
+      "locid": "VDZ",
+      "rank": 541,
+      "enplanements": 2874,
+      "hub": null
+    },
+    {
+      "locid": "BBG",
+      "rank": 543,
+      "enplanements": 2856,
+      "hub": null
+    },
+    {
+      "locid": "GAM",
+      "rank": 545,
+      "enplanements": 2855,
+      "hub": null
+    },
+    {
+      "locid": "RSH",
+      "rank": 547,
+      "enplanements": 2807,
+      "hub": null
+    },
+    {
+      "locid": "4A2",
+      "rank": 549,
+      "enplanements": 2733,
+      "hub": null
+    },
+    {
+      "locid": "MKG",
+      "rank": 550,
+      "enplanements": 2729,
+      "hub": null
+    },
+    {
+      "locid": "MDM",
+      "rank": 551,
+      "enplanements": 2724,
+      "hub": null
+    },
+    {
+      "locid": "MCK",
+      "rank": 552,
+      "enplanements": 2707,
+      "hub": null
+    },
+    {
+      "locid": "MCG",
+      "rank": 553,
+      "enplanements": 2676,
+      "hub": null
+    },
+    {
+      "locid": "AKI",
+      "rank": 554,
+      "enplanements": 2674,
+      "hub": null
+    },
+    {
+      "locid": "HNM",
+      "rank": 555,
+      "enplanements": 2656,
+      "hub": null
+    },
+    {
+      "locid": "TLT",
+      "rank": 556,
+      "enplanements": 2628,
+      "hub": null
+    },
+    {
+      "locid": "GUP",
+      "rank": 557,
+      "enplanements": 2619,
+      "hub": null
+    },
+    {
+      "locid": "ELD",
+      "rank": 559,
+      "enplanements": 2560,
+      "hub": null
+    },
+    {
+      "locid": "IAN",
+      "rank": 560,
+      "enplanements": 2555,
+      "hub": null
+    },
+    {
+      "locid": "GGV",
+      "rank": 561,
+      "enplanements": 2534,
+      "hub": null
+    },
+    {
+      "locid": "KLG",
+      "rank": 562,
+      "enplanements": 2524,
+      "hub": null
+    },
+    {
+      "locid": "YNG",
+      "rank": 713,
+      "enplanements": 523,
+      "hub": "N"
+    }
+  ]
+}

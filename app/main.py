@@ -1,21 +1,34 @@
 """US Checkpoint Wait Picture — web app and API."""
 import logging
 import os
+from collections.abc import Sequence
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db, poller
+from . import db, poller, weather_alerts
+from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
+from .travel_calendar import TravelPeriod, period_payload
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 STALE_SECONDS = 30 * 60
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
+FAA_EVENT_SEVERITY = {
+    "ground_stop": 5,
+    "closure": 4,
+    "ground_delay": 3,
+    "arrival_delay": 2,
+    "departure_delay": 1,
+}
+EASTERN = ZoneInfo("America/New_York")
 
 
 @asynccontextmanager
@@ -61,6 +74,68 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.astimezone(UTC).isoformat() if dt else None
 
 
+ALERT_COLUMNS = """
+SELECT airport_iata, event, severity, headline, area_desc, sender_name, alert_url,
+       effective, onset, expires, ends, fetched_at
+FROM weather_alerts
+"""
+ACTIVE_ALERTS_SQL = ALERT_COLUMNS + "WHERE expires IS NULL OR expires > now()"
+AIRPORT_ALERTS_SQL = ALERT_COLUMNS + "WHERE airport_iata = %s AND (expires IS NULL OR expires > now())"
+
+
+def _alert_dict(row: Sequence[Any]) -> dict[str, Any]:
+    (_iata, event, severity, headline, area_desc, sender, url,
+     effective, onset, expires, ends, fetched_at) = row
+    return {
+        "event": event,
+        "severity": severity,
+        "headline": headline,
+        "area": area_desc,
+        "sender": sender,
+        "url": url,
+        "effective": _iso(effective),
+        "onset": _iso(onset),
+        "expires": _iso(expires),
+        "ends": _iso(ends),
+        "fetched_at": _iso(fetched_at),
+        "source": weather_alerts.ATTRIBUTION,
+        "source_url": weather_alerts.PUBLIC_PAGE,
+    }
+
+
+def _alert_sort_key(alert: dict[str, Any]) -> tuple[int, str]:
+    return (-weather_alerts.SEVERITY_RANK.get(alert["severity"], 0), alert["event"])
+
+
+def _today() -> date:
+    return datetime.now(UTC).astimezone(EASTERN).date()
+
+
+async def _travel_period(cur) -> dict | None:
+    today = _today()
+    await cur.execute(
+        """
+        SELECT name, start_date, end_date, intensity, note
+        FROM travel_periods
+        WHERE end_date >= %s
+        ORDER BY start_date, name
+        LIMIT 1
+        """,
+        (today,),
+    )
+    row = await cur.fetchone()
+    if row is None:
+        return None
+    period = TravelPeriod(
+        name=row[0],
+        start=row[1],
+        end=row[2],
+        intensity=row[3],
+        note=row[4],
+    )
+    return period_payload(period, today)
+
+
 LATEST_OBS_SQL = """
 SELECT DISTINCT ON (o.checkpoint_id)
     c.airport_iata, c.name, c.lane_type, o.wait_seconds, o.is_open,
@@ -70,6 +145,35 @@ JOIN checkpoints c ON c.id = o.checkpoint_id
 JOIN sources s ON s.code = o.source_code
 ORDER BY o.checkpoint_id, o.fetched_at DESC
 """
+
+FAA_EVENTS_SQL = """
+SELECT airport_iata, event_type, reason, avg_delay_seconds, start_time, end_time, update_time
+FROM faa_airport_events
+WHERE fetched_at = (
+        SELECT max(fetched_at) FROM raw_payloads WHERE source_code = %s
+      )
+  AND fetched_at > now() - interval '20 minutes'
+  AND (start_time IS NULL OR start_time <= now())
+  AND (end_time IS NULL OR end_time >= now())
+"""
+
+
+def _faa_event_dict(row: tuple, *, include_iata: bool = False) -> dict:
+    airport_iata, event_type, reason, avg_delay_seconds, _start_time, end_time, update_time = row
+    event = {
+        "event_type": event_type,
+        "reason": reason,
+        "avg_delay_seconds": avg_delay_seconds,
+        "end_time": _iso(end_time),
+        "update_time": _iso(update_time),
+    }
+    if include_iata:
+        event["iata"] = airport_iata
+    return event
+
+
+def _faa_sort_key(event: dict) -> tuple[int, str]:
+    return (-FAA_EVENT_SEVERITY.get(event["event_type"], 0), event.get("iata", ""))
 
 
 @app.get("/api/summary")
@@ -105,11 +209,37 @@ async def api_summary():
             fetched_iso = _iso(fetched_at)
             if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
                 a["last_fetch"] = fetched_iso
+        await cur.execute(ACTIVE_ALERTS_SQL)
+        for row in await cur.fetchall():
+            a = airports.get(row[0])
+            if a is None:
+                continue
+            alert = _alert_dict(row)
+            current = a.get("weather_alert")
+            if current is None or _alert_sort_key(alert) < _alert_sort_key(current):
+                a["weather_alert"] = alert
+        travel_period = await _travel_period(cur)
         await cur.execute(
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
         tsa_rows = await cur.fetchall()
+        await cur.execute(
+            """
+            SELECT date_trunc('week', date)::date AS wk, round(avg(travelers))::bigint
+            FROM tsa_throughput
+            WHERE date >= (SELECT max(date) FROM tsa_throughput) - interval '2 years'
+            GROUP BY 1 HAVING count(*) >= 4 ORDER BY 1
+            """
+        )
+        tsa_history = [[week.isoformat(), int(avg)] for week, avg in await cur.fetchall()]
+        await cur.execute(FAA_EVENTS_SQL, (FAA_SOURCE_CODE,))
+        faa_events = [_faa_event_dict(row, include_iata=True) for row in await cur.fetchall()]
     live = sum(1 for a in airports.values() if a["live"])
+    faa_events.sort(key=_faa_sort_key)
+    for event in faa_events:
+        airport = airports.get(event["iata"])
+        if airport is not None and "faa_event" not in airport:
+            airport["faa_event"] = {key: value for key, value in event.items() if key != "iata"}
     tsa = None
     if tsa_rows:
         by_date = {d: t for d, t in tsa_rows}
@@ -124,6 +254,7 @@ async def api_summary():
             "lastyear_date": lastyear_date.isoformat() if lastyear_date and lastyear_date in by_date else None,
             "lastyear_travelers": by_date.get(lastyear_date) if lastyear_date else None,
             "source": "TSA checkpoint travel numbers (tsa.gov/travel/passenger-volumes)",
+            "history": tsa_history,
         }
     return JSONResponse({
         "generated_at": _iso(datetime.now(UTC)),
@@ -131,6 +262,9 @@ async def api_summary():
         "no_data_count": len(airports) - live,
         "airports": list(airports.values()),
         "tsa_throughput": tsa,
+        "faa_events": faa_events,
+        "faa_attribution": FAA_ATTRIBUTION,
+        "travel_period": travel_period,
     })
 
 
@@ -144,6 +278,28 @@ async def api_airport(iata: str):
         if row is None:
             raise HTTPException(404, "unknown airport")
         airport = {"iata": row[0], "name": row[1], "city": row[2], "state": row[3], "lat": row[4], "lon": row[5]}
+        await cur.execute(AIRPORT_ALERTS_SQL, (iata,))
+        alerts = sorted((_alert_dict(r) for r in await cur.fetchall()), key=_alert_sort_key)
+        await cur.execute(
+            """
+            SELECT year, enplanements, national_rank, hub, source_name, source_url
+            FROM airport_enplanements WHERE airport_iata = %s ORDER BY year DESC LIMIT 1
+            """,
+            (iata,),
+        )
+        enplanement_row = await cur.fetchone()
+        airport["enplanements"] = (
+            {
+                "year": enplanement_row[0],
+                "enplanements": enplanement_row[1],
+                "rank": enplanement_row[2],
+                "hub": enplanement_row[3],
+                "source": enplanement_row[4],
+                "source_url": enplanement_row[5],
+            }
+            if enplanement_row is not None else None
+        )
+        travel_period = await _travel_period(cur)
         await cur.execute(
             """
             SELECT c.id, c.name, c.lane_type FROM checkpoints c
@@ -199,8 +355,18 @@ async def api_airport(iata: str):
                 "source_url": src_url,
                 "history": history,
             })
-    return JSONResponse({"airport": airport, "checkpoints": checkpoints,
-                         "generated_at": _iso(datetime.now(UTC))})
+        await cur.execute(FAA_EVENTS_SQL + " AND airport_iata = %s", (FAA_SOURCE_CODE, iata))
+        faa_events = [_faa_event_dict(row) for row in await cur.fetchall()]
+        faa_events.sort(key=_faa_sort_key)
+    return JSONResponse({
+        "airport": airport,
+        "checkpoints": checkpoints,
+        "faa_events": faa_events,
+        "faa_attribution": FAA_ATTRIBUTION,
+        "weather_alerts": alerts,
+        "travel_period": travel_period,
+        "generated_at": _iso(datetime.now(UTC)),
+    })
 
 
 @app.get("/healthz")

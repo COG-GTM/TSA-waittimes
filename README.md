@@ -16,12 +16,29 @@ Demonstration only.
 - **Sources** (`app/sources/adapters.py`): polite API clients for the public
   wait-time feeds each airport's own website loads. Honest user agent, public
   endpoints only, no logins or credentials.
+- **Weather** (`app/weather_alerts.py`): one national `api.weather.gov`
+  `/alerts/active` request every 10 minutes, matched to each airport by its NWS
+  forecast/county/fire zone (resolved once per airport via `/points` and cached
+  in `airport_nws_zones`) with a point-in-polygon fallback for alerts that carry
+  geometry. Only aviation-relevant event types are surfaced; see
+  `RELEVANT_EVENTS`. Attribution: National Weather Service (weather.gov).
 - **Storage**: PostgreSQL — airports, checkpoints, observations (wait value,
   lane type, source URL, source publish timestamp, fetch timestamp), raw
-  payloads for provenance, poll health, and TSA daily throughput.
+  payloads for provenance, poll health, TSA daily throughput, and FAA airport
+  enplanements.
 - **Web** (`app/main.py`): FastAPI serving the national map, airport drill-down
   pages, and a JSON API. Frontend is vanilla JS + vendored Leaflet with a
   vendored US-states GeoJSON basemap (no external tile servers).
+
+## Travel calendar
+
+`data/travel_calendar.json` contains the static US travel-demand calendar. It is
+generated data and must never be hand-edited; regenerate it with
+`python scripts/gen_travel_calendar.py`. Regenerate it when the year rolls over;
+the default covers the current year and next two years, plus any prior-year
+period still active at the start of the current year. At startup, the calendar is seeded into
+the `travel_periods` table with a full replace. The `/api/summary` and
+`/api/airport/{iata}` endpoints expose the selected period as `travel_period`.
 
 ## Live sources
 
@@ -30,6 +47,22 @@ records the airport, the public page where the data is published, attribution,
 and refresh rate.
 Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS,
 PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
+
+National TSA throughput history is backfilled from 2019 through the last
+completed year at startup, one year at a time. A missing or blocked historical
+page is logged and does not prevent the app from starting. FAA CY2024
+commercial-service enplanements are committed in `data/enplanements.json` and
+seeded into the `airport_enplanements` table. Regenerate the static file with:
+
+```bash
+python3.12 scripts/fetch_enplanements.py
+```
+
+The generator also accepts `--file <path>` for a downloaded FAA workbook.
+FAA LOCIDs are normalized to the app's IATA codes for the small set of
+confirmed aliases during seeding; the source JSON remains faithful to FAA
+LOCIDs. Re-seeding also removes stale rows for that year that are no longer
+present in the regenerated file.
 
 ## Run locally
 
@@ -66,6 +99,7 @@ tests discover every file in `tests/fixtures/` automatically, and
 ```bash
 python scripts/probe_source.py SEA            # fetch live, print observations, write tests/fixtures/sea.json
 python scripts/probe_source.py SEA --no-save  # fetch and print only
+python scripts/probe_weather_alerts.py        # live NWS cycle, refresh tests/weather_fixtures/nws_alerts.json
 ```
 
 `probe_source.py` runs a single live fetch for one source code, prints the

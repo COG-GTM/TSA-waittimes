@@ -16,6 +16,10 @@ let grayLayer = L.layerGroup().addTo(map);
 
 function popupHtml(a) {
   let html = "<b>" + esc(a.iata) + "</b> — " + esc(a.name) + "<br>";
+  if (a.weather_alert) {
+    html += '<div class="popup-wx">' + alertBadge(a.weather_alert) +
+      '<div class="wx-src">National Weather Service (weather.gov)</div></div>';
+  }
   if (a.live) {
     html += '<div class="popup-wait">' + fmtMin(a.max_wait_seconds) + (a.stale ? " (stale)" : "") + "</div>";
     if (a.max_precheck_seconds !== undefined)
@@ -24,6 +28,9 @@ function popupHtml(a) {
     html += '<a href="/airport/' + esc(a.iata) + '">Checkpoint detail →</a>';
   } else {
     html += '<span class="popup-src">No public wait-time data published</span>';
+  }
+  if (a.faa_event) {
+    html += '<div class="faa-badge">' + esc(faaEventText(a.faa_event)) + "</div>";
   }
   return html;
 }
@@ -34,6 +41,7 @@ function render(data) {
   document.getElementById("updated").textContent =
     "Auto-refreshes every 60s · Updated " + new Date(data.generated_at).toLocaleTimeString();
   renderTsaStrip(data.tsa_throughput);
+  renderTravelBanner(data.travel_period);
 
   liveLayer.clearLayers();
   grayLayer.clearLayers();
@@ -71,8 +79,13 @@ function render(data) {
     '<a class="live-card" href="/airport/' + esc(a.iata) + '">' +
       '<span class="wait ' + (a.stale ? "stale" : "") + '">' + fmtMin(a.max_wait_seconds) + "</span>" +
       '<span class="code">' + esc(a.iata) + "</span>" +
+      alertBadge(a.weather_alert) +
       '<div class="meta">' + esc(a.name) + (a.stale ? " · STALE" : "") + "<br>" +
-      esc(a.source) + " · " + asPublished(a.as_of || a.last_fetch) + "</div></a>"
+      esc(a.source) + " · " + asPublished(a.as_of || a.last_fetch) +
+      (a.faa_event
+        ? ' <span class="faa-badge">' + esc(FAA_EVENT_LABELS[a.faa_event.event_type] || "FAA event") + "</span>"
+        : "") +
+      "</div></a>"
   ).join("");
 }
 
