@@ -48,6 +48,9 @@ The canonical public hostname is `waitpicture.com` (also available at
 `www.waitpicture.com`). The legacy `tsadelays.com` and `www.tsadelays.com`
 hostnames return a 301 redirect to the canonical domain, handled in the app.
 
+Pull requests and pushes to `main` run the `ci.yml` lint, type-check, and test gates.
+Run them locally with `pip install -r requirements-dev.txt`, `ruff check .`, `mypy`, and `pytest`.
+
 ## Operations
 
 See [RUNBOOK.md](RUNBOOK.md).
