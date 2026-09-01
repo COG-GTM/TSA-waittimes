@@ -159,7 +159,7 @@ async def fetch_slc(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=data, observations=obs)
 
 
-# ---------------------------------------------------------------- LAS (Zensors widget API used by harryreidairport.com)
+# ---------------------------------------------------------------- Zensors vendor (LAS / BOS)
 LAS_SLUG = "t1LQGTAPA"
 LAS_TOKEN = "3Ll9yq2riLZctX1CZ94FRgLcScJimgXx"
 LAS_JOURNEYS = {
@@ -168,12 +168,27 @@ LAS_JOURNEYS = {
     "t0CSXP4SK": "T3 - D/E Gates",
 }
 
+BOS_SLUG = "tSTQVPRW1"
+BOS_TOKEN = "9uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl"
+BOS_JOURNEYS = {
+    "t6CQ1P0Y3": "Checkpoint 1: A Gates",
+    "tKK3PDVP9": "Checkpoint 2: A Gates PreCheck Only",
+    "tXT4B8KMX": "Checkpoint 3: Gates B1 - B22",
+    "tF1JP9828": "Checkpoint 4: Gates B23 - 40",
+    "tSGV88H0D": "Checkpoint 5: Terminal C",
+    "tWEBCSW2Q": "Checkpoint 6: All E Gates",
+    "tCLRGFHM9": "Checkpoint 7: All E Gates",
+}
 
-async def fetch_las(client: httpx.AsyncClient) -> FetchResult:
+
+async def _zensors(
+    client: httpx.AsyncClient, domain_slug: str, slug: str, token: str, journeys: dict[str, str]
+) -> FetchResult:
+    """Zensors embeddable-widget trpc API (embed.zensors.live), one call per journey."""
     raws = {}
     obs = []
-    for journey, jname in LAS_JOURNEYS.items():
-        inp = json.dumps({"0": {"journey": journey, "slug": LAS_SLUG, "domainSlug": "LAS", "token": LAS_TOKEN}})
+    for journey, jname in journeys.items():
+        inp = json.dumps({"0": {"journey": journey, "slug": slug, "domainSlug": domain_slug, "token": token}})
         url = (
             "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input="
             + urllib.parse.quote(inp)
@@ -182,7 +197,7 @@ async def fetch_las(client: httpx.AsyncClient) -> FetchResult:
             url,
             headers={
                 **HEADERS,
-                "Referer": f"https://embed.zensors.live/LAS/{LAS_SLUG}/waitTimeExplorer?token={LAS_TOKEN}",
+                "Referer": f"https://embed.zensors.live/{domain_slug}/{slug}/waitTimeExplorer?token={token}",
             },
         )
         r.raise_for_status()
@@ -203,6 +218,74 @@ async def fetch_las(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=raws, observations=obs)
 
 
+async def fetch_las(client: httpx.AsyncClient) -> FetchResult:
+    return await _zensors(client, "LAS", LAS_SLUG, LAS_TOKEN, LAS_JOURNEYS)
+
+
+async def fetch_bos(client: httpx.AsyncClient) -> FetchResult:
+    return await _zensors(client, "BOS", BOS_SLUG, BOS_TOKEN, BOS_JOURNEYS)
+
+
+# ---------------------------------------------------------------- PIT (ACAA wait-times API used by flypittsburgh.com; Zensors-derived)
+async def fetch_pit(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://acaa-dna-api-prod.azure-api.net/tsa/wait-times",
+        headers={
+            **HEADERS,
+            "Ocp-Apim-Subscription-Key": "92cd43f60453443098d08528bf0c994e",
+            "Origin": "https://flypittsburgh.com",
+            "Referer": "https://flypittsburgh.com/",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    for q in data:
+        if not q.get("canDisplayData", True):
+            continue
+        queue = q.get("queueName") or "Queue"
+        wait = q.get("waitTime")
+        obs.append(
+            Observation(
+                f"{q.get('checkpointName', 'Checkpoint')} — {queue}",
+                "precheck" if "pre" in queue.lower() else "standard",
+                int(wait) * 60 if wait is not None else None,
+                str(q.get("status", "")).lower() == "open",
+            )
+        )
+    return FetchResult(raw=data, observations=obs)
+
+
+# ---------------------------------------------------------------- CVG (cvgairport.mobi checkpoints API used by cvgairport.com)
+async def fetch_cvg(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://api.cvgairport.mobi/checkpoints/CVG",
+        headers={
+            **HEADERS,
+            "api-key": "b6461a439f1047ac950a920866b86fef",
+            "api-version": "100",
+            "Content-Type": "application/json",
+            "Origin": "https://www.cvgairport.com",
+            "Referer": "https://www.cvgairport.com/",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    for cp in data.get("data", {}).get("checkpoints", []):
+        lane = cp.get("lane") or ""
+        obs.append(
+            Observation(
+                cp.get("name") or "Checkpoint",
+                "precheck" if lane.lower() == "pre" else "standard",
+                cp.get("waitSeconds"),
+                bool(cp.get("isOpen", True)),
+                _ts(cp.get("lastUpdatedTimestamp")),
+            )
+        )
+    return FetchResult(raw=data, observations=obs)
+
+
 SOURCES: list[Source] = [
     Source("SEA", "Port of Seattle — SEA checkpoint wait times", "https://www.portseattle.org/sea-tac", "Port of Seattle (portseattle.org)", 120, fetch_sea),
     Source("DEN", "Denver International Airport — security wait times", "https://www.flydenver.com/security/", "Denver International Airport (flydenver.com)", 120, fetch_den),
@@ -212,4 +295,7 @@ SOURCES: list[Source] = [
     Source("DFW", "DFW International Airport — security wait times", "https://www.dfwairport.com/security/", "DFW International Airport (dfwairport.com)", 120, fetch_dfw),
     Source("SLC", "Salt Lake City International Airport — TSA wait times", "https://slcairport.com/", "Salt Lake City Department of Airports (slcairport.com)", 120, fetch_slc),
     Source("LAS", "Harry Reid International Airport — security wait times", "https://www.harryreidairport.com/security-wait-times", "Harry Reid International Airport (harryreidairport.com)", 120, fetch_las),
+    Source("BOS", "Boston Logan International Airport — security wait times", "https://www.massport.com/logan-airport/", "Massachusetts Port Authority (massport.com)", 120, fetch_bos),
+    Source("PIT", "Pittsburgh International Airport — security wait times", "https://flypittsburgh.com/pittsburgh-international-airport/security/", "Allegheny County Airport Authority (flypittsburgh.com)", 120, fetch_pit),
+    Source("CVG", "Cincinnati/Northern Kentucky International Airport — security wait times", "https://www.cvgairport.com/security/", "Kenton County Airport Board (cvgairport.com)", 120, fetch_cvg),
 ]
