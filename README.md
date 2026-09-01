@@ -16,6 +16,12 @@ Demonstration only.
 - **Sources** (`app/sources/adapters.py`): polite API clients for the public
   wait-time feeds each airport's own website loads. Honest user agent, public
   endpoints only, no logins or credentials.
+- **Weather** (`app/weather_alerts.py`): one national `api.weather.gov`
+  `/alerts/active` request every 10 minutes, matched to each airport by its NWS
+  forecast/county/fire zone (resolved once per airport via `/points` and cached
+  in `airport_nws_zones`) with a point-in-polygon fallback for alerts that carry
+  geometry. Only aviation-relevant event types are surfaced; see
+  `RELEVANT_EVENTS`. Attribution: National Weather Service (weather.gov).
 - **Storage**: PostgreSQL — airports, checkpoints, observations (wait value,
   lane type, source URL, source publish timestamp, fetch timestamp), raw
   payloads for provenance, poll health, and TSA daily throughput.
@@ -66,6 +72,7 @@ tests discover every file in `tests/fixtures/` automatically, and
 ```bash
 python scripts/probe_source.py SEA            # fetch live, print observations, write tests/fixtures/sea.json
 python scripts/probe_source.py SEA --no-save  # fetch and print only
+python scripts/probe_weather_alerts.py        # live NWS cycle, refresh tests/weather_fixtures/nws_alerts.json
 ```
 
 `probe_source.py` runs a single live fetch for one source code, prints the

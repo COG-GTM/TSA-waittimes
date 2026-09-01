@@ -19,6 +19,21 @@ function asPublished(iso) {
   return m === null ? "" : "as published " + m + " min ago";
 }
 
+const ALERT_SEVERITY_CLASS = {
+  Extreme: "sev-extreme", Severe: "sev-extreme", Moderate: "sev-moderate",
+  Minor: "sev-minor", Unknown: "sev-minor",
+};
+
+function alertClass(alert) {
+  return ALERT_SEVERITY_CLASS[alert && alert.severity] || "sev-minor";
+}
+
+function alertBadge(alert) {
+  if (!alert) return "";
+  return '<span class="wx-badge ' + alertClass(alert) + '" title="' +
+    esc(alert.headline || alert.event) + '">&#9888; ' + esc(alert.event) + "</span>";
+}
+
 function renderTsaStrip(tsa) {
   const el = document.getElementById("tsa-strip");
   if (!el || !tsa) return;

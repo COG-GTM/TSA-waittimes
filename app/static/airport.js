@@ -18,10 +18,31 @@ function sparkline(history) {
     '<text class="axis" x="2" y="8">peak ' + fmtMin(maxW) + "</text></svg>";
 }
 
+function renderWeather(alerts) {
+  const el = document.getElementById("wx-alerts");
+  if (!el) return;
+  if (!alerts || !alerts.length) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = alerts.map(al =>
+    '<div class="wx-alert ' + alertClass(al) + '">' +
+      '<div class="wx-event">&#9888; ' + esc(al.event) +
+        '<span class="wx-sev">' + esc(al.severity) + "</span></div>" +
+      '<div class="wx-headline">' + esc(al.headline || "") + "</div>" +
+      (al.area ? '<div class="wx-area">' + esc(al.area) + "</div>" : "") +
+      '<div class="wx-src">' + esc(al.sender || "") + " · Source: " +
+        '<a href="' + esc(al.source_url) + '" rel="noopener">' + esc(al.source) + "</a>" +
+        (al.expires ? " · until " + esc(new Date(al.expires).toLocaleString()) : "") +
+      "</div></div>"
+  ).join("");
+}
+
 function render(data) {
   const a = data.airport;
   document.getElementById("airport-title").textContent = a.iata + " — " + a.name;
   document.getElementById("airport-sub").textContent = a.city + ", " + a.state;
+  renderWeather(data.weather_alerts);
   if (!data.checkpoints.length) {
     container.innerHTML = '<div class="cp-card"><div class="cp-name">No public wait-time data published for this airport.</div>' +
       '<div class="cp-src">This airport does not currently publish live checkpoint wait times on its public website.</div></div>';

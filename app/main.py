@@ -1,15 +1,17 @@
 """US Checkpoint Wait Picture — web app and API."""
 import logging
 import os
+from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db, poller
+from . import db, poller, weather_alerts
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -61,6 +63,39 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.astimezone(UTC).isoformat() if dt else None
 
 
+ALERT_COLUMNS = """
+SELECT airport_iata, event, severity, headline, area_desc, sender_name, alert_url,
+       effective, onset, expires, ends, fetched_at
+FROM weather_alerts
+"""
+ACTIVE_ALERTS_SQL = ALERT_COLUMNS + "WHERE expires IS NULL OR expires > now()"
+AIRPORT_ALERTS_SQL = ALERT_COLUMNS + "WHERE airport_iata = %s AND (expires IS NULL OR expires > now())"
+
+
+def _alert_dict(row: Sequence[Any]) -> dict[str, Any]:
+    (_iata, event, severity, headline, area_desc, sender, url,
+     effective, onset, expires, ends, fetched_at) = row
+    return {
+        "event": event,
+        "severity": severity,
+        "headline": headline,
+        "area": area_desc,
+        "sender": sender,
+        "url": url,
+        "effective": _iso(effective),
+        "onset": _iso(onset),
+        "expires": _iso(expires),
+        "ends": _iso(ends),
+        "fetched_at": _iso(fetched_at),
+        "source": weather_alerts.ATTRIBUTION,
+        "source_url": weather_alerts.PUBLIC_PAGE,
+    }
+
+
+def _alert_sort_key(alert: dict[str, Any]) -> tuple[int, str]:
+    return (-weather_alerts.SEVERITY_RANK.get(alert["severity"], 0), alert["event"])
+
+
 LATEST_OBS_SQL = """
 SELECT DISTINCT ON (o.checkpoint_id)
     c.airport_iata, c.name, c.lane_type, o.wait_seconds, o.is_open,
@@ -105,6 +140,15 @@ async def api_summary():
             fetched_iso = _iso(fetched_at)
             if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
                 a["last_fetch"] = fetched_iso
+        await cur.execute(ACTIVE_ALERTS_SQL)
+        for row in await cur.fetchall():
+            a = airports.get(row[0])
+            if a is None:
+                continue
+            alert = _alert_dict(row)
+            current = a.get("weather_alert")
+            if current is None or _alert_sort_key(alert) < _alert_sort_key(current):
+                a["weather_alert"] = alert
         await cur.execute(
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
@@ -144,6 +188,8 @@ async def api_airport(iata: str):
         if row is None:
             raise HTTPException(404, "unknown airport")
         airport = {"iata": row[0], "name": row[1], "city": row[2], "state": row[3], "lat": row[4], "lon": row[5]}
+        await cur.execute(AIRPORT_ALERTS_SQL, (iata,))
+        alerts = sorted((_alert_dict(r) for r in await cur.fetchall()), key=_alert_sort_key)
         await cur.execute(
             """
             SELECT c.id, c.name, c.lane_type FROM checkpoints c
@@ -200,6 +246,7 @@ async def api_airport(iata: str):
                 "history": history,
             })
     return JSONResponse({"airport": airport, "checkpoints": checkpoints,
+                         "weather_alerts": alerts,
                          "generated_at": _iso(datetime.now(UTC))})
 
 
