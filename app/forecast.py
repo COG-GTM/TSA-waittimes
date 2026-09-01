@@ -6,7 +6,7 @@ UTC weekly occurrences over the recent history. Recent observations matter
 most for the nearest horizon, but are excluded from the trend when they are
 stale.
 Observations after the forecast's reference time are discarded before any
-forecast input is calculated.
+forecast input is calculated, including the current lane-state query.
 """
 
 from __future__ import annotations
@@ -120,6 +120,7 @@ WITH latest AS (
     WHERE c.airport_iata = %s
       AND c.lane_type = 'standard'
       AND o.fetched_at > %s
+      AND o.fetched_at <= %s
     ORDER BY o.checkpoint_id, o.fetched_at DESC
 ), newest AS (
     SELECT max(fetched_at) AS newest_fetched_at FROM latest
@@ -454,7 +455,7 @@ async def load_lane_state(cur: ForecastCursor, iata: str, now: datetime) -> bool
     cutoff = now - timedelta(days=HISTORY_DAYS)
     await cur.execute(
         LANE_STATE_SQL,
-        (iata, cutoff, timedelta(minutes=TREND_STALE_MINUTES)),
+        (iata, cutoff, now, timedelta(minutes=TREND_STALE_MINUTES)),
     )
     row = await cur.fetchone()
     if row is None or row[1] is None:

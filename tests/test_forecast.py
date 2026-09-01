@@ -403,12 +403,14 @@ class FakeCursor:
         self.observation_rows = observation_rows
         self.lanes_open = lanes_open
         self.current_query = ""
+        self.executions: list[tuple[str, tuple[object, ...]]] = []
         self.airport_queries = 0
         self.observation_queries = 0
         self.lane_state_queries = 0
 
     async def execute(self, query: str, _params: tuple[object, ...] = ()) -> None:
         self.current_query = query
+        self.executions.append((query, _params))
         if "FROM airports WHERE iata" in query:
             self.airport_queries += 1
         elif "WITH per_minute AS" in query:
@@ -454,6 +456,23 @@ class FakePool:
 
     def connection(self):
         return FakeConnection(self.cursor)
+
+
+@pytest.mark.asyncio
+async def test_load_lane_state_binds_reference_time() -> None:
+    cursor = FakeCursor(("JFK", "John F. Kennedy International Airport"), [])
+
+    assert await forecast.load_lane_state(cursor, "JFK", NOW) is True
+
+    query, params = cursor.executions[-1]
+    assert "o.fetched_at <= %s" in forecast.LANE_STATE_SQL
+    assert query == forecast.LANE_STATE_SQL
+    assert params == (
+        "JFK",
+        NOW - timedelta(days=forecast.HISTORY_DAYS),
+        NOW,
+        timedelta(minutes=forecast.TREND_STALE_MINUTES),
+    )
 
 
 def rich_rows() -> list[tuple[datetime, int]]:
