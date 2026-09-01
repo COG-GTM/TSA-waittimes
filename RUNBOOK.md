@@ -59,6 +59,9 @@ When FAA publishes the next final calendar-year commercial-service workbook:
 
 The JSON intentionally stores only LOCIDs, rank, enplanements, hub, and source
 metadata; airport names and cities remain sourced from `data/us_airports.json`.
+During seeding, the confirmed FAA LOCID-to-IATA aliases are applied only to
+the database key, and rows dropped from a regenerated file are removed for
+that year.
 
 ## Data provenance
 

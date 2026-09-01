@@ -10,6 +10,15 @@ from typing import cast
 ENPLANEMENTS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "enplanements.json")
 LOCID_RE = re.compile(r"^[A-Z0-9]{3}$")
 _ENPLANEMENTS_RE = re.compile(r"^cy (\d{2,4}) enplanements$")
+LOCID_TO_IATA = {
+    "AWI": "AIN", "IWA": "AZA", "BBG": "BKG", "BVU": "BLD", "CRQ": "CLD",
+    "ENM": "EMK", "ORS": "ESD", "GPI": "FCA", "HXD": "HHH", "HLA": "HSL",
+    "AKW": "KLW", "SAW": "MQT", "UNV": "SCE", "JQF": "USA", "NYL": "YUM",
+}
+
+
+def iata_for_locid(locid: str) -> str:
+    return LOCID_TO_IATA.get(locid, locid)
 
 
 def _normalize_header(value: object) -> str:

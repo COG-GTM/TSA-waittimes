@@ -6,7 +6,7 @@ import os
 
 from psycopg_pool import AsyncConnectionPool
 
-from .enplanements import ENPLANEMENTS_PATH, load_enplanements
+from .enplanements import ENPLANEMENTS_PATH, iata_for_locid, load_enplanements
 
 log = logging.getLogger("db")
 
@@ -144,9 +144,15 @@ async def seed_enplanements() -> None:
             raise TypeError("invalid enplanements airports")
         assert pool is not None
         async with pool.connection() as conn, conn.cursor() as cur:
+            seeded_codes: list[str] = []
             for airport in airports:
                 if not isinstance(airport, dict):
                     raise TypeError("invalid enplanements airport record")
+                locid = airport["locid"]
+                if not isinstance(locid, str):
+                    raise TypeError("invalid enplanements airport locid")
+                airport_iata = iata_for_locid(locid)
+                seeded_codes.append(airport_iata)
                 await cur.execute(
                     """
                     INSERT INTO airport_enplanements
@@ -157,9 +163,16 @@ async def seed_enplanements() -> None:
                         hub = EXCLUDED.hub, source_name = EXCLUDED.source_name, source_url = EXCLUDED.source_url
                     """,
                     (
-                        airport["locid"], year, airport["enplanements"], airport["rank"], airport["hub"],
+                        airport_iata, year, airport["enplanements"], airport["rank"], airport["hub"],
                         source_name, source_url,
                     ),
                 )
+            await cur.execute(
+                """
+                DELETE FROM airport_enplanements
+                WHERE year = %s AND airport_iata <> ALL(%s)
+                """,
+                (year, seeded_codes),
+            )
     except Exception as err:  # noqa: BLE001 - invalid optional data must not break startup
         log.warning("could not seed enplanements: %s", err)

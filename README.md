@@ -43,6 +43,10 @@ python3.12 scripts/fetch_enplanements.py
 ```
 
 The generator also accepts `--file <path>` for a downloaded FAA workbook.
+FAA LOCIDs are normalized to the app's IATA codes for the small set of
+confirmed aliases during seeding; the source JSON remains faithful to FAA
+LOCIDs. Re-seeding also removes stale rows for that year that are no longer
+present in the regenerated file.
 
 ## Run locally
 

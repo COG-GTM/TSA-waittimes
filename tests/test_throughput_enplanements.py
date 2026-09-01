@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.enplanements import load_enplanements, parse_enplanement_rows
+from app.enplanements import LOCID_TO_IATA, iata_for_locid, load_enplanements, parse_enplanement_rows
 from app.tsa_throughput import parse_throughput_html
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -66,3 +66,19 @@ def test_committed_enplanements_data() -> None:
     atl = next(airport for airport in airports if airport["locid"] == "ATL")
     assert atl["rank"] == 1
     assert atl["enplanements"] == 52511402
+
+
+def test_iata_for_locid_aliases() -> None:
+    assert iata_for_locid("IWA") == "AZA"
+    assert iata_for_locid("GPI") == "FCA"
+    assert iata_for_locid("DEN") == "DEN"
+
+
+def test_locid_aliases_match_committed_data() -> None:
+    data = load_enplanements()
+    assert data is not None
+    airports = data["airports"]
+    assert isinstance(airports, list)
+    locids = {airport["locid"] for airport in airports}
+    assert set(LOCID_TO_IATA) <= locids
+    assert not set(LOCID_TO_IATA.values()) & locids
