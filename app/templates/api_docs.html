@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Public API v1 — US Checkpoint Wait Picture</title>
+<style>
+  :root { color-scheme: light; --blue: #3969ca; --teal: #21c19a; --ink: #17202a; --muted: #52616b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); background: #f7f9fb; font: 15px/1.55 Inter, system-ui, sans-serif; }
+  header { padding: 32px max(20px, calc((100% - 900px) / 2)); color: white; background: linear-gradient(120deg, #3969ca, #21c19a); }
+  header a { color: white; text-decoration: none; font-weight: 700; }
+  main { max-width: 900px; margin: 0 auto; padding: 28px 20px 48px; }
+  h1 { margin: 0 0 6px; font-size: 30px; }
+  h2 { margin: 30px 0 8px; font-size: 21px; }
+  h3 { margin-bottom: 4px; font-size: 17px; color: var(--blue); }
+  p { margin: 8px 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { overflow-x: auto; padding: 14px; border: 1px solid #d9e0e7; border-radius: 6px; background: #fff; font-size: 13px; }
+  .note { padding: 12px 14px; border-left: 3px solid var(--teal); background: #eafaf5; }
+  .footer { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header><a href="/">US Checkpoint Wait Picture</a></header>
+<main>
+  <h1>Public API v1</h1>
+  <p>Read-only airport security wait times and source health for applications and websites.</p>
+
+  <h2>Endpoints</h2>
+  <h3>GET /api/v1/airports</h3>
+  <p>List airports with live checkpoint data.</p>
+  <pre><code>curl https://waitpicture.com/api/v1/airports</code></pre>
+  <pre><code>{
+  "generated_at": "2025-01-15T12:00:00+00:00",
+  "data_notice": "Wait times are aggregated from officially published public data sources; ...",
+  "airports": [{"iata": "DEN", "standard_wait_seconds": 900, "precheck_wait_seconds": 300, "stale": false, "source_url": "..."}]
+}</code></pre>
+
+  <h3>GET /api/v1/airport/{IATA}</h3>
+  <p>Return airport metadata, checkpoint observations, FAA events, alerts, and travel period data.</p>
+  <pre><code>curl https://waitpicture.com/api/v1/airport/DEN</code></pre>
+  <pre><code>{
+  "airport": {"iata": "DEN", "name": "Denver International Airport", "...": "..."},
+  "checkpoints": [{"name": "North", "lane_type": "standard", "wait_seconds": 900, "is_open": true, "...": "..."}],
+  "faa_events": [], "weather_alerts": [], "generated_at": "2025-01-15T12:00:00+00:00",
+  "data_notice": "Wait times are aggregated from officially published public data sources; ..."
+}</code></pre>
+
+  <h3>GET /api/v1/status</h3>
+  <p>Return source health and the current observation count.</p>
+  <pre><code>curl https://waitpicture.com/api/v1/status</code></pre>
+  <pre><code>{
+  "status": "ok",
+  "observations": 1234,
+  "sources": [{"source": "denver", "healthy": true, "...": "..."}],
+  "data_notice": "Wait times are aggregated from officially published public data sources; ..."
+}</code></pre>
+
+  <h2>Embeddable widget</h2>
+  <p>Embed a compact airport summary with an iframe:</p>
+  <pre><code>&lt;iframe src="https://waitpicture.com/embed/DEN" width="320" height="180" style="border:0" title="DEN security wait times"&gt;&lt;/iframe&gt;</code></pre>
+  <p>The widget is self-contained and uses no external JavaScript or CSS.</p>
+
+  <h2>Usage and attribution</h2>
+  <p>Sources poll every ~120 seconds, and responses may be cached for a couple of minutes.</p>
+  <p>Requests are limited to 60 requests/min per IP. Exceeding the limit returns <code>429</code> with a <code>Retry-After</code> header.</p>
+  <p>CORS permits GET requests from any origin on <code>/api/v1/*</code> only. Other routes do not enable CORS.</p>
+  <div class="note"><strong>Data notice:</strong> Each response includes a <code>data_notice</code> field. Data is aggregated from officially published public sources; consumers must retain the <code>attribution</code> and <code>source_url</code> fields when displaying data.</div>
+  <p class="footer">Cognition demo built from publicly published airport data. Not affiliated with TSA. Demonstration only.</p>
+</main>
+</body>
+</html>
