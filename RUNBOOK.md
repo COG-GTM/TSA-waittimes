@@ -29,7 +29,7 @@ each entry holds the airport code, source name, public URL, attribution string,
 and `refresh_seconds` (default 120s — no source is polled faster than once per
 minute). The `sources` table is upserted from this list at startup.
 
-Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS, PIT, JFK, LGA, EWR.
+Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS, PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX, MSP, SFO.
 TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
 
 ## Common issues
