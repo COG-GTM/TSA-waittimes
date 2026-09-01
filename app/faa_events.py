@@ -21,7 +21,6 @@ _DAILY_CLOSURE_RE = re.compile(r"\bDLY\s+(\d{4})-(\d{4})\b", re.IGNORECASE)
 _DLY_MARKER_RE = re.compile(r"\bDLY\b", re.IGNORECASE)
 _CLOSURE_RE = re.compile(r"\bCLSD\b", re.IGNORECASE)
 _PARTIAL_CLOSURE_RE = re.compile(r"\bCLSD\s+TO\b", re.IGNORECASE)
-_EXCEPTION_CLOSURE_RE = re.compile(r"\bEXC\b|\bEXCEPT\b", re.IGNORECASE)
 
 
 @dataclass
@@ -109,10 +108,7 @@ def _daily_closure_active(reason: str, now: datetime) -> bool | None:
 
 
 def _is_qualified_closure(reason: str) -> bool:
-    return (
-        _PARTIAL_CLOSURE_RE.search(reason) is not None
-        or _EXCEPTION_CLOSURE_RE.search(reason) is not None
-    )
+    return _PARTIAL_CLOSURE_RE.search(reason) is not None
 
 
 def parse_airport_events(

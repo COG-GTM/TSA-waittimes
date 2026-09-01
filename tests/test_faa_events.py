@@ -99,7 +99,7 @@ def test_unparseable_daily_closure_is_skipped() -> None:
     assert parse_airport_events(payload, now=FIXTURE_NOW) == []
 
 
-def test_qualified_free_form_closures_are_skipped() -> None:
+def test_traffic_restriction_free_form_closures_are_skipped() -> None:
     payload = [
         {
             "airportId": "LAX",
@@ -135,18 +135,23 @@ def test_qualified_free_form_closures_are_skipped() -> None:
                 "updatedAt": "2026-03-18T13:00:00Z",
             },
         },
-        {
-            "airportId": "ABC",
-            "freeForm": {
-                "simpleText": "ABC AD AP CLSD EXC MEDEVAC",
-                "text": "ABC AD AP CLSD EXC MEDEVAC",
-                "startTime": "2026-09-01T00:00:00Z",
-                "endTime": "2026-09-02T00:00:00Z",
-                "updatedAt": "2026-09-01T00:00:00Z",
-            },
-        },
     ]
     assert parse_airport_events(payload, now=FIXTURE_NOW) == []
+
+
+def test_free_form_closure_with_exception_still_parses() -> None:
+    payload = [{
+        "airportId": "ABC",
+        "freeForm": {
+            "simpleText": "ABC AD AP CLSD EXC MEDEVAC",
+            "text": "ABC AD AP CLSD EXC MEDEVAC",
+            "startTime": "2026-09-01T00:00:00Z",
+            "endTime": "2026-09-02T00:00:00Z",
+            "updatedAt": "2026-09-01T00:00:00Z",
+        },
+    }]
+    events = parse_airport_events(payload, now=FIXTURE_NOW)
+    assert [(event.airport_iata, event.event_type) for event in events] == [("ABC", "closure")]
 
 
 def test_lft_fixture_free_form_closure_still_parses() -> None:
