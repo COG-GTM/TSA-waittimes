@@ -76,15 +76,12 @@ class ProfileBucket:
 
     mean: float
     samples: int
-    days: int
+    dates: frozenset[date]
+    scope: str
 
-
-class _Profile(dict[int, ProfileBucket]):
-    """Profile mapping with private date sets for pooled day counts."""
-
-    def __init__(self, dates: dict[int, set[date]]):
-        super().__init__()
-        self.dates = dates
+    @property
+    def days(self) -> int:
+        return len(self.dates)
 
 
 FORECAST_SQL = """
@@ -179,37 +176,30 @@ def hour_of_week_profile(points: Sequence[ObsPoint]) -> dict[int, ProfileBucket]
         bucket = hour_of_week(point.at)
         buckets.setdefault(bucket, []).append(point.wait_seconds)
         dates.setdefault(bucket, set()).add(point.at.astimezone(UTC).date())
-    profile = _Profile(dates)
-    profile.update(
-        {
-            bucket: ProfileBucket(
-                mean=sum(values) / len(values),
-                samples=len(values),
-                days=len(dates[bucket]),
-            )
-            for bucket, values in buckets.items()
-        }
-    )
-    return profile
+    return {
+        bucket: ProfileBucket(
+            mean=sum(values) / len(values),
+            samples=len(values),
+            dates=frozenset(dates[bucket]),
+            scope="exact",
+        )
+        for bucket, values in buckets.items()
+    }
 
 
-def _pooled_days(profile: dict[int, ProfileBucket], buckets: Sequence[int]) -> int:
-    dates = getattr(profile, "dates", None)
-    if dates is not None:
-        pooled_dates: set[date] = set()
-        for item in buckets:
-            pooled_dates.update(dates.get(item, set()))
-        return len(pooled_dates)
-    return sum(profile[item].days for item in buckets if item in profile)
-
-
-def _pooled_bucket(profile: dict[int, ProfileBucket], buckets: Sequence[int]) -> ProfileBucket:
+def _pooled_bucket(
+    profile: dict[int, ProfileBucket], buckets: Sequence[int], scope: str
+) -> ProfileBucket | None:
     values = [profile[item] for item in buckets if item in profile]
     samples = sum(value.samples for value in values)
+    if samples <= 0:
+        return None
+    pooled_dates = frozenset(date_value for value in values for date_value in value.dates)
     return ProfileBucket(
         mean=sum(value.mean * value.samples for value in values) / samples,
         samples=samples,
-        days=_pooled_days(profile, buckets),
+        dates=pooled_dates,
+        scope=scope,
     )
 
 
@@ -220,20 +210,19 @@ def profile_lookup(
 
     exact = profile.get(bucket)
     if exact is not None and exact.days >= 2:
-        return exact.mean, exact
+        return exact.mean, ProfileBucket(exact.mean, exact.samples, exact.dates, "exact")
 
     nearby_buckets = [(bucket + offset) % 168 for offset in (-1, 0, 1)]
-    nearby = _pooled_bucket(profile, nearby_buckets) if any(
-        item in profile for item in nearby_buckets
-    ) else None
+    nearby = _pooled_bucket(profile, nearby_buckets, "nearby")
     if nearby is not None and nearby.days >= 2:
         return nearby.mean, nearby
 
     total_samples = sum(value.samples for value in profile.values())
     if total_samples >= MIN_PROFILE_SAMPLES:
         all_buckets = list(profile)
-        global_bucket = _pooled_bucket(profile, all_buckets)
-        return global_bucket.mean, global_bucket
+        global_bucket = _pooled_bucket(profile, all_buckets, "global")
+        if global_bucket is not None:
+            return global_bucket.mean, global_bucket
     return None, None
 
 
@@ -248,13 +237,14 @@ def confidence_label(
     recent_count: int,
     latest_age_minutes: float | None,
     bucket_days: int,
+    bucket_scope: str,
     horizon_minutes: int,
 ) -> str:
     """Classify confidence from freshness, recent data, and profile support."""
 
     fresh = latest_age_minutes is not None and latest_age_minutes <= FRESH_MINUTES
     strong_recent = fresh and recent_count >= STRONG_RECENT_POINTS
-    strong_profile = bucket_days >= STRONG_BUCKET_DAYS
+    strong_profile = bucket_days >= STRONG_BUCKET_DAYS and bucket_scope != "global"
     if strong_recent and strong_profile and horizon_minutes <= 60:
         return "high"
     if strong_recent or strong_profile:
@@ -295,7 +285,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
     basis: dict[str, object] = {
         "recent_points": len(recent),
         "recent_level_seconds": round(level) if level is not None else None,
-        "trend_seconds_per_hour": round(slope * 60),
+        "trend_seconds_per_hour": round(slope * 60) if have_trend else None,
         "history_points": total_history,
         "history_days": HISTORY_DAYS,
         "latest_observation_at": latest.at.astimezone(UTC).isoformat() if latest else None,
@@ -303,6 +293,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         "window_minutes": RECENT_WINDOW_MINUTES,
         "profile_days": 0,
         "profile_samples": 0,
+        "profile_scope": None,
     }
 
     if not have_trend and not have_profile:
@@ -325,6 +316,8 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
     labels: list[str] = []
     profile_days = 0
     profile_samples = 0
+    profile_scope: str | None = None
+    scope_rank = {"exact": 0, "nearby": 1, "global": 2}
     for horizon in HORIZON_MINUTES:
         valid_at = now + timedelta(minutes=horizon)
         trend_pred = _clamp_wait(level + slope * horizon) if have_trend and level is not None else None
@@ -335,6 +328,8 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         if profile_bucket is not None:
             profile_days = max(profile_days, profile_bucket.days)
             profile_samples = max(profile_samples, profile_bucket.samples)
+            if profile_scope is None or scope_rank[profile_bucket.scope] > scope_rank[profile_scope]:
+                profile_scope = profile_bucket.scope
 
         if trend_pred is not None and profile_pred is not None:
             prediction = blend_weight(horizon) * trend_pred + (1 - blend_weight(horizon)) * profile_pred
@@ -350,6 +345,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
             recent_count=len(recent),
             latest_age_minutes=latest_age,
             bucket_days=profile_bucket.days if profile_bucket is not None else 0,
+            bucket_scope=profile_bucket.scope if profile_bucket is not None else "",
             horizon_minutes=horizon,
         )
         labels.append(label)
@@ -365,6 +361,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
 
     basis["profile_days"] = profile_days
     basis["profile_samples"] = profile_samples
+    basis["profile_scope"] = profile_scope
     return Forecast(
         available=True,
         reason=None,

@@ -14,6 +14,13 @@ def points_from(values: list[tuple[int, int]]) -> list[forecast.ObsPoint]:
     return [forecast.ObsPoint(NOW + timedelta(minutes=offset), wait) for offset, wait in values]
 
 
+def profile_bucket(
+    mean: float, samples: int, day_offsets: list[int], scope: str = "exact"
+) -> forecast.ProfileBucket:
+    dates = frozenset(NOW.date() - timedelta(days=offset) for offset in day_offsets)
+    return forecast.ProfileBucket(mean, samples, dates, scope)
+
+
 def steady_points(wait_seconds: int = 600) -> list[forecast.ObsPoint]:
     return [
         forecast.ObsPoint(NOW - timedelta(minutes=10 * index), wait_seconds)
@@ -31,6 +38,7 @@ def test_steady_forecast() -> None:
     assert [h.confidence for h in result.horizons] == ["high", "high", "medium"]
     assert result.basis["profile_days"] >= 3
     assert result.basis["profile_samples"] >= 18
+    assert result.basis["trend_seconds_per_hour"] == 0
 
 
 def test_rising_forecast_uses_trend_and_profile_blend() -> None:
@@ -96,28 +104,37 @@ def test_hour_of_week_uses_utc() -> None:
 
 
 def test_profile_lookup_widens_and_falls_back() -> None:
-    exact, exact_bucket = forecast.profile_lookup({10: forecast.ProfileBucket(900.0, 3, 2)}, 10)
+    exact, exact_bucket = forecast.profile_lookup({10: profile_bucket(900.0, 3, [0, 7])}, 10)
     assert exact == 900.0
-    assert exact_bucket == forecast.ProfileBucket(900.0, 3, 2)
+    assert exact_bucket == profile_bucket(900.0, 3, [0, 7])
     neighbor, neighbor_bucket = forecast.profile_lookup(
-        {9: forecast.ProfileBucket(600.0, 2, 2), 11: forecast.ProfileBucket(1200.0, 2, 2)},
+        {9: profile_bucket(600.0, 2, [0, 7]), 11: profile_bucket(1200.0, 2, [0, 7])},
         10,
     )
     assert neighbor == 900.0
-    assert neighbor_bucket == forecast.ProfileBucket(900.0, 4, 4)
-    profile = {20: forecast.ProfileBucket(600.0, 6, 1), 40: forecast.ProfileBucket(1200.0, 6, 1)}
+    assert neighbor_bucket == profile_bucket(900.0, 4, [0, 7], "nearby")
+    profile = {20: profile_bucket(600.0, 6, [0]), 40: profile_bucket(1200.0, 6, [7])}
     global_mean, global_bucket = forecast.profile_lookup(profile, 80)
     assert global_mean == 900.0
-    assert global_bucket == forecast.ProfileBucket(900.0, 12, 2)
-    assert forecast.profile_lookup({20: forecast.ProfileBucket(600.0, 2, 1)}, 80) == (None, None)
+    assert global_bucket == profile_bucket(900.0, 12, [0, 7], "global")
+    assert forecast.profile_lookup({20: profile_bucket(600.0, 2, [0])}, 80) == (None, None)
 
 
 @pytest.mark.parametrize(
     ("kwargs", "expected"),
     [
-        ({"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 3, "horizon_minutes": 30}, "high"),
-        ({"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 1, "horizon_minutes": 120}, "medium"),
-        ({"recent_count": 2, "latest_age_minutes": 10, "bucket_days": 1, "horizon_minutes": 30}, "low"),
+        (
+            {"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 3, "bucket_scope": "exact", "horizon_minutes": 30},
+            "high",
+        ),
+        (
+            {"recent_count": 6, "latest_age_minutes": 10, "bucket_days": 1, "bucket_scope": "exact", "horizon_minutes": 120},
+            "medium",
+        ),
+        (
+            {"recent_count": 2, "latest_age_minutes": 10, "bucket_days": 1, "bucket_scope": "exact", "horizon_minutes": 30},
+            "low",
+        ),
     ],
 )
 def test_confidence_label(kwargs: dict[str, object], expected: str) -> None:
@@ -164,6 +181,28 @@ def test_many_samples_on_one_day_are_not_strong_profile_support() -> None:
         recent_count=0,
         latest_age_minutes=None,
         bucket_days=bucket.days,
+        bucket_scope=bucket.scope,
+        horizon_minutes=30,
+    ) == "low"
+
+
+def test_global_profile_support_is_not_strong() -> None:
+    profile = {
+        20: profile_bucket(600.0, 4, [0]),
+        40: profile_bucket(900.0, 4, [7]),
+        60: profile_bucket(1200.0, 4, [14]),
+    }
+    mean, bucket = forecast.profile_lookup(profile, 100)
+
+    assert mean == 900.0
+    assert bucket is not None
+    assert bucket.scope == "global"
+    assert bucket.days == 3
+    assert forecast.confidence_label(
+        recent_count=0,
+        latest_age_minutes=None,
+        bucket_days=bucket.days,
+        bucket_scope=bucket.scope,
         horizon_minutes=30,
     ) == "low"
 
@@ -179,6 +218,7 @@ def test_stale_recent_observations_use_profile_only() -> None:
     assert result.available is True
     assert result.method == "profile_only"
     assert result.basis["latest_observation_age_minutes"] == 45
+    assert result.basis["trend_seconds_per_hour"] is None
 
 
 def test_stale_thin_history_is_unavailable() -> None:
@@ -310,7 +350,7 @@ async def test_forecast_endpoint_rejects_unknown_and_malformed_iata(monkeypatch:
 
 
 @pytest.mark.asyncio
-async def test_forecast_endpoint_thin_history_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_forecast_endpoint_stale_history_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     cursor = FakeCursor(
         ("JFK", "John F. Kennedy International Airport"),
         [(datetime.now(UTC) - timedelta(minutes=60), 600)],
@@ -323,3 +363,20 @@ async def test_forecast_endpoint_thin_history_is_unavailable(monkeypatch: pytest
     assert response.status_code == 200
     assert response.json()["available"] is False
     assert response.json()["reason"] == "stale_observations"
+
+
+@pytest.mark.asyncio
+async def test_forecast_endpoint_fresh_thin_history_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = datetime.now(UTC)
+    cursor = FakeCursor(
+        ("JFK", "John F. Kennedy International Airport"),
+        [(now - timedelta(minutes=3), 600)],
+    )
+    monkeypatch.setattr(main.db, "pool", FakePool(cursor))
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/airport/JFK/forecast")
+
+    assert response.status_code == 200
+    assert response.json()["available"] is False
+    assert response.json()["reason"] == "insufficient_history"
