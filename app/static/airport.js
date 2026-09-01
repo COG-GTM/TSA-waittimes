@@ -32,6 +32,14 @@ function render(data) {
   } else {
     rankEl.innerHTML = "";
   }
+  document.getElementById("faa-banner").innerHTML = (data.faa_events || []).map(event =>
+    '<div class="faa-banner">' +
+      '<div>' + esc(faaEventText(event)) + "</div>" +
+      '<div class="faa-attribution"><a href="https://nasstatus.faa.gov/" rel="noopener">' +
+        esc(data.faa_attribution || "FAA National Airspace System Status (nasstatus.faa.gov)") +
+      "</a></div>" +
+    "</div>"
+  ).join("");
   if (!data.checkpoints.length) {
     container.innerHTML = '<div class="cp-card"><div class="cp-name">No public wait-time data published for this airport.</div>' +
       '<div class="cp-src">This airport does not currently publish live checkpoint wait times on its public website.</div></div>';

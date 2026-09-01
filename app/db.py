@@ -40,6 +40,20 @@ CREATE TABLE IF NOT EXISTS raw_payloads (
     payload JSONB NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS faa_airport_events (
+    id BIGSERIAL PRIMARY KEY,
+    airport_iata TEXT NOT NULL REFERENCES airports(iata),
+    event_type TEXT NOT NULL,
+    reason TEXT,
+    avg_delay_seconds INTEGER,
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
+    update_time TIMESTAMPTZ,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    raw_id BIGINT REFERENCES raw_payloads(id)
+);
+CREATE INDEX IF NOT EXISTS idx_faa_events_time ON faa_airport_events (fetched_at DESC);
+
 CREATE TABLE IF NOT EXISTS checkpoints (
     id SERIAL PRIMARY KEY,
     airport_iata TEXT NOT NULL REFERENCES airports(iata),

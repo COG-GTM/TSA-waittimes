@@ -25,6 +25,9 @@ function popupHtml(a) {
   } else {
     html += '<span class="popup-src">No public wait-time data published</span>';
   }
+  if (a.faa_event) {
+    html += '<div class="faa-badge">' + esc(faaEventText(a.faa_event)) + "</div>";
+  }
   return html;
 }
 
@@ -72,7 +75,11 @@ function render(data) {
       '<span class="wait ' + (a.stale ? "stale" : "") + '">' + fmtMin(a.max_wait_seconds) + "</span>" +
       '<span class="code">' + esc(a.iata) + "</span>" +
       '<div class="meta">' + esc(a.name) + (a.stale ? " · STALE" : "") + "<br>" +
-      esc(a.source) + " · " + asPublished(a.as_of || a.last_fetch) + "</div></a>"
+      esc(a.source) + " · " + asPublished(a.as_of || a.last_fetch) +
+      (a.faa_event
+        ? ' <span class="faa-badge">' + esc(FAA_EVENT_LABELS[a.faa_event.event_type] || "FAA event") + "</span>"
+        : "") +
+      "</div></a>"
   ).join("");
 }
 

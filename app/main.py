@@ -10,12 +10,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import db, poller
+from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 STALE_SECONDS = 30 * 60
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
+FAA_EVENT_SEVERITY = {
+    "ground_stop": 5,
+    "closure": 4,
+    "ground_delay": 3,
+    "arrival_delay": 2,
+    "departure_delay": 1,
+}
 
 
 @asynccontextmanager
@@ -71,6 +79,35 @@ JOIN sources s ON s.code = o.source_code
 ORDER BY o.checkpoint_id, o.fetched_at DESC
 """
 
+FAA_EVENTS_SQL = """
+SELECT airport_iata, event_type, reason, avg_delay_seconds, start_time, end_time, update_time
+FROM faa_airport_events
+WHERE fetched_at = (
+        SELECT max(fetched_at) FROM raw_payloads WHERE source_code = %s
+      )
+  AND fetched_at > now() - interval '20 minutes'
+  AND (start_time IS NULL OR start_time <= now())
+  AND (end_time IS NULL OR end_time >= now())
+"""
+
+
+def _faa_event_dict(row: tuple, *, include_iata: bool = False) -> dict:
+    airport_iata, event_type, reason, avg_delay_seconds, _start_time, end_time, update_time = row
+    event = {
+        "event_type": event_type,
+        "reason": reason,
+        "avg_delay_seconds": avg_delay_seconds,
+        "end_time": _iso(end_time),
+        "update_time": _iso(update_time),
+    }
+    if include_iata:
+        event["iata"] = airport_iata
+    return event
+
+
+def _faa_sort_key(event: dict) -> tuple[int, str]:
+    return (-FAA_EVENT_SEVERITY.get(event["event_type"], 0), event.get("iata", ""))
+
 
 @app.get("/api/summary")
 async def api_summary():
@@ -118,7 +155,14 @@ async def api_summary():
             """
         )
         tsa_history = [[week.isoformat(), int(avg)] for week, avg in await cur.fetchall()]
+        await cur.execute(FAA_EVENTS_SQL, (FAA_SOURCE_CODE,))
+        faa_events = [_faa_event_dict(row, include_iata=True) for row in await cur.fetchall()]
     live = sum(1 for a in airports.values() if a["live"])
+    faa_events.sort(key=_faa_sort_key)
+    for event in faa_events:
+        airport = airports.get(event["iata"])
+        if airport is not None and "faa_event" not in airport:
+            airport["faa_event"] = {key: value for key, value in event.items() if key != "iata"}
     tsa = None
     if tsa_rows:
         by_date = {d: t for d, t in tsa_rows}
@@ -141,6 +185,8 @@ async def api_summary():
         "no_data_count": len(airports) - live,
         "airports": list(airports.values()),
         "tsa_throughput": tsa,
+        "faa_events": faa_events,
+        "faa_attribution": FAA_ATTRIBUTION,
     })
 
 
@@ -228,8 +274,16 @@ async def api_airport(iata: str):
                 "source_url": src_url,
                 "history": history,
             })
-    return JSONResponse({"airport": airport, "checkpoints": checkpoints,
-                         "generated_at": _iso(datetime.now(UTC))})
+        await cur.execute(FAA_EVENTS_SQL + " AND airport_iata = %s", (FAA_SOURCE_CODE, iata))
+        faa_events = [_faa_event_dict(row) for row in await cur.fetchall()]
+        faa_events.sort(key=_faa_sort_key)
+    return JSONResponse({
+        "airport": airport,
+        "checkpoints": checkpoints,
+        "faa_events": faa_events,
+        "faa_attribution": FAA_ATTRIBUTION,
+        "generated_at": _iso(datetime.now(UTC)),
+    })
 
 
 @app.get("/healthz")

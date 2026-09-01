@@ -1,0 +1,660 @@
+[
+  {
+    "airportId": "BOS",
+    "groundStop": null,
+    "groundDelay": {
+      "id": "6e4a3b00-5db2-4302-8818-cce6cbf9027c",
+      "createdAt": "2026-09-01T13:41:53Z",
+      "airportId": "BOS",
+      "sourceTimeStamp": "2026-09-01T13:43:06Z",
+      "updatedAt": "2026-09-01T13:44:29Z",
+      "impactingCondition": "runway construction",
+      "avgDelay": 147.0,
+      "maxDelay": 280,
+      "startTime": "2026-09-01T15:00:00Z",
+      "endTime": "2026-09-02T04:59:00Z",
+      "center": "ZBW",
+      "advisoryUrl": "https://www.fly.faa.gov/adv/adv_otherdis.jsp?advn=47&adv_date=09012026&facId=BOS&title=ATCSCC ADVZY 047 BOS/ZBW 09/01/2026 CDM GROUND DELAY PROGRAM&titleDate=09/01/2026",
+      "departureScope": null,
+      "includedFacilities": [
+        "ZLA",
+        "ZAU",
+        "ZLC",
+        "ZTL",
+        "ZDC",
+        "ZNY",
+        "ZHU",
+        "ZJX",
+        "ZFW",
+        "ZOB",
+        "ZDV",
+        "ZOA",
+        "ZSE",
+        "ZBW",
+        "ZMA",
+        "ZKC",
+        "ZME",
+        "ZID",
+        "ZAB",
+        "ZMP",
+        "CYHZ",
+        "CYOW",
+        "CYUL",
+        "CYYZ",
+        "CYTZ",
+        "CYQB"
+      ],
+      "fuelFlowAdvisoryDelayTime": {
+        "id": "c3a8a484-63d6-4153-84ac-1f2433b054fa",
+        "controlElement": "BOS",
+        "delayProgramType": "GDP",
+        "startTime": "2026-09-01T15:00:00Z",
+        "endTime": "2026-09-02T04:59:00Z",
+        "dasDelays": {
+          "delayTimeAmount": "2026-09-01T15:00:00.000+00:00",
+          "dasDelay": [
+            {
+              "delay": 36,
+              "seq": 1
+            },
+            {
+              "delay": 38,
+              "seq": 2
+            },
+            {
+              "delay": 42,
+              "seq": 3
+            }
+          ]
+        },
+        "sourceTimeStamp": "2026-09-01T13:43:06Z",
+        "createdAt": "2026-08-23T22:58:45Z",
+        "updatedAt": "2026-09-01T13:44:45Z"
+      },
+      "includedFlights": ": ALL CONTIGUOUS US DEP",
+      "fadtParamType": "GDP",
+      "gsCancelReceivedTs": null,
+      "gsCancelSourceTs": null,
+      "compression": false,
+      "blanket": false
+    },
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": {
+      "id": "f9ed1b72-1d73-4daf-9ca5-cf9f9bf440ac",
+      "createdAt": "2026-09-01T09:48:07Z",
+      "airportId": "BOS",
+      "arrivalRunwayConfig": "22L",
+      "departureRunwayConfig": "22R",
+      "arrivalRate": 38,
+      "sourceTimeStamp": "2026-09-01T09:48:07Z"
+    },
+    "deicing": null,
+    "airportLongName": "General Edward Lawrence Logan International",
+    "latitude": "42.3656",
+    "longitude": "-71.0096"
+  },
+  {
+    "airportId": "EWR",
+    "groundStop": null,
+    "groundDelay": {
+      "id": "08daac47-88ef-463e-90d5-6007ac1ba460",
+      "createdAt": "2026-09-01T16:00:04Z",
+      "airportId": "EWR",
+      "sourceTimeStamp": "2026-09-01T15:59:20Z",
+      "updatedAt": "2026-09-01T16:00:04Z",
+      "impactingCondition": "thunderstorms",
+      "avgDelay": 102.0,
+      "maxDelay": 169,
+      "startTime": "2026-09-01T18:00:00Z",
+      "endTime": "2026-09-02T03:59:00Z",
+      "center": "ZNY",
+      "advisoryUrl": "https://www.fly.faa.gov/adv/adv_otherdis.jsp?advn=70&adv_date=09012026&facId=EWR&title=ATCSCC ADVZY 070 EWR/ZNY 09/01/2026 CDM GROUND DELAY PROGRAM&titleDate=09/01/2026",
+      "departureScope": null,
+      "includedFacilities": [
+        "ZLA",
+        "ZAU",
+        "ZLC",
+        "ZTL",
+        "ZDC",
+        "ZNY",
+        "ZHU",
+        "ZJX",
+        "ZFW",
+        "ZOB",
+        "ZDV",
+        "ZOA",
+        "ZSE",
+        "ZBW",
+        "ZMA",
+        "ZKC",
+        "ZME",
+        "ZID",
+        "ZAB",
+        "ZMP",
+        "CYHZ",
+        "CYOW",
+        "CYUL",
+        "CYYZ",
+        "CYTZ",
+        "CYQB"
+      ],
+      "fuelFlowAdvisoryDelayTime": {
+        "id": "733697e5-aec4-4e7a-9d7d-6dc336998add",
+        "controlElement": "EWR",
+        "delayProgramType": "GDP",
+        "startTime": "2026-09-01T18:00:00Z",
+        "endTime": "2026-09-02T03:59:00Z",
+        "dasDelays": {
+          "delayTimeAmount": "2026-09-01T18:00:00.000+00:00",
+          "dasDelay": [
+            {
+              "delay": 12,
+              "seq": 1
+            },
+            {
+              "delay": 16,
+              "seq": 2
+            },
+            {
+              "delay": 21,
+              "seq": 3
+            }
+          ]
+        },
+        "sourceTimeStamp": "2026-09-01T15:59:20Z",
+        "createdAt": "2026-08-23T23:32:33Z",
+        "updatedAt": "2026-09-01T16:00:29Z"
+      },
+      "includedFlights": ": ALL CONTIGUOUS US DEP",
+      "fadtParamType": "GDP",
+      "gsCancelReceivedTs": null,
+      "gsCancelSourceTs": null,
+      "compression": false,
+      "blanket": false
+    },
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": {
+      "id": "daa0927a-f7e0-4e4c-ba6e-5e793e940bd3",
+      "createdAt": "2026-09-01T09:40:32Z",
+      "airportId": "EWR",
+      "arrivalRunwayConfig": "22L",
+      "departureRunwayConfig": "22R",
+      "arrivalRate": 36,
+      "sourceTimeStamp": "2026-09-01T09:40:32Z"
+    },
+    "deicing": null,
+    "airportLongName": "Newark International",
+    "latitude": "40.6895",
+    "longitude": "-74.1745"
+  },
+  {
+    "airportId": "HPN",
+    "groundStop": null,
+    "groundDelay": null,
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": {
+      "airportId": "HPN",
+      "reason": "OTHER: N90 ODO ARR REQ",
+      "arrivalDeparture": {
+        "type": "Departure",
+        "min": "31 minutes",
+        "max": "45 minutes",
+        "trend": "Increasing"
+      },
+      "updateTime": "2026-09-01T15:40:00Z",
+      "averageDelay": "30",
+      "trend": "increasing"
+    },
+    "airportConfig": null,
+    "deicing": null,
+    "airportLongName": "Westchester Co",
+    "latitude": "41.0683",
+    "longitude": "-73.7085"
+  },
+  {
+    "airportId": "JFK",
+    "groundStop": null,
+    "groundDelay": {
+      "id": "89e78a65-9641-42de-a21b-d63ac79d6128",
+      "createdAt": "2026-09-01T15:44:24Z",
+      "airportId": "JFK",
+      "sourceTimeStamp": "2026-09-01T15:43:26Z",
+      "updatedAt": "2026-09-01T15:44:24Z",
+      "impactingCondition": "thunderstorms",
+      "avgDelay": 113.0,
+      "maxDelay": 193,
+      "startTime": "2026-09-01T17:00:00Z",
+      "endTime": "2026-09-02T03:59:00Z",
+      "center": "ZNY",
+      "advisoryUrl": "https://www.fly.faa.gov/adv/adv_otherdis.jsp?advn=64&adv_date=09012026&facId=JFK&title=ATCSCC ADVZY 064 JFK/ZNY 09/01/2026 CDM GROUND DELAY PROGRAM&titleDate=09/01/2026",
+      "departureScope": null,
+      "includedFacilities": [
+        "ZLA",
+        "ZAU",
+        "ZLC",
+        "ZTL",
+        "ZDC",
+        "ZNY",
+        "ZHU",
+        "ZJX",
+        "ZFW",
+        "ZOB",
+        "ZDV",
+        "ZOA",
+        "ZSE",
+        "ZBW",
+        "ZMA",
+        "ZKC",
+        "ZME",
+        "ZID",
+        "ZAB",
+        "ZMP",
+        "CYHZ",
+        "CYOW",
+        "CYUL",
+        "CYYZ",
+        "CYTZ",
+        "CYQB"
+      ],
+      "fuelFlowAdvisoryDelayTime": {
+        "id": "ae498126-269f-43e7-8dcf-c44c2cfa0d9f",
+        "controlElement": "JFK",
+        "delayProgramType": "GDP",
+        "startTime": "2026-09-01T17:00:00Z",
+        "endTime": "2026-09-02T03:59:00Z",
+        "dasDelays": {
+          "delayTimeAmount": "2026-09-01T17:00:00.000+00:00",
+          "dasDelay": [
+            {
+              "delay": 123,
+              "seq": 1
+            },
+            {
+              "delay": 122,
+              "seq": 2
+            },
+            {
+              "delay": 116,
+              "seq": 3
+            }
+          ]
+        },
+        "sourceTimeStamp": "2026-09-01T15:43:26Z",
+        "createdAt": "2026-08-27T15:01:31Z",
+        "updatedAt": "2026-09-01T15:44:46Z"
+      },
+      "includedFlights": ": ALL CONTIGUOUS US DEP",
+      "fadtParamType": "GDP",
+      "gsCancelReceivedTs": null,
+      "gsCancelSourceTs": null,
+      "compression": false,
+      "blanket": false
+    },
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": {
+      "id": "cf5fa45c-d36a-4256-822a-60a706eb1435",
+      "createdAt": "2026-09-01T11:58:27Z",
+      "airportId": "JFK",
+      "arrivalRunwayConfig": "ILS 22L/22R",
+      "departureRunwayConfig": "22R/31L",
+      "arrivalRate": 40,
+      "sourceTimeStamp": "2026-09-01T11:58:26Z"
+    },
+    "deicing": null,
+    "airportLongName": "John F Kennedy International",
+    "latitude": "40.6413",
+    "longitude": "-73.7781"
+  },
+  {
+    "airportId": "LFT",
+    "groundStop": null,
+    "groundDelay": null,
+    "airportClosure": null,
+    "freeForm": {
+      "id": "81c0fddc-5b21-427e-ade7-0091e829c1f9",
+      "airportId": "LFT",
+      "createdAt": null,
+      "updatedAt": "2026-08-30T02:07:32Z",
+      "startTime": "2026-08-31T04:30:00Z",
+      "endTime": "2026-09-04T09:15:00Z",
+      "simpleText": "!LFT 08/135 LFT AD AP CLSD DLY 0430-0915 2608310430-2609040915",
+      "text": "DLY 0430-0915",
+      "notamNumber": 135,
+      "issuedDate": "2026-08-30T01:57:00Z"
+    },
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": null,
+    "deicing": null,
+    "airportLongName": "Lafayette Regional",
+    "latitude": "30.2050",
+    "longitude": "-91.9883"
+  },
+  {
+    "airportId": "LGA",
+    "groundStop": null,
+    "groundDelay": {
+      "id": "09b2cb5c-c5bb-468b-bd7e-c811c7631a84",
+      "createdAt": "2026-09-01T15:52:21Z",
+      "airportId": "LGA",
+      "sourceTimeStamp": "2026-09-01T15:50:51Z",
+      "updatedAt": "2026-09-01T15:52:22Z",
+      "impactingCondition": "thunderstorms",
+      "avgDelay": 45.0,
+      "maxDelay": 105,
+      "startTime": "2026-09-01T17:30:00Z",
+      "endTime": "2026-09-02T02:59:00Z",
+      "center": "ZNY",
+      "advisoryUrl": "https://www.fly.faa.gov/adv/adv_otherdis.jsp?advn=69&adv_date=09012026&facId=LGA&title=ATCSCC ADVZY 069 LGA/ZNY 09/01/2026 CDM GROUND DELAY PROGRAM&titleDate=09/01/2026",
+      "departureScope": null,
+      "includedFacilities": [
+        "ZLA",
+        "ZAU",
+        "ZLC",
+        "ZTL",
+        "ZDC",
+        "ZNY",
+        "ZHU",
+        "ZJX",
+        "ZFW",
+        "ZOB",
+        "ZDV",
+        "ZOA",
+        "ZSE",
+        "ZBW",
+        "ZMA",
+        "ZKC",
+        "ZME",
+        "ZID",
+        "ZAB",
+        "ZMP",
+        "CYHZ",
+        "CYOW",
+        "CYUL",
+        "CYYZ",
+        "CYTZ",
+        "CYQB"
+      ],
+      "fuelFlowAdvisoryDelayTime": {
+        "id": "c4f623e6-9be1-4828-a6ea-85690fce053f",
+        "controlElement": "LGA",
+        "delayProgramType": "GDP",
+        "startTime": "2026-09-01T17:30:00Z",
+        "endTime": "2026-09-02T02:59:00Z",
+        "dasDelays": {
+          "delayTimeAmount": "2026-09-01T17:30:00.000+00:00",
+          "dasDelay": [
+            {
+              "delay": 15,
+              "seq": 1
+            },
+            {
+              "delay": 21,
+              "seq": 2
+            },
+            {
+              "delay": 26,
+              "seq": 3
+            }
+          ]
+        },
+        "sourceTimeStamp": "2026-09-01T15:50:51Z",
+        "createdAt": "2026-08-27T12:36:21Z",
+        "updatedAt": "2026-09-01T15:52:35Z"
+      },
+      "includedFlights": ": ALL CONTIGUOUS US DEP",
+      "fadtParamType": "GDP",
+      "gsCancelReceivedTs": null,
+      "gsCancelSourceTs": null,
+      "compression": false,
+      "blanket": false
+    },
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": {
+      "airportId": "LGA",
+      "reason": "TM Initiatives:SWAP:WX",
+      "arrivalDeparture": {
+        "type": "Departure",
+        "min": "15 minutes",
+        "max": "29 minutes",
+        "trend": "Decreasing"
+      },
+      "updateTime": "2026-09-01T15:16:00Z",
+      "averageDelay": "30",
+      "trend": "decreasing"
+    },
+    "airportConfig": {
+      "id": "92e9be9e-7f0c-4748-95a3-22d559d81d6a",
+      "createdAt": "2026-09-01T09:55:48Z",
+      "airportId": "LGA",
+      "arrivalRunwayConfig": "ILS/LDA 22",
+      "departureRunwayConfig": "13",
+      "arrivalRate": 40,
+      "sourceTimeStamp": "2026-09-01T09:55:47Z"
+    },
+    "deicing": null,
+    "airportLongName": "La Guardia",
+    "latitude": "40.7769",
+    "longitude": "-73.8740"
+  },
+  {
+    "airportId": "LMT",
+    "groundStop": null,
+    "groundDelay": null,
+    "airportClosure": {
+      "id": "9a924b4b-0b45-4b4b-95a0-46678e137980",
+      "airportId": "LMT",
+      "createdAt": "2026-08-28T21:08:07Z",
+      "updatedAt": "2026-08-28T21:08:07Z",
+      "startTime": "2026-08-31T00:01:00Z",
+      "endTime": "2026-09-04T13:00:00Z",
+      "simpleText": "!LMT 08/056 LMT AD AP CLSD EXC FIRE FIGHTING ACFT AND LIFE FLT AND HEL 1HR \rPPR 133.975/541-891-2620 DLY 0001-1300 2608310001-2609041300",
+      "text": "except FIRE FIGHTING ACFT AND LIFE FLT AND HEL 1HR \rPPR 133.975/541-891-2620 DLY 0001-1300",
+      "notamNumber": 56,
+      "issuedDate": "2026-08-28T21:03:00Z"
+    },
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": null,
+    "deicing": null,
+    "airportLongName": "Klamath Falls International",
+    "latitude": "42.1618",
+    "longitude": "-121.7369"
+  },
+  {
+    "airportId": "SAN",
+    "groundStop": null,
+    "groundDelay": {
+      "id": "0aba0877-9da7-4d79-a21d-bd3d714ec9a5",
+      "createdAt": "2026-09-01T13:35:02Z",
+      "airportId": "SAN",
+      "sourceTimeStamp": "2026-09-01T13:34:10Z",
+      "updatedAt": "2026-09-01T13:35:02Z",
+      "impactingCondition": "airport volume",
+      "avgDelay": 32.0,
+      "maxDelay": 65,
+      "startTime": "2026-09-01T17:00:00Z",
+      "endTime": "2026-09-01T20:59:00Z",
+      "center": "ZLA",
+      "advisoryUrl": "https://www.fly.faa.gov/adv/adv_otherdis.jsp?advn=44&adv_date=09012026&facId=SAN&title=ATCSCC ADVZY 044 SAN/ZLA 09/01/2026 CDM GROUND DELAY PROGRAM&titleDate=09/01/2026",
+      "departureScope": 1200.0,
+      "includedFacilities": [
+        "CYYJ",
+        "CYVR",
+        "CYLW",
+        "CYYC"
+      ],
+      "fuelFlowAdvisoryDelayTime": {
+        "id": "e8a18051-9725-472e-9135-53da0081181f",
+        "controlElement": "SAN",
+        "delayProgramType": "GDP",
+        "startTime": "2026-09-01T17:00:00Z",
+        "endTime": "2026-09-01T20:59:00Z",
+        "dasDelays": {
+          "delayTimeAmount": "2026-09-01T17:00:00.000+00:00",
+          "dasDelay": [
+            {
+              "delay": 11,
+              "seq": 1
+            },
+            {
+              "delay": 14,
+              "seq": 2
+            },
+            {
+              "delay": 21,
+              "seq": 3
+            }
+          ]
+        },
+        "sourceTimeStamp": "2026-09-01T13:34:10Z",
+        "createdAt": "2026-08-24T00:40:30Z",
+        "updatedAt": "2026-09-01T13:35:15Z"
+      },
+      "includedFlights": ": ALL CONTIGUOUS US DEP",
+      "fadtParamType": "GDP",
+      "gsCancelReceivedTs": null,
+      "gsCancelSourceTs": null,
+      "compression": false,
+      "blanket": false
+    },
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": {
+      "id": "32450f35-ef1c-421e-8763-a51c552226e7",
+      "createdAt": "2026-09-01T12:51:41Z",
+      "airportId": "SAN",
+      "arrivalRunwayConfig": "27",
+      "departureRunwayConfig": "27",
+      "arrivalRate": 24,
+      "sourceTimeStamp": "2026-09-01T12:51:40Z"
+    },
+    "deicing": null,
+    "airportLongName": "San Diego-Lindbergh Field",
+    "latitude": "32.7338",
+    "longitude": "-117.1933"
+  },
+  {
+    "airportId": "SFO",
+    "groundStop": null,
+    "groundDelay": {
+      "id": "c8df4834-e76c-438b-8882-bfe6844ed45a",
+      "createdAt": "2026-09-01T12:33:30Z",
+      "airportId": "SFO",
+      "sourceTimeStamp": "2026-09-01T12:32:14Z",
+      "updatedAt": "2026-09-01T12:33:31Z",
+      "impactingCondition": "low ceilings",
+      "avgDelay": 50.0,
+      "maxDelay": 91,
+      "startTime": "2026-09-01T15:00:00Z",
+      "endTime": "2026-09-01T20:59:00Z",
+      "center": "ZOA",
+      "advisoryUrl": "https://www.fly.faa.gov/adv/adv_otherdis.jsp?advn=37&adv_date=09012026&facId=SFO&title=ATCSCC ADVZY 037 SFO/ZOA 09/01/2026 CDM GROUND DELAY PROGRAM&titleDate=09/01/2026",
+      "departureScope": 1625.0,
+      "includedFacilities": [
+        "CYEG",
+        "CYVR",
+        "CYYC"
+      ],
+      "fuelFlowAdvisoryDelayTime": {
+        "id": "7e6476f0-0bd5-4833-931a-7a2eb3556a05",
+        "controlElement": "SFO",
+        "delayProgramType": "GDP",
+        "startTime": "2026-09-01T15:00:00Z",
+        "endTime": "2026-09-01T20:59:00Z",
+        "dasDelays": {
+          "delayTimeAmount": "2026-09-01T15:00:00.000+00:00",
+          "dasDelay": [
+            {
+              "delay": 0,
+              "seq": 1
+            },
+            {
+              "delay": 15,
+              "seq": 2
+            },
+            {
+              "delay": 28,
+              "seq": 3
+            }
+          ]
+        },
+        "sourceTimeStamp": "2026-09-01T12:32:14Z",
+        "createdAt": "2026-08-24T00:13:28Z",
+        "updatedAt": "2026-09-01T12:33:43Z"
+      },
+      "includedFlights": ": ALL CONTIGUOUS US DEP",
+      "fadtParamType": "GDP",
+      "gsCancelReceivedTs": null,
+      "gsCancelSourceTs": null,
+      "compression": false,
+      "blanket": false
+    },
+    "airportClosure": null,
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": {
+      "id": "317d0d94-c2cc-457b-875a-ba1b27d951e8",
+      "createdAt": "2026-09-01T14:06:35Z",
+      "airportId": "SFO",
+      "arrivalRunwayConfig": "28L/28R (.308)",
+      "departureRunwayConfig": "28L/28R",
+      "arrivalRate": 36,
+      "sourceTimeStamp": "2026-09-01T14:06:34Z"
+    },
+    "deicing": null,
+    "airportLongName": "San Francisco International",
+    "latitude": "37.6213",
+    "longitude": "-122.3790"
+  },
+  {
+    "airportId": "SNA",
+    "groundStop": null,
+    "groundDelay": null,
+    "airportClosure": {
+      "id": "1bf341e9-f21f-479f-996c-ad6860e5c5a2",
+      "airportId": "SNA",
+      "createdAt": "2026-08-28T18:42:02Z",
+      "updatedAt": "2026-08-28T18:42:02Z",
+      "startTime": "2026-08-30T06:30:00Z",
+      "endTime": "2026-09-04T13:15:00Z",
+      "simpleText": "!SNA 08/060 SNA AD AP CLSD DLY 0630-1315 2608300630-2609041315",
+      "text": "DLY 0630-1315",
+      "notamNumber": 60,
+      "issuedDate": "2026-08-28T18:36:00Z"
+    },
+    "freeForm": null,
+    "arrivalDelay": null,
+    "departureDelay": null,
+    "airportConfig": {
+      "id": "9cf37ac0-2b94-4461-b9ce-f379b4b530f5",
+      "createdAt": "2026-09-01T12:51:41Z",
+      "airportId": "SNA",
+      "arrivalRunwayConfig": "20R",
+      "departureRunwayConfig": "20R",
+      "arrivalRate": 24,
+      "sourceTimeStamp": "2026-09-01T12:51:40Z"
+    },
+    "deicing": null,
+    "airportLongName": "John Wayne Airport-Orange County",
+    "latitude": "33.6763",
+    "longitude": "-117.8674"
+  }
+]
