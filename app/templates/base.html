@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}US Checkpoint Wait Picture{% endblock %}</title>
+<link rel="stylesheet" href="/static/leaflet.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">US Checkpoint Wait Picture</a>
+  <div id="tsa-strip" class="tsa-strip"></div>
+</header>
+<main>{% block content %}{% endblock %}</main>
+<footer class="footer">
+  Cognition demo built from publicly published airport data. Not affiliated with TSA. Demonstration only.
+</footer>
+<script src="/static/leaflet.js"></script>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

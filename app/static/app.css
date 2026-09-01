@@ -1,0 +1,83 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #2d333b;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --green: #2ea043;
+  --green-bright: #3fb950;
+  --amber: #d29922;
+  --red: #f85149;
+  --gray-dot: #484f58;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+a { color: inherit; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 17px; text-decoration: none; letter-spacing: .2px; }
+.tsa-strip { font-size: 12.5px; color: var(--muted); }
+.tsa-strip b { color: var(--text); }
+
+.counter-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 10px 16px; flex-wrap: wrap; }
+.counter { font-size: 15px; }
+.counter b { font-size: 20px; }
+.counter-live b { color: var(--green-bright); }
+.counter-gray b { color: var(--muted); }
+.counter-sep { margin: 0 8px; color: var(--muted); }
+.updated { font-size: 12px; color: var(--muted); }
+
+#map { height: 62vh; min-height: 340px; background: var(--bg); }
+.leaflet-container { background: var(--bg); font: inherit; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
+.popup-wait { font-size: 18px; font-weight: 700; }
+.popup-src { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.wait-label { background: none; border: none; }
+.wait-label span { display: inline-block; transform: translate(-50%, -130%);
+  background: var(--green); color: #fff; font-weight: 700; font-size: 11px;
+  padding: 1px 5px; border-radius: 8px; white-space: nowrap; }
+.wait-label span.stale { background: var(--amber); }
+
+.live-list { padding: 12px 16px 4px; display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.live-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; text-decoration: none; display: block; }
+.live-card:hover { border-color: var(--muted); }
+.live-card .code { font-weight: 700; font-size: 15px; }
+.live-card .wait { float: right; font-weight: 700; font-size: 18px; color: var(--green-bright); }
+.live-card .wait.stale { color: var(--amber); }
+.live-card .meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+.airport-head { padding: 14px 16px 0; }
+.airport-head h1 { margin: 6px 0 2px; font-size: 22px; }
+.back { font-size: 13px; color: var(--muted); text-decoration: none; }
+.airport-sub { color: var(--muted); font-size: 13px; }
+
+.checkpoints { padding: 12px 16px; display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.cp-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.cp-name { font-weight: 600; font-size: 14px; }
+.cp-lane { display: inline-block; font-size: 10.5px; padding: 1px 6px; border-radius: 8px;
+  background: #1f2937; color: var(--muted); margin-left: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.cp-wait { font-size: 30px; font-weight: 700; margin: 6px 0 2px; color: var(--green-bright); }
+.cp-wait.closed { color: var(--muted); font-size: 20px; }
+.cp-wait.stale { color: var(--amber); }
+.stale-flag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 6px;
+  border-radius: 8px; background: var(--amber); color: #000; margin-left: 8px; vertical-align: middle; }
+.cp-src { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+.cp-src a { color: var(--muted); }
+.sparkline { margin-top: 8px; width: 100%; height: 44px; }
+.sparkline polyline { fill: none; stroke: var(--green-bright); stroke-width: 1.5; }
+.sparkline .axis { font-size: 8px; fill: var(--muted); }
+
+.footer { padding: 18px 16px 26px; color: var(--muted); font-size: 12px;
+  border-top: 1px solid var(--border); margin-top: 18px; text-align: center; }
+
+@media (max-width: 600px) {
+  #map { height: 52vh; }
+  .topbar { padding: 8px 12px; }
+  .counter b { font-size: 17px; }
+}
