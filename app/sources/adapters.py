@@ -85,8 +85,16 @@ def _den_wait_seconds(wait: str | None) -> int | None:
         return None
 
 
-# ---------------------------------------------------------------- Airport Labs vendor (MCO / IAH / HOU / DFW)
-async def _airportlabs(client: httpx.AsyncClient, url: str, key: str, version: str, origin: str) -> FetchResult:
+# ---------------------------------------------------------------- Airport Labs vendor (MCO / IAH / HOU / DFW / CLT / CVG)
+async def _airportlabs(
+    client: httpx.AsyncClient,
+    url: str,
+    key: str,
+    version: str,
+    origin: str,
+    *,
+    collection: str = "wait_times",
+) -> FetchResult:
     r = await client.get(
         url,
         headers={
@@ -101,14 +109,21 @@ async def _airportlabs(client: httpx.AsyncClient, url: str, key: str, version: s
     r.raise_for_status()
     data = r.json()
     obs = []
-    for cp in data.get("data", {}).get("wait_times", []):
+    for cp in data.get("data", {}).get(collection, []):
         if not cp.get("isDisplayable", True):
             continue
         lane = cp.get("lane") or ""
+        name = cp.get("name") or "Checkpoint"
+        attrs = cp.get("attributes")
+        precheck = (
+            "pre" in lane.lower()
+            or "pre" in name.lower()
+            or (isinstance(attrs, dict) and bool(attrs.get("preCheck")))
+        )
         obs.append(
             Observation(
-                cp.get("name") or "Checkpoint",
-                "precheck" if "pre" in lane.lower() or "pre" in (cp.get("name") or "").lower() else "standard",
+                name,
+                "precheck" if precheck else "standard",
                 cp.get("waitSeconds"),
                 bool(cp.get("isOpen", True)),
                 _ts(cp.get("lastUpdatedTimestamp")),
@@ -142,6 +157,21 @@ async def fetch_dfw(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.dfwairport.mobi/wait-times/checkpoint/DFW",
         "87856E0636AA4BF282150FCBE1AD63DE", "170", "https://www.dfwairport.com",
+    )
+
+
+async def fetch_clt(client: httpx.AsyncClient) -> FetchResult:
+    return await _airportlabs(
+        client, "https://api.cltairport.mobi/wait-times/checkpoint/CLT",
+        "5ccb418715f9428ca6cb4df1635d4815", "130", "https://www.cltairport.com",
+    )
+
+
+async def fetch_cvg(client: httpx.AsyncClient) -> FetchResult:
+    return await _airportlabs(
+        client, "https://api.cvgairport.mobi/checkpoints/CVG",
+        "b6461a439f1047ac950a920866b86fef", "100", "https://www.cvgairport.com",
+        collection="checkpoints",
     )
 
 
@@ -210,6 +240,8 @@ SOURCES: list[Source] = [
     Source("IAH", "Houston Airports — IAH checkpoint wait times", "https://www.fly2houston.com/iah/security", "Houston Airport System (fly2houston.com)", 120, fetch_iah),
     Source("HOU", "Houston Airports — HOU checkpoint wait times", "https://www.fly2houston.com/hou/security", "Houston Airport System (fly2houston.com)", 120, fetch_hou),
     Source("DFW", "DFW International Airport — security wait times", "https://www.dfwairport.com/security/", "DFW International Airport (dfwairport.com)", 120, fetch_dfw),
+    Source("CLT", "Charlotte Douglas International Airport — security wait times", "https://www.cltairport.com/airport-info/security/", "Charlotte Douglas International Airport (cltairport.com)", 120, fetch_clt),
+    Source("CVG", "Cincinnati/Northern Kentucky International Airport — security wait times", "https://www.cvgairport.com/security/", "Kenton County Airport Board — CVG (cvgairport.com)", 120, fetch_cvg),
     Source("SLC", "Salt Lake City International Airport — TSA wait times", "https://slcairport.com/", "Salt Lake City Department of Airports (slcairport.com)", 120, fetch_slc),
     Source("LAS", "Harry Reid International Airport — security wait times", "https://www.harryreidairport.com/security-wait-times", "Harry Reid International Airport (harryreidairport.com)", 120, fetch_las),
 ]
