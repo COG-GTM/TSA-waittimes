@@ -29,7 +29,7 @@ def _ts(epoch: float | None) -> datetime | None:
 
 
 _PRECHECK_RE = re.compile(r"\bpre[\s-]?check\b|\bpre\b")
-_ALT_LANE_RE = re.compile(r"\b(clear|priority|premium|premier|employee|crew|staff|kcm)\b")
+_ALT_LANE_RE = re.compile(r"\b(clear|priority|premium|premier|employee|crew|staff|kcm|fis|customs|immigration)\b")
 
 
 def _lane(*parts: str | None) -> str:

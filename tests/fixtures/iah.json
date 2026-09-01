@@ -200,9 +200,9 @@
   "expected": {
     "observation_count": 10,
     "lane_types": {
-      "other": 1,
+      "other": 2,
       "precheck": 3,
-      "standard": 6
+      "standard": 5
     },
     "open_count": 10,
     "closed_count": 0,
@@ -275,7 +275,7 @@
       },
       {
         "checkpoint_name": "Int'l Arrivals Customs Checkpoint",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 120,
         "is_open": true,
         "published_at": "2026-09-01T08:38:10+00:00"

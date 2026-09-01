@@ -355,9 +355,9 @@
   "expected": {
     "observation_count": 20,
     "lane_types": {
-      "other": 9,
+      "other": 10,
       "precheck": 3,
-      "standard": 8
+      "standard": 7
     },
     "open_count": 19,
     "closed_count": 1,
@@ -500,7 +500,7 @@
       },
       {
         "checkpoint_name": "FIS General",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 120,
         "is_open": true,
         "published_at": "2026-09-01T15:33:16+00:00"
