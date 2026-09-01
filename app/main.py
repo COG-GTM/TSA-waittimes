@@ -35,6 +35,17 @@ templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
 
 
 @app.middleware("http")
+async def canonical_host_redirect(request: Request, call_next):
+    host = request.headers.get("host", "").split(":", 1)[0].lower()
+    if host in REDIRECT_HOSTS:
+        target = f"https://{CANONICAL_HOST}{request.url.path}"
+        if request.url.query:
+            target += "?" + request.url.query
+        return RedirectResponse(target, status_code=301)
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def security_headers(request: Request, call_next):
     resp = await call_next(request)
     resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -44,17 +55,6 @@ async def security_headers(request: Request, call_next):
         "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     )
     return resp
-
-
-@app.middleware("http")
-async def canonical_host_redirect(request: Request, call_next):
-    host = request.headers.get("host", "").split(":", 1)[0].lower()
-    if host in REDIRECT_HOSTS:
-        target = f"https://{CANONICAL_HOST}{request.url.path}"
-        if request.url.query:
-            target += "?" + request.url.query
-        return RedirectResponse(target, status_code=301)
-    return await call_next(request)
 
 
 def _iso(dt: datetime | None) -> str | None:
