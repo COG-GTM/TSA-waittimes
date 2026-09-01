@@ -183,7 +183,7 @@ async def poll_weather_alerts(client: httpx.AsyncClient) -> None:
                 raise EmptyPollError(f"{source.code}: feed returned no alert features")
             coords = await weather_alerts.load_coords()
             matched = weather_alerts.match_alerts(alerts, zones, coords)
-            raw_id = await store_raw(source, _matched_raw(matched))
+            raw_id = await store_raw(source, _matched_raw(matched, zones))
             stored = await weather_alerts.store_alerts(matched, raw_id)
             log.info(
                 "polled %s: %d relevant alerts, %d airports affected (%d rows)",
@@ -213,16 +213,31 @@ async def poll_weather_alerts(client: httpx.AsyncClient) -> None:
         await asyncio.sleep(delay + random.uniform(0, 5))
 
 
-def _matched_raw(matched: dict[str, list[tuple[weather_alerts.Alert, str]]]) -> dict[str, Any]:
-    """Provenance for the alerts we kept (the full national feed is ~1.5 MB/cycle)."""
+def _matched_raw(
+    matched: dict[str, list[tuple[weather_alerts.Alert, str]]],
+    zones: dict[str, weather_alerts.AirportZones],
+) -> dict[str, Any]:
+    """Provenance for the alerts we kept (the full national feed is ~1.5 MB/cycle).
+
+    Records both sides of the match — the alert's zones/geometry and the airport's
+    cached zones — so a stored row can be re-derived after the upstream product,
+    or our matching, changes.
+    """
     return {
         "source": weather_alerts.ALERTS_URL,
         "matched": {
-            iata: [
-                {"alert_id": a.alert_id, "event": a.event, "severity": a.severity,
-                 "headline": a.headline, "expires": a.expires, "match_basis": basis}
-                for a, basis in entries
-            ]
+            iata: {
+                "airport_zones": sorted(zones[iata].codes) if iata in zones else [],
+                "alerts": [
+                    {"alert_id": a.alert_id, "event": a.event, "severity": a.severity,
+                     "headline": a.headline, "expires": a.expires, "match_basis": basis,
+                     "alert_zones": sorted(a.zones),
+                     "geometry": [
+                         {"outer": outer, "holes": holes} for outer, holes in a.polygons
+                     ]}
+                    for a, basis in entries
+                ],
+            }
             for iata, entries in matched.items()
         },
     }

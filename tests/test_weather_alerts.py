@@ -240,6 +240,28 @@ def test_polygon_holes_exclude_the_point() -> None:
     assert not wx.point_in_polygon(-99.25, 40.75, polygon)
 
 
+def test_polygon_alert_skips_zone_neighbours_outside_the_warning() -> None:
+    """A storm-based warning clips whole counties, so geometry beats the UGC zone."""
+    feature = {
+        "geometry": {"type": "Polygon", "coordinates": [_square(-100.0, 40.0, -99.0, 41.0)]},
+        "properties": {
+            "id": "urn:oid:poly", "@id": "https://api.weather.gov/alerts/urn:oid:poly",
+            "event": "Severe Thunderstorm Warning", "status": "Actual", "severity": "Severe",
+            "geocode": {"UGC": ["NEC001"]},
+        },
+    }
+    alert = wx.parse_alert(feature)
+    assert alert is not None
+    zones = {
+        "INS": wx.AirportZones("INS", "NEC001", None, None),
+        "OUT": wx.AirportZones("OUT", "NEC001", None, None),
+    }
+    coords = {"INS": (40.5, -99.5), "OUT": (40.5, -98.5)}
+    matched = wx.match_alerts([alert], zones, coords)
+    assert set(matched) == {"INS"}
+    assert matched["INS"][0][1] == "polygon"
+
+
 def test_multipolygon_holes_are_per_component() -> None:
     geometry = {
         "type": "MultiPolygon",

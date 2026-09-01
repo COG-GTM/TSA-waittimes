@@ -5070,13 +5070,13 @@
         {
           "event": "Hurricane Watch",
           "severity": "Severe",
-          "basis": "zone",
+          "basis": "polygon",
           "alert_id": "urn:oid:2.49.0.1.840.0.865dc83cea24fac5e58ff3de60d6f37715c24cb3.001.1"
         },
         {
           "event": "Tropical Storm Warning",
           "severity": "Severe",
-          "basis": "zone",
+          "basis": "polygon",
           "alert_id": "urn:oid:2.49.0.1.840.0.865dc83cea24fac5e58ff3de60d6f37715c24cb3.001.3"
         },
         {
@@ -5138,7 +5138,7 @@
         {
           "event": "Tropical Storm Warning",
           "severity": "Severe",
-          "basis": "zone",
+          "basis": "polygon",
           "alert_id": "urn:oid:2.49.0.1.840.0.865dc83cea24fac5e58ff3de60d6f37715c24cb3.006.1"
         },
         {

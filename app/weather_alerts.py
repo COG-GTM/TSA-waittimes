@@ -305,18 +305,18 @@ def match_alerts(
         if alert.expires is not None and alert.expires <= now:
             continue
         hit: dict[str, str] = {}
-        for code in alert.zones:
-            for iata in by_zone.get(code, ()):
-                hit[iata] = "zone"
-        # Geometry is matched against every airport we have coordinates for, not
-        # just the zone-resolved ones: polygon-only alerts must still land while
-        # the zone cache is being backfilled.
-        for polygon in alert.polygons:
-            for iata, (lat, lon) in coords.items():
-                if iata in hit:
-                    continue
-                if point_in_polygon(lon, lat, polygon):
-                    hit[iata] = "polygon"
+        if alert.polygons:
+            # Storm-based warnings carry both a polygon and the whole counties it
+            # clips; the polygon is the warned area, so geometry wins outright and
+            # is tested against every airport we have coordinates for.
+            for polygon in alert.polygons:
+                for iata, (lat, lon) in coords.items():
+                    if point_in_polygon(lon, lat, polygon):
+                        hit[iata] = "polygon"
+        else:
+            for code in alert.zones:
+                for iata in by_zone.get(code, ()):
+                    hit[iata] = "zone"
         for iata, basis in hit.items():
             matched.setdefault(iata, []).append((alert, basis))
     for iata, entries in matched.items():
