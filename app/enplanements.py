@@ -16,8 +16,10 @@ def _normalize_header(value: object) -> str:
     return " ".join(str(value).strip().split()).casefold()
 
 
-def parse_enplanement_rows(rows: Iterable[Sequence[object]]) -> tuple[int, list[dict[str, object]]]:
-    """Parse FAA worksheet rows into validated airport enplanement records."""
+def parse_enplanement_rows(
+    rows: Iterable[Sequence[object]], *, min_records: int = 300
+) -> tuple[int, list[dict[str, object]]]:
+    """Parse FAA rows into validated records, allowing small test fixtures."""
     iterator = iter(rows)
     try:
         header = next(iterator)
@@ -65,8 +67,10 @@ def parse_enplanement_rows(rows: Iterable[Sequence[object]]) -> tuple[int, list[
             "enplanements": int(enplanements),
             "hub": hub_value,
         })
-    if len(records) < 300:
-        raise ValueError(f"enplanements worksheet yielded only {len(records)} records; expected at least 300")
+    if len(records) < min_records:
+        raise ValueError(
+            f"enplanements worksheet yielded only {len(records)} records; expected at least {min_records}"
+        )
     if len({record["locid"] for record in records}) != len(records):
         raise ValueError("enplanements worksheet contains duplicate locids")
     if len({record["rank"] for record in records}) != len(records):

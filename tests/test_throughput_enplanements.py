@@ -32,7 +32,7 @@ def test_parse_tsa_drops_out_of_range_rows() -> None:
 
 def test_parse_enplanement_fixture() -> None:
     with (FIXTURES / "enplanement_rows.json").open(encoding="utf-8") as file:
-        year, records = parse_enplanement_rows(json.load(file))
+        year, records = parse_enplanement_rows(json.load(file), min_records=1)
     expected = {
         "ATL": (1, 52511402),
         "DFW": (2, 42351316),
@@ -44,8 +44,9 @@ def test_parse_enplanement_fixture() -> None:
     }
     assert year == 2024
     parsed = {record["locid"]: (record["rank"], record["enplanements"]) for record in records}
-    assert len(records) == 513
-    assert {locid: parsed[locid] for locid in expected} == expected
+    assert len(records) == 7
+    assert set(parsed) == set(expected)
+    assert parsed == expected
 
 
 def test_parse_enplanements_requires_columns() -> None:

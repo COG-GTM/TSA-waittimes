@@ -17,7 +17,7 @@ def parse_throughput_html(html: str) -> list[tuple[date, int]]:
     for date_text, travelers_text in ROW_RE.findall(html):
         parsed = datetime.strptime(date_text, "%m/%d/%Y").replace(tzinfo=UTC).date()
         travelers = int(travelers_text.replace(",", ""))
-        if not date(2019, 1, 1) <= parsed <= latest:
+        if not date(FIRST_YEAR, 1, 1) <= parsed <= latest:
             continue
         if travelers <= 0 or travelers > 10_000_000:
             continue
@@ -41,4 +41,8 @@ async def fetch_tsa_year(year: int) -> list[tuple[date, int]]:
     async with AsyncSession(impersonate="chrome") as s:
         response = await s.get(f"{PAGE}/{year}", timeout=30)
         response.raise_for_status()
-    return [(date, travelers) for date, travelers in parse_throughput_html(response.text) if date.year == year]
+    return [
+        (row_date, travelers)
+        for row_date, travelers in parse_throughput_html(response.text)
+        if row_date.year == year
+    ]
