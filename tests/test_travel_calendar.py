@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app import main
+from app import queries
 from app.travel_calendar import (
     INTENSITIES,
     build_default_periods,
@@ -107,7 +107,7 @@ def test_select_period_active_upcoming_and_past() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sql_travel_period_uses_shared_payload_builder(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sql_travel_period_uses_shared_payload_builder() -> None:
     today = date(2026, 9, 1)
 
     class Cursor:
@@ -123,8 +123,7 @@ async def test_sql_travel_period_uses_shared_payload_builder(monkeypatch: pytest
             return self.row
 
     cursor = Cursor()
-    monkeypatch.setattr(main, "_today", lambda: today)
-    result = await main._travel_period(cursor)
+    result = await queries.travel_period(cursor, today)
     expected = select_period(build_periods([2026]), today)
     assert result == expected
     assert "WHERE end_date >= %s" in cursor.query
