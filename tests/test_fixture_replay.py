@@ -27,7 +27,7 @@ from tests.harness import (
 LANE_TYPES = {"standard", "precheck", "other"}
 MAX_PLAUSIBLE_WAIT_SECONDS = 6 * 3600
 SOURCES_BY_CODE = {s.code: s for s in SOURCES}
-FIXTURE_FILES = sorted(FIXTURE_DIR.glob("*.json"))
+FIXTURE_FILES = sorted(p for p in FIXTURE_DIR.glob("*.json") if p.name != "enplanement_rows.json")
 
 
 def _codes() -> list[str]:
@@ -121,5 +121,5 @@ def test_replay_rejects_unrecorded_requests(fixture: dict[str, Any]) -> None:
 
 
 def test_fixture_dir_contains_only_json() -> None:
-    stray = [p.name for p in FIXTURE_DIR.iterdir() if p.suffix != ".json"]
+    stray = [p.name for p in FIXTURE_DIR.iterdir() if p.suffix not in {".json", ".html"}]
     assert not stray, f"unexpected files in {Path(FIXTURE_DIR).name}: {stray}"

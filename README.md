@@ -18,7 +18,8 @@ Demonstration only.
   endpoints only, no logins or credentials.
 - **Storage**: PostgreSQL — airports, checkpoints, observations (wait value,
   lane type, source URL, source publish timestamp, fetch timestamp), raw
-  payloads for provenance, poll health, and TSA daily throughput.
+  payloads for provenance, poll health, TSA daily throughput, and FAA airport
+  enplanements.
 - **Web** (`app/main.py`): FastAPI serving the national map, airport drill-down
   pages, and a JSON API. Frontend is vanilla JS + vendored Leaflet with a
   vendored US-states GeoJSON basemap (no external tile servers).
@@ -30,6 +31,18 @@ records the airport, the public page where the data is published, attribution,
 and refresh rate.
 Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS,
 PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
+
+National TSA throughput history is backfilled from 2019 through the last
+completed year at startup, one year at a time. A missing or blocked historical
+page is logged and does not prevent the app from starting. FAA CY2024
+commercial-service enplanements are committed in `data/enplanements.json` and
+seeded into the `airport_enplanements` table. Regenerate the static file with:
+
+```bash
+python3.12 scripts/fetch_enplanements.py
+```
+
+The generator also accepts `--file <path>` for a downloaded FAA workbook.
 
 ## Run locally
 

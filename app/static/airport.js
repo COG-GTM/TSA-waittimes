@@ -22,6 +22,16 @@ function render(data) {
   const a = data.airport;
   document.getElementById("airport-title").textContent = a.iata + " — " + a.name;
   document.getElementById("airport-sub").textContent = a.city + ", " + a.state;
+  const rankEl = document.getElementById("airport-rank");
+  const e = a.enplanements;
+  if (e) {
+    const millions = (Number(e.enplanements) / 1000000).toFixed(1);
+    rankEl.innerHTML = "#" + esc(e.rank) + " busiest US airport — " + millions +
+      "M enplanements (CY" + esc(e.year) + ", FAA) — " +
+      '<a href="' + esc(e.source_url) + '" rel="noopener">' + esc(e.source) + "</a>";
+  } else {
+    rankEl.innerHTML = "";
+  }
   if (!data.checkpoints.length) {
     container.innerHTML = '<div class="cp-card"><div class="cp-name">No public wait-time data published for this airport.</div>' +
       '<div class="cp-src">This airport does not currently publish live checkpoint wait times on its public website.</div></div>';

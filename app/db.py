@@ -1,9 +1,14 @@
 """Database pool and schema management."""
 import asyncio
 import json
+import logging
 import os
 
 from psycopg_pool import AsyncConnectionPool
+
+from .enplanements import ENPLANEMENTS_PATH, load_enplanements
+
+log = logging.getLogger("db")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/waits")
 
@@ -71,6 +76,17 @@ CREATE TABLE IF NOT EXISTS tsa_throughput (
     fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (date)
 );
+
+CREATE TABLE IF NOT EXISTS airport_enplanements (
+    airport_iata TEXT NOT NULL,
+    year INTEGER NOT NULL,
+    enplanements BIGINT NOT NULL,
+    national_rank INTEGER,
+    hub TEXT,
+    source_name TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    PRIMARY KEY (airport_iata, year)
+);
 """
 
 
@@ -81,6 +97,7 @@ async def init() -> None:
     async with pool.connection() as conn:
         await conn.execute(SCHEMA)
     await seed_airports()
+    await seed_enplanements()
 
 
 async def close() -> None:
@@ -109,3 +126,40 @@ async def seed_airports() -> None:
                 """,
                 (a["iata"], a["name"], a["city"], a["state"], a["lat"], a["lon"], a["hub"]),
             )
+
+
+async def seed_enplanements() -> None:
+    try:
+        data = await asyncio.to_thread(load_enplanements)
+        if data is None:
+            log.warning("enplanements data file is missing: %s", ENPLANEMENTS_PATH)
+            return
+        year = data["year"]
+        source_name = data["source_name"]
+        source_url = data["source_url"]
+        airports = data["airports"]
+        if not isinstance(year, int) or isinstance(year, bool) or not isinstance(source_name, str) or not isinstance(source_url, str):
+            raise TypeError("invalid enplanements metadata")
+        if not isinstance(airports, list):
+            raise TypeError("invalid enplanements airports")
+        assert pool is not None
+        async with pool.connection() as conn, conn.cursor() as cur:
+            for airport in airports:
+                if not isinstance(airport, dict):
+                    raise TypeError("invalid enplanements airport record")
+                await cur.execute(
+                    """
+                    INSERT INTO airport_enplanements
+                        (airport_iata, year, enplanements, national_rank, hub, source_name, source_url)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (airport_iata, year) DO UPDATE SET
+                        enplanements = EXCLUDED.enplanements, national_rank = EXCLUDED.national_rank,
+                        hub = EXCLUDED.hub, source_name = EXCLUDED.source_name, source_url = EXCLUDED.source_url
+                    """,
+                    (
+                        airport["locid"], year, airport["enplanements"], airport["rank"], airport["hub"],
+                        source_name, source_url,
+                    ),
+                )
+    except Exception as err:  # noqa: BLE001 - invalid optional data must not break startup
+        log.warning("could not seed enplanements: %s", err)

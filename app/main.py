@@ -109,6 +109,15 @@ async def api_summary():
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
         tsa_rows = await cur.fetchall()
+        await cur.execute(
+            """
+            SELECT date_trunc('week', date)::date AS wk, round(avg(travelers))::bigint
+            FROM tsa_throughput
+            WHERE date >= (SELECT max(date) FROM tsa_throughput) - interval '2 years'
+            GROUP BY 1 HAVING count(*) >= 4 ORDER BY 1
+            """
+        )
+        tsa_history = [[week.isoformat(), int(avg)] for week, avg in await cur.fetchall()]
     live = sum(1 for a in airports.values() if a["live"])
     tsa = None
     if tsa_rows:
@@ -124,6 +133,7 @@ async def api_summary():
             "lastyear_date": lastyear_date.isoformat() if lastyear_date and lastyear_date in by_date else None,
             "lastyear_travelers": by_date.get(lastyear_date) if lastyear_date else None,
             "source": "TSA checkpoint travel numbers (tsa.gov/travel/passenger-volumes)",
+            "history": tsa_history,
         }
     return JSONResponse({
         "generated_at": _iso(datetime.now(UTC)),
@@ -144,6 +154,25 @@ async def api_airport(iata: str):
         if row is None:
             raise HTTPException(404, "unknown airport")
         airport = {"iata": row[0], "name": row[1], "city": row[2], "state": row[3], "lat": row[4], "lon": row[5]}
+        await cur.execute(
+            """
+            SELECT year, enplanements, national_rank, hub, source_name, source_url
+            FROM airport_enplanements WHERE airport_iata = %s ORDER BY year DESC LIMIT 1
+            """,
+            (iata,),
+        )
+        enplanement_row = await cur.fetchone()
+        airport["enplanements"] = (
+            {
+                "year": enplanement_row[0],
+                "enplanements": enplanement_row[1],
+                "rank": enplanement_row[2],
+                "hub": enplanement_row[3],
+                "source": enplanement_row[4],
+                "source_url": enplanement_row[5],
+            }
+            if enplanement_row is not None else None
+        )
         await cur.execute(
             """
             SELECT c.id, c.name, c.lane_type FROM checkpoints c

@@ -31,6 +31,10 @@ minute). The `sources` table is upserted from this list at startup.
 
 Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS, PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
 TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
+At startup, a separate one-time task sequentially backfills missing national
+throughput years from 2019 through the last completed year. It waits briefly
+for the app to come up, pauses between years, and logs failures without
+affecting the web process.
 
 ## Common issues
 
@@ -41,6 +45,20 @@ TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
 | All sources unhealthy | DB or egress problem | Check `fly logs`; verify `DATABASE_URL` |
 | Suspected feed change | Feed shape changed | `python scripts/probe_source.py <CODE>` — prints a live fetch and refreshes `tests/fixtures/<code>.json`; then run `pytest` |
 | TSA strip missing | tsa.gov blocking datacenter IPs | Non-fatal; retried every 30 min |
+
+## Annual FAA enplanements refresh
+
+When FAA publishes the next final calendar-year commercial-service workbook:
+
+1. Update the source constants and filename in `scripts/fetch_enplanements.py`
+   to the new FAA page/file URLs.
+2. Run `python3.12 scripts/fetch_enplanements.py` (or pass `--file` with the
+   downloaded workbook).
+3. Confirm the script's year, airport count, and top-five summary.
+4. Commit the regenerated `data/enplanements.json` and run the full test gates.
+
+The JSON intentionally stores only LOCIDs, rank, enplanements, hub, and source
+metadata; airport names and cities remain sourced from `data/us_airports.json`.
 
 ## Data provenance
 

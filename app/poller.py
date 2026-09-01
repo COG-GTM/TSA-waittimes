@@ -1,15 +1,17 @@
 """Polling loops: one task per source, plus a daily TSA throughput task."""
 import asyncio
+import calendar
 import json
 import logging
 import random
+from datetime import UTC, date, datetime
 
 import httpx
 
 from . import db
 from .sources.adapters import SOURCES
 from .sources.base import USER_AGENT, FetchResult, Source
-from .tsa_throughput import fetch_tsa_throughput
+from .tsa_throughput import FIRST_YEAR, fetch_tsa_throughput, fetch_tsa_year
 
 log = logging.getLogger("poller")
 
@@ -125,22 +127,51 @@ async def poll_tsa_throughput(client: httpx.AsyncClient) -> None:
     while True:
         try:
             rows = await fetch_tsa_throughput(client)
-            assert db.pool is not None
-            async with db.pool.connection() as conn:
-                for date, travelers in rows:
-                    await conn.execute(
-                        """
-                        INSERT INTO tsa_throughput (date, travelers)
-                        VALUES (%s, %s)
-                        ON CONFLICT (date) DO UPDATE SET travelers = EXCLUDED.travelers, fetched_at = now()
-                        """,
-                        (date, travelers),
-                    )
+            await upsert_tsa_throughput(rows)
             log.info("tsa throughput: stored %d rows", len(rows))
             await asyncio.sleep(6 * 3600)
         except Exception as err:  # noqa: BLE001
             log.warning("tsa throughput failed: %s", err)
             await asyncio.sleep(1800)
+
+
+async def upsert_tsa_throughput(rows: list[tuple[date, int]]) -> None:
+    assert db.pool is not None
+    async with db.pool.connection() as conn:
+        for row_date, travelers in rows:
+            await conn.execute(
+                """
+                INSERT INTO tsa_throughput (date, travelers)
+                VALUES (%s, %s)
+                ON CONFLICT (date) DO UPDATE SET travelers = EXCLUDED.travelers, fetched_at = now()
+                """,
+                (row_date, travelers),
+            )
+
+
+async def backfill_tsa_throughput() -> None:
+    """Backfill missing historical TSA years without affecting startup."""
+    try:
+        await asyncio.sleep(10)
+        assert db.pool is not None
+        async with db.pool.connection() as conn, conn.cursor() as cur:
+            await cur.execute(
+                "SELECT extract(year from date)::int, count(*) FROM tsa_throughput GROUP BY 1"
+            )
+            existing = {year: count for year, count in await cur.fetchall()}
+        current_year = datetime.now(UTC).year
+        for year in range(FIRST_YEAR, current_year):
+            if existing.get(year, 0) >= (366 if calendar.isleap(year) else 365) - 5:
+                continue
+            try:
+                rows = await fetch_tsa_year(year)
+                await upsert_tsa_throughput(rows)
+                log.info("backfilled tsa throughput %d: %d rows", year, len(rows))
+                await asyncio.sleep(3)
+            except Exception as err:  # noqa: BLE001 - one blocked year must not stop the rest
+                log.warning("backfill tsa throughput %d failed: %s", year, err)
+    except Exception as err:  # noqa: BLE001 - backfill must never crash startup
+        log.warning("tsa throughput backfill failed: %s", err)
 
 
 _tasks: list[asyncio.Task] = []
@@ -158,6 +189,7 @@ async def start() -> None:
     for s in SOURCES:
         _tasks.append(asyncio.create_task(poll_source(s, _client)))
     _tasks.append(asyncio.create_task(poll_tsa_throughput(_client)))
+    _tasks.append(asyncio.create_task(backfill_tsa_throughput()))
 
 
 async def stop() -> None:
