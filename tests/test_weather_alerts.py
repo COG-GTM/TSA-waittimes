@@ -262,6 +262,26 @@ def test_polygon_alert_skips_zone_neighbours_outside_the_warning() -> None:
     assert matched["INS"][0][1] == "polygon"
 
 
+def test_malformed_geometry_falls_back_to_zone_matching() -> None:
+    """A garbled polygon must not silently hide the alert; county granularity is kept."""
+    for geometry in (None, {"type": "LineString", "coordinates": [[-99.0, 40.0]]},
+                     {"type": "Polygon", "coordinates": [[[-99.0, 40.0]]]}):
+        feature = {
+            "geometry": geometry,
+            "properties": {
+                "id": "urn:oid:bad", "event": "Tornado Warning", "status": "Actual",
+                "severity": "Extreme", "geocode": {"UGC": ["NEC001"]},
+            },
+        }
+        alert = wx.parse_alert(feature)
+        assert alert is not None
+        assert alert.polygons == ()
+        matched = wx.match_alerts(
+            [alert], {"INS": wx.AirportZones("INS", "NEC001", None, None)}, {"INS": (40.5, -99.5)}
+        )
+        assert matched["INS"][0][1] == "zone"
+
+
 def test_multipolygon_holes_are_per_component() -> None:
     geometry = {
         "type": "MultiPolygon",
