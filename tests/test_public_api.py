@@ -106,8 +106,15 @@ async def test_airport_success_and_unknown_inputs(client, patched_loaders):
     response = await client.get("/api/v1/airport/den")
     assert response.status_code == 200
     assert response.json()["data_notice"]
-    assert (await client.get("/api/v1/airport/ZZZ")).status_code == 404
-    assert (await client.get("/api/v1/airport/1x!")).status_code == 404
+    unknown = await client.get("/api/v1/airport/ZZZ")
+    assert unknown.status_code == 404
+    assert unknown.json()["data_notice"]
+    invalid = await client.get("/api/v1/airport/1x!")
+    assert invalid.status_code == 404
+    assert invalid.json()["data_notice"]
+    routed = await client.get("/api/v1/not-an-endpoint")
+    assert routed.status_code == 404
+    assert routed.json()["data_notice"]
 
 
 @pytest.mark.asyncio
@@ -138,6 +145,54 @@ async def test_embed_escapes_content_and_allows_frames(client, patched_loaders):
     assert status.headers["x-frame-options"] == "DENY"
 
 
+def test_display_wait_rounds_half_minute_up():
+    checkpoints = [{
+        "lane_type": "standard",
+        "wait_seconds": 150,
+        "is_open": True,
+        "stale": False,
+    }]
+    assert public_api._display_wait(checkpoints, "standard") == "3"
+
+
+def test_updated_time_uses_only_displayed_checkpoints():
+    detail = {
+        "generated_at": "2025-01-15T09:00:00+00:00",
+        "checkpoints": [
+            {
+                "fetched_at": "2025-01-15T12:00:00+00:00",
+                "is_open": False,
+                "stale": False,
+                "wait_seconds": 600,
+            },
+            {
+                "fetched_at": "2025-01-15T11:00:00+00:00",
+                "is_open": True,
+                "stale": True,
+                "wait_seconds": 600,
+            },
+            {
+                "fetched_at": "2025-01-15T10:00:00+00:00",
+                "is_open": True,
+                "stale": False,
+                "wait_seconds": None,
+            },
+            {
+                "fetched_at": "2025-01-15T08:00:00+00:00",
+                "is_open": True,
+                "stale": False,
+                "wait_seconds": 120,
+            },
+        ],
+    }
+    assert public_api._updated_time(detail) == "08:00 UTC"
+    assert public_api._updated_time({
+        "generated_at": "2025-01-15T09:00:00+00:00",
+        "checkpoints": [{"fetched_at": "2025-01-15T12:00:00+00:00", "is_open": False, "stale": False,
+                         "wait_seconds": 600}],
+    }) == "09:00 UTC"
+
+
 @pytest.mark.asyncio
 async def test_rate_limit_and_reset(client, patched_loaders):
     responses = [await client.get("/api/v1/status") for _ in range(60)]
@@ -145,8 +200,20 @@ async def test_rate_limit_and_reset(client, patched_loaders):
     limited = await client.get("/api/v1/status")
     assert limited.status_code == 429
     assert limited.headers["retry-after"]
+    assert limited.json()["data_notice"]
     public_api.reset_rate_limiter()
     assert (await client.get("/api/v1/status")).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_fly_client_ips_have_independent_rate_limits(client, patched_loaders):
+    first_ip = {"Fly-Client-IP": "203.0.113.10"}
+    second_ip = {"Fly-Client-IP": "203.0.113.11"}
+    responses = [await client.get("/api/v1/status", headers=first_ip) for _ in range(60)]
+    assert all(response.status_code == 200 for response in responses)
+    assert (await client.get("/api/v1/status", headers=first_ip)).status_code == 429
+    other_ip = await client.get("/api/v1/status", headers=second_ip)
+    assert other_ip.status_code == 200
 
 
 @pytest.mark.asyncio

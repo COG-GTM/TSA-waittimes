@@ -5,7 +5,7 @@ import time
 from datetime import UTC, datetime
 from math import ceil
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
@@ -23,6 +23,14 @@ _rate_limits: dict[str, tuple[float, int]] = {}
 v1_app = FastAPI(title="Wait Picture Public API v1")
 
 
+@v1_app.exception_handler(404)
+async def not_found_handler(_request: Request, exc: HTTPException):
+    return JSONResponse(
+        {"detail": exc.detail, "data_notice": DATA_NOTICE},
+        status_code=404,
+    )
+
+
 def reset_rate_limiter() -> None:
     _rate_limits.clear()
 
@@ -30,14 +38,16 @@ def reset_rate_limiter() -> None:
 @v1_app.middleware("http")
 async def rate_limit(request: Request, call_next):
     now = time.monotonic()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = request.headers.get("fly-client-ip") or (
+        request.client.host if request.client else "unknown"
+    )
     window_start, count = _rate_limits.get(client_ip, (now, 0))
     if now - window_start >= RATE_WINDOW_SECONDS:
         window_start, count = now, 0
     if count >= RATE_LIMIT:
         retry_after = max(1, ceil(window_start + RATE_WINDOW_SECONDS - now))
         return JSONResponse(
-            {"detail": "rate limit exceeded"},
+            {"detail": "rate limit exceeded", "data_notice": DATA_NOTICE},
             status_code=429,
             headers={"Retry-After": str(retry_after)},
         )
@@ -111,7 +121,7 @@ def _display_wait(checkpoints: list[dict], lane_type: str) -> str:
     ]
     if not waits:
         return "—"
-    return str(round(max(waits) / 60))
+    return str((max(waits) + 30) // 60)
 
 
 def _updated_time(detail: dict) -> str:
@@ -119,6 +129,9 @@ def _updated_time(detail: dict) -> str:
         checkpoint.get("fetched_at")
         for checkpoint in detail.get("checkpoints", [])
         if checkpoint.get("fetched_at")
+        and checkpoint.get("is_open")
+        and not checkpoint.get("stale")
+        and checkpoint.get("wait_seconds") is not None
     ]
     value = max(fetched, default=detail.get("generated_at"))
     if not value:
@@ -142,10 +155,16 @@ async def airports():
 @v1_app.get("/airport/{iata}")
 async def airport(iata: str):
     if not _valid_iata(iata):
-        return JSONResponse({"detail": "unknown airport"}, status_code=404)
+        return JSONResponse(
+            {"detail": "unknown airport", "data_notice": DATA_NOTICE},
+            status_code=404,
+        )
     detail = await load_airport(iata.upper())
     if detail is None:
-        return JSONResponse({"detail": "unknown airport"}, status_code=404)
+        return JSONResponse(
+            {"detail": "unknown airport", "data_notice": DATA_NOTICE},
+            status_code=404,
+        )
     return JSONResponse({**detail, "data_notice": DATA_NOTICE})
 
 
