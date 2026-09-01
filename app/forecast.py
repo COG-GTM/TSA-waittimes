@@ -130,7 +130,8 @@ METHOD_NOTES = {
     ),
     "profile_only": (
         f"This airport's hour-of-week average over the past {HISTORY_DAYS} days "
-        "(UTC hour buckets); recent observations were missing or stale."
+        "(UTC hour buckets); recent observations were missing or stale, or the standard "
+        "lanes are closed."
     ),
     "none": "Not enough recent or historical standard-lane observations to forecast.",
 }
