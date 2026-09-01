@@ -5,3 +5,4 @@ httpx==0.28.1
 psycopg[binary]==3.2.3
 psycopg-pool==3.2.4
 curl_cffi==0.7.4
+lzstring==1.0.4

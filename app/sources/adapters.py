@@ -5,10 +5,13 @@ airports' own public websites load in a visitor's browser), identifies with an
 honest User-Agent, and polls no faster than once per minute.
 """
 import json
+import math
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import httpx
+import lzstring
 
 from .base import FetchResult, Observation, Source
 
@@ -203,6 +206,140 @@ async def fetch_las(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=raws, observations=obs)
 
 
+# ---------------------------------------------------------------- PANYNJ (JFK / LGA / EWR)
+PANYNJ_SITES = {
+    "JFK": "https://www.jfkairport.com",
+    "LGA": "https://www.laguardiaairport.com",
+    "EWR": "https://www.newarkairport.com",
+}
+PANYNJ_QUERY = """
+query GetSecurityWaitTimes($airportCode: String!, $terminal: String) {
+  securityWaitTimes(airportCode: $airportCode, terminal: $terminal) {
+    title
+    terminal
+    gate
+    checkPoint
+    queueType
+    isOpen
+    waitTime
+    isWaitTimeAvailable
+    status
+    lastUpdated
+  }
+}
+"""
+PANYNJ_TZ = ZoneInfo("America/New_York")
+PANYNJ_MAX_WAIT_MINUTES = 600
+PANYNJ_LANE_TYPES = {
+    "reg": "standard",
+    "tsapre": "precheck",
+}
+
+
+def _panynj_text(value: object) -> str:
+    return str(value).strip() if value is not None else ""
+
+
+def _panynj_checkpoint_name(row: dict) -> str:
+    title = _panynj_text(row.get("title"))
+    if not title:
+        title = f"Terminal {_panynj_text(row.get('terminal'))}".strip()
+    name = title or "Terminal"
+
+    gate = _panynj_text(row.get("gate"))
+    if gate and gate.lower() != "all gates":
+        name += f" — Gates {gate}"
+
+    checkpoint = _panynj_text(row.get("checkPoint"))
+    if checkpoint and checkpoint.lower() not in {"main chekpoint", "main checkpoint"}:
+        name += f" — {checkpoint}"
+    return name[:120]
+
+
+def _panynj_wait_seconds(row: dict) -> int | None:
+    if not row.get("isOpen"):
+        return None
+    if not row.get("isWaitTimeAvailable"):
+        return 0 if _panynj_text(row.get("status")).lower() == "no wait" else None
+
+    minutes = row.get("waitTime")
+    if isinstance(minutes, bool) or not isinstance(minutes, (int, float)):
+        return None
+    if (isinstance(minutes, float) and not math.isfinite(minutes)) or minutes < 0 or minutes > PANYNJ_MAX_WAIT_MINUTES:
+        return None
+    return int(minutes) * 60
+
+
+def _panynj_published_at(row: dict, now_et: datetime) -> datetime | None:
+    text = _panynj_text(row.get("lastUpdated"))
+    if not text:
+        return None
+    try:
+        updated = datetime.strptime(text, "%I:%M %p").time()  # noqa: DTZ007
+    except ValueError:
+        return None
+
+    published = datetime.combine(now_et.date(), updated, tzinfo=PANYNJ_TZ)
+    if published - now_et > timedelta(minutes=5):
+        published -= timedelta(days=1)
+    return published.astimezone(timezone.utc)
+
+
+async def _panynj(client: httpx.AsyncClient, iata: str) -> FetchResult:
+    origin = PANYNJ_SITES[iata]
+    payload = {
+        "operationName": "GetSecurityWaitTimes",
+        "variables": {"airportCode": iata},
+        "query": PANYNJ_QUERY,
+    }
+    body = lzstring.LZString().compressToEncodedURIComponent(json.dumps(payload))
+    r = await client.post(
+        f"{origin}/api/graphql",
+        content=body,
+        headers={
+            **HEADERS,
+            "Content-Type": "text/plain",
+            "Origin": origin,
+            "Referer": origin + "/",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    if data.get("errors"):
+        raise ValueError(f"PANYNJ {iata}: feed returned errors")
+
+    rows = (data.get("data") or {}).get("securityWaitTimes") or []
+    if not rows:
+        raise ValueError(f"PANYNJ {iata}: feed returned no checkpoints")
+
+    now_et = datetime.now(PANYNJ_TZ)
+    observations = []
+    for row in rows:
+        queue_type = _panynj_text(row.get("queueType")).lower()
+        observations.append(
+            Observation(
+                _panynj_checkpoint_name(row),
+                PANYNJ_LANE_TYPES.get(queue_type, "other"),
+                _panynj_wait_seconds(row),
+                bool(row.get("isOpen")),
+                _panynj_published_at(row, now_et),
+            )
+        )
+    return FetchResult(raw=data, observations=observations)
+
+
+async def fetch_jfk(client: httpx.AsyncClient) -> FetchResult:
+    return await _panynj(client, "JFK")
+
+
+async def fetch_lga(client: httpx.AsyncClient) -> FetchResult:
+    return await _panynj(client, "LGA")
+
+
+async def fetch_ewr(client: httpx.AsyncClient) -> FetchResult:
+    return await _panynj(client, "EWR")
+
+
 SOURCES: list[Source] = [
     Source("SEA", "Port of Seattle — SEA checkpoint wait times", "https://www.portseattle.org/sea-tac", "Port of Seattle (portseattle.org)", 120, fetch_sea),
     Source("DEN", "Denver International Airport — security wait times", "https://www.flydenver.com/security/", "Denver International Airport (flydenver.com)", 120, fetch_den),
@@ -212,4 +349,7 @@ SOURCES: list[Source] = [
     Source("DFW", "DFW International Airport — security wait times", "https://www.dfwairport.com/security/", "DFW International Airport (dfwairport.com)", 120, fetch_dfw),
     Source("SLC", "Salt Lake City International Airport — TSA wait times", "https://slcairport.com/", "Salt Lake City Department of Airports (slcairport.com)", 120, fetch_slc),
     Source("LAS", "Harry Reid International Airport — security wait times", "https://www.harryreidairport.com/security-wait-times", "Harry Reid International Airport (harryreidairport.com)", 120, fetch_las),
+    Source("JFK", "John F. Kennedy International Airport — security wait times", "https://www.jfkairport.com/", "Port Authority of New York and New Jersey (jfkairport.com)", 120, fetch_jfk),
+    Source("LGA", "LaGuardia Airport — security wait times", "https://www.laguardiaairport.com/", "Port Authority of New York and New Jersey (laguardiaairport.com)", 120, fetch_lga),
+    Source("EWR", "Newark Liberty International Airport — security wait times", "https://www.newarkairport.com/", "Port Authority of New York and New Jersey (newarkairport.com)", 120, fetch_ewr),
 ]
