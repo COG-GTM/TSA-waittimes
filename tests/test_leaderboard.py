@@ -139,7 +139,7 @@ class FakeCursor:
     async def fetchall(self) -> list[Any]:
         if self.query == "SELECT iata, name FROM airports":
             return [("AAA", "Airport AAA"), ("BBB", "Airport BBB")]
-        if self.query == main.LATEST_OBS_SQL:
+        if self.query == main.queries.LATEST_OBS_SQL:
             return [
                 row("AAA", 600, reference=self.reference),
                 row("BBB", 1200, lane="precheck", reference=self.reference),
