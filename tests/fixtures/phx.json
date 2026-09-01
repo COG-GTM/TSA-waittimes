@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "source": "PHX",
+  "captured_at": "2026-09-01T15:35:20.515681+00:00",
+  "public_page": "https://www.skyharbor.com/",
+  "attribution": "City of Phoenix Aviation Department (skyharbor.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://api.phx.aero/avn-wait-times/raw?Key=4f85fe2ef5a240d59809b63de94ef536",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "json": {
+        "success": false,
+        "current": [
+          {
+            "airportCode": "PHX",
+            "airportName": "Phoenix Sky Harbor International Airport",
+            "queueId": "55820b7305a96c590852a3f784ea4627",
+            "queueName": "T3 General",
+            "projectedWaitTime": 420,
+            "projectedMinWaitMinutes": 5,
+            "projectedMaxWaitMinutes": 9,
+            "localTime": "2026-09-01T08:35:07.0328465-07:00",
+            "time": "2026-09-01T15:32:00Z"
+          },
+          {
+            "airportCode": "PHX",
+            "airportName": "Phoenix Sky Harbor International Airport",
+            "queueId": "bf6889ae470cfeb0ee5bf988cce03b5c",
+            "queueName": "T4 Checkpoint A General",
+            "projectedWaitTime": 480,
+            "projectedMinWaitMinutes": 6,
+            "projectedMaxWaitMinutes": 10,
+            "localTime": "2026-09-01T08:35:07.0328465-07:00",
+            "time": "2026-09-01T15:32:00Z"
+          },
+          {
+            "airportCode": "PHX",
+            "airportName": "Phoenix Sky Harbor International Airport",
+            "queueId": "88db3490acf844155098f5906d518cbf",
+            "queueName": "T4 Checkpoint B General",
+            "projectedWaitTime": 540,
+            "projectedMinWaitMinutes": 7,
+            "projectedMaxWaitMinutes": 11,
+            "localTime": "2026-09-01T08:35:07.0328465-07:00",
+            "time": "2026-09-01T15:31:00Z"
+          },
+          {
+            "airportCode": "PHX",
+            "airportName": "Phoenix Sky Harbor International Airport",
+            "queueId": "9f30d48642a77c382fc94ea4382592cf",
+            "queueName": "T4 Checkpoint C General",
+            "projectedWaitTime": 480,
+            "projectedMinWaitMinutes": 6,
+            "projectedMaxWaitMinutes": 10,
+            "localTime": "2026-09-01T08:35:07.0328465-07:00",
+            "time": "2026-09-01T15:32:00Z"
+          },
+          {
+            "airportCode": "PHX",
+            "airportName": "Phoenix Sky Harbor International Airport",
+            "queueId": "8e0c433b2f787533add794fdb1dfaeee",
+            "queueName": "T4 Checkpoint D General",
+            "projectedWaitTime": 420,
+            "projectedMinWaitMinutes": 5,
+            "projectedMaxWaitMinutes": 9,
+            "localTime": "2026-09-01T08:35:07.0328465-07:00",
+            "time": "2026-09-01T15:32:00Z"
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 5,
+    "lane_types": {
+      "standard": 5
+    },
+    "open_count": 5,
+    "closed_count": 0,
+    "with_published_at": 5,
+    "null_wait_count": 0,
+    "max_wait_seconds": 540,
+    "observations": [
+      {
+        "checkpoint_name": "T3 General",
+        "lane_type": "standard",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": "2026-09-01T15:32:00+00:00"
+      },
+      {
+        "checkpoint_name": "T4 Checkpoint A General",
+        "lane_type": "standard",
+        "wait_seconds": 480,
+        "is_open": true,
+        "published_at": "2026-09-01T15:32:00+00:00"
+      },
+      {
+        "checkpoint_name": "T4 Checkpoint B General",
+        "lane_type": "standard",
+        "wait_seconds": 540,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "T4 Checkpoint C General",
+        "lane_type": "standard",
+        "wait_seconds": 480,
+        "is_open": true,
+        "published_at": "2026-09-01T15:32:00+00:00"
+      },
+      {
+        "checkpoint_name": "T4 Checkpoint D General",
+        "lane_type": "standard",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": "2026-09-01T15:32:00+00:00"
+      }
+    ]
+  }
+}

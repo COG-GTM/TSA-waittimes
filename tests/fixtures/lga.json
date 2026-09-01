@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "source": "LGA",
+  "captured_at": "2026-09-01T15:35:16.387740+00:00",
+  "public_page": "https://www.laguardiaairport.com/",
+  "attribution": "Port Authority of New York and New Jersey (laguardiaairport.com)",
+  "exchanges": [
+    {
+      "method": "POST",
+      "url": "https://www.laguardiaairport.com/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "data": {
+          "securityWaitTimes": [
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "All Gates",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 4,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:31 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "All Gates",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "TSAPre",
+              "isOpen": true,
+              "waitTime": 0,
+              "isWaitTimeAvailable": false,
+              "status": "No Wait",
+              "lastUpdated": "11:31 AM"
+            },
+            {
+              "title": "Terminal C",
+              "terminal": "C",
+              "gate": "All Gates",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "TSAPre",
+              "isOpen": true,
+              "waitTime": 1,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:31 AM"
+            },
+            {
+              "title": "Terminal C",
+              "terminal": "C",
+              "gate": "All Gates",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 1,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:31 AM"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 4,
+    "lane_types": {
+      "precheck": 2,
+      "standard": 2
+    },
+    "open_count": 4,
+    "closed_count": 0,
+    "with_published_at": 4,
+    "null_wait_count": 0,
+    "max_wait_seconds": 240,
+    "observations": [
+      {
+        "checkpoint_name": "Terminal B",
+        "lane_type": "standard",
+        "wait_seconds": 240,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B",
+        "lane_type": "precheck",
+        "wait_seconds": 0,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal C",
+        "lane_type": "precheck",
+        "wait_seconds": 60,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal C",
+        "lane_type": "standard",
+        "wait_seconds": 60,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      }
+    ]
+  }
+}

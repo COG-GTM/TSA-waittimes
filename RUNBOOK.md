@@ -29,7 +29,7 @@ each entry holds the airport code, source name, public URL, attribution string,
 and `refresh_seconds` (default 120s — no source is polled faster than once per
 minute). The `sources` table is upserted from this list at startup.
 
-Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, SLC, LAS.
+Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS, PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
 TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
 
 ## Common issues
@@ -39,6 +39,7 @@ TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
 | Source unhealthy, HTTP 401/403 | Airport rotated its public API key | Re-inspect the airport site's own requests; update the key in `adapters.py` |
 | Source unhealthy, parse errors | Feed shape changed | Check `raw_payloads` for that source; adjust the adapter |
 | All sources unhealthy | DB or egress problem | Check `fly logs`; verify `DATABASE_URL` |
+| Suspected feed change | Feed shape changed | `python scripts/probe_source.py <CODE>` — prints a live fetch and refreshes `tests/fixtures/<code>.json`; then run `pytest` |
 | TSA strip missing | tsa.gov blocking datacenter IPs | Non-fatal; retried every 30 min |
 
 ## Data provenance

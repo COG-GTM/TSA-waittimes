@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "source": "DTW",
+  "captured_at": "2026-09-01T15:35:21.716126+00:00",
+  "public_page": "https://www.metroairport.com/",
+  "attribution": "Wayne County Airport Authority (metroairport.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://proxy.metroairport.com/SkyFiiTSAProxy.ashx",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": [
+        {
+          "Name": "Evans",
+          "WaitTime": 7
+        },
+        {
+          "Name": "McNamara",
+          "WaitTime": 4
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "observation_count": 2,
+    "lane_types": {
+      "standard": 2
+    },
+    "open_count": 2,
+    "closed_count": 0,
+    "with_published_at": 0,
+    "null_wait_count": 0,
+    "max_wait_seconds": 420,
+    "observations": [
+      {
+        "checkpoint_name": "Evans Terminal",
+        "lane_type": "standard",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "McNamara Terminal",
+        "lane_type": "standard",
+        "wait_seconds": 240,
+        "is_open": true,
+        "published_at": null
+      }
+    ]
+  }
+}

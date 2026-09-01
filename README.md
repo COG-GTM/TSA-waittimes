@@ -28,6 +28,8 @@ Demonstration only.
 See `SOURCES` in `app/sources/adapters.py` (single source of truth). Each entry
 records the airport, the public page where the data is published, attribution,
 and refresh rate.
+Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS,
+PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
 
 ## Run locally
 
@@ -39,14 +41,53 @@ uvicorn app.main:app --port 8080
 
 `DATABASE_URL` overrides the default local connection string.
 
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+ruff check app/ tests/
+```
+
+Tests never touch the network. `tests/test_fixture_replay.py` replays one
+recorded payload per adapter (`tests/fixtures/<code>.json`) through the real
+adapter over an `httpx.MockTransport` and asserts the parsed observations:
+checkpoint count, lane classification, wait values in **seconds**, open/closed
+flags, and timezone-aware timestamps. `tests/test_helpers.py` and
+`tests/test_adapter_flags.py` cover the pure helpers and the close/hide flag
+handling on synthetic payloads.
+
+Adding an adapter to the harness is just recording its fixture — the replay
+tests discover every file in `tests/fixtures/` automatically, and
+`test_every_adapter_has_a_fixture` fails if a source in `SOURCES` has none.
+
+## Probing a live source
+
+```bash
+python scripts/probe_source.py SEA            # fetch live, print observations, write tests/fixtures/sea.json
+python scripts/probe_source.py SEA --no-save  # fetch and print only
+```
+
+`probe_source.py` runs a single live fetch for one source code, prints the
+parsed observations (wait in seconds and minutes, lane type, open/closed,
+publish timestamp), and records a fixture containing every HTTP exchange the
+adapter made plus the observations it parsed. Re-run it after a feed changes
+shape to refresh the fixture.
+
 ## Continuous deployment
 
-Every push to `main` deploys the application to Fly.io through the
-`.github/workflows/fly-deploy.yml` workflow. The repository must define a
-`FLYIO_TSA_TOKEN` secret with permission to deploy the Fly.io application.
+The application deploys to Fly.io through the `.github/workflows/fly-deploy.yml`
+workflow only after the `CI` workflow succeeds on `main`. `workflow_dispatch`
+remains available for manual deploys. A CI run whose commit is no longer the
+tip of `main` is skipped, so a late-finishing run cannot roll production back.
+The repository must define a `FLYIO_TSA_TOKEN` secret with permission to deploy
+the Fly.io application.
 The canonical public hostname is `waitpicture.com` (also available at
 `www.waitpicture.com`). The legacy `tsadelays.com` and `www.tsadelays.com`
 hostnames return a 301 redirect to the canonical domain, handled in the app.
+
+Pull requests and pushes to `main` run the `ci.yml` lint, type-check, and test gates.
+Run them locally with `pip install -r requirements-dev.txt`, `ruff check .`, `mypy`, and `pytest`.
 
 ## Operations
 

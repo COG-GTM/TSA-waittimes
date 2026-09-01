@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "source": "DEN",
+  "captured_at": "2026-09-01T14:15:26.923745+00:00",
+  "public_page": "https://www.flydenver.com/security/",
+  "attribution": "Denver International Airport (flydenver.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://app.flyfruition.com/api/public/tsa",
+      "status": 200,
+      "content_type": "application/json",
+      "json": [
+        {
+          "title": "East Security",
+          "description": "<ul><li>Standard&nbsp;screening&nbsp;passengers&nbsp;will&nbsp;enter&nbsp;at&nbsp;East&nbsp;Security&nbsp;1&nbsp;(located&nbsp;behind&nbsp;the&nbsp;Southwest&nbsp;check-in&nbsp;counters)</li><li>The&nbsp;following&nbsp;access&nbsp;is&nbsp;available&nbsp;at&nbsp;East&nbsp;Security&nbsp;2&nbsp;(north&nbsp;of&nbsp;the&nbsp;Southwest&nbsp;ticket&nbsp;counters)</li><li>Premium/Premier&nbsp;Access</li><li>Accessibility&nbsp;and&nbsp;Functional&nbsp;Needs</li><li>Military</li><li>Badged&nbsp;Employees</li><li>This&nbsp;checkpoint&nbsp;is&nbsp;open&nbsp;from&nbsp;3&nbsp;a.m.&nbsp;\u2013&nbsp;8&nbsp;p.m.</li><li>TSA&nbsp;Precheck&nbsp;is&nbsp;open&nbsp;from&nbsp;4&nbsp;a.m.&nbsp;\u2013&nbsp;8&nbsp;p.m.</li><li>TSA&nbsp;PreCheck&nbsp;passengers&nbsp;will&nbsp;enter&nbsp;at&nbsp;East&nbsp;Security&nbsp;3&nbsp;(north&nbsp;of&nbsp;the&nbsp;Southwest&nbsp;ticket&nbsp;counters)</li><li>CLEAR&nbsp;is&nbsp;available&nbsp;at&nbsp;this&nbsp;checkpoint</li></ul>",
+          "thumbnail": "https://cdn.flydenver.com/app/uploads/2025/07/31110337/072925_East_Security_TSA_Checkpoint-032.jpg",
+          "location": "Level 6, East Side",
+          "direction_url": "https://maps.flydenver.com/?poiId=4004288",
+          "lanes": [
+            {
+              "lane_id": "4651,4652",
+              "title": "Standard",
+              "closed": false,
+              "wait_time": "2-6",
+              "opening_info": "3:00 a.m. - 8:00 p.m.",
+              "opening_time": "03:00",
+              "closing_time": "20:00",
+              "open_24h": false,
+              "force_close": false,
+              "type": "main",
+              "hide_lane": false
+            },
+            {
+              "lane_id": "4653",
+              "title": "PreCheck",
+              "closed": false,
+              "wait_time": "3-7",
+              "opening_info": "4:00 a.m. - 8:00 p.m.",
+              "opening_time": "04:00",
+              "closing_time": "20:00",
+              "open_24h": false,
+              "force_close": false,
+              "type": "main",
+              "hide_lane": false
+            },
+            {
+              "lane_id": "4654",
+              "title": "CLEAR with PreCheck",
+              "closed": false,
+              "wait_time": "1-5",
+              "opening_info": "4:15 a.m. - 8:45 p.m.",
+              "opening_time": "04:15",
+              "closing_time": "20:45",
+              "open_24h": false,
+              "force_close": false,
+              "type": "main",
+              "hide_lane": true
+            },
+            {
+              "lane_id": "4651",
+              "title": "Standard from Entry",
+              "closed": false,
+              "wait_time": "2-6",
+              "opening_info": "3:00 a.m. - 8:30 p.m.",
+              "opening_time": "03:00",
+              "closing_time": "20:30",
+              "open_24h": false,
+              "force_close": false,
+              "type": "main",
+              "hide_lane": true
+            }
+          ]
+        },
+        {
+          "title": "West Security",
+          "description": "<ul><li>Standard&nbsp;screening&nbsp;passengers&nbsp;will&nbsp;enter&nbsp;at&nbsp;West&nbsp;Security&nbsp;1&nbsp;(located&nbsp;behind&nbsp;the&nbsp;United&nbsp;check-in&nbsp;counters)</li><li>The&nbsp;following&nbsp;access&nbsp;is&nbsp;available&nbsp;at&nbsp;West&nbsp;Security&nbsp;2&nbsp;(north&nbsp;of&nbsp;the&nbsp;United&nbsp;ticket&nbsp;counters)</li><li>Premium/Premier&nbsp;Access</li><li>Accessibility&nbsp;and&nbsp;Functional&nbsp;Needs</li><li>Military</li><li>Badged&nbsp;Employees</li><li>This&nbsp;checkpoint&nbsp;is&nbsp;open&nbsp;3:30&nbsp;a.m.&nbsp;\u2013&nbsp;1&nbsp;a.m.&nbsp;(the&nbsp;next&nbsp;morning)</li><li>TSA&nbsp;Precheck&nbsp;is&nbsp;open&nbsp;from&nbsp;4&nbsp;a.m.&nbsp;\u2013&nbsp;8:45&nbsp;p.m.</li><li>TSA&nbsp;PreCheck&nbsp;passengers&nbsp;will&nbsp;enter&nbsp;at&nbsp;West&nbsp;Security&nbsp;3&nbsp;(north&nbsp;of&nbsp;the&nbsp;United&nbsp;ticket&nbsp;counters)</li><li>CLEAR&nbsp;is&nbsp;available&nbsp;at&nbsp;this&nbsp;checkpoint</li></ul>",
+          "thumbnail": "https://cdn.flydenver.com/app/uploads/2024/02/14083633/security_west_checkpoint_1_standard.jpg",
+          "location": "Level 6, West Side",
+          "direction_url": "https://maps.flydenver.com/?poiId=4003534",
+          "lanes": [
+            {
+              "lane_id": "4551,4533",
+              "title": "Standard",
+              "closed": false,
+              "wait_time": "14-18",
+              "opening_info": "3:30 a.m. - 1:00 a.m.",
+              "opening_time": "03:30",
+              "closing_time": "01:00",
+              "open_24h": false,
+              "force_close": false,
+              "type": "standard",
+              "hide_lane": false
+            },
+            {
+              "lane_id": "4552",
+              "title": "PreCheck",
+              "closed": false,
+              "wait_time": "15+",
+              "opening_info": "4:00 a.m. - 8:45 p.m.",
+              "opening_time": "04:00",
+              "closing_time": "20:45",
+              "open_24h": false,
+              "force_close": false,
+              "type": "precheck",
+              "hide_lane": false
+            },
+            {
+              "lane_id": "4553",
+              "title": "CLEAR with PreCheck",
+              "closed": false,
+              "wait_time": "4-8",
+              "opening_info": "4:15 a.m. - 8:45 p.m.",
+              "opening_time": "04:15",
+              "closing_time": "20:45",
+              "open_24h": false,
+              "force_close": false,
+              "type": "clear",
+              "hide_lane": true
+            },
+            {
+              "lane_id": "4551",
+              "title": "Standard from Entry",
+              "closed": false,
+              "wait_time": "14-18",
+              "opening_info": "3:30 a.m. - 1:00 a.m. ((the next morning))",
+              "opening_time": "03:30",
+              "closing_time": "01:00",
+              "open_24h": false,
+              "force_close": false,
+              "type": "signage",
+              "hide_lane": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "observation_count": 4,
+    "lane_types": {
+      "precheck": 2,
+      "standard": 2
+    },
+    "open_count": 4,
+    "closed_count": 0,
+    "with_published_at": 0,
+    "null_wait_count": 1,
+    "max_wait_seconds": 1080,
+    "observations": [
+      {
+        "checkpoint_name": "East Security \u2014 Standard",
+        "lane_type": "standard",
+        "wait_seconds": 360,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "East Security \u2014 PreCheck",
+        "lane_type": "precheck",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "West Security \u2014 Standard",
+        "lane_type": "standard",
+        "wait_seconds": 1080,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "West Security \u2014 PreCheck",
+        "lane_type": "precheck",
+        "wait_seconds": null,
+        "is_open": true,
+        "published_at": null
+      }
+    ]
+  }
+}

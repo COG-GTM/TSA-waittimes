@@ -2,7 +2,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -58,7 +58,7 @@ async def security_headers(request: Request, call_next):
 
 
 def _iso(dt: datetime | None) -> str | None:
-    return dt.astimezone(timezone.utc).isoformat() if dt else None
+    return dt.astimezone(UTC).isoformat() if dt else None
 
 
 LATEST_OBS_SQL = """
@@ -83,7 +83,7 @@ async def api_summary():
             for r in await cur.fetchall()
         }
         await cur.execute(LATEST_OBS_SQL)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for iata, name, lane, wait, is_open, pub_at, fetched_at, attribution, url in await cur.fetchall():
             a = airports.get(iata)
             if a is None:
@@ -94,12 +94,14 @@ async def api_summary():
             a["stale"] = a["stale"] and stale
             a.setdefault("source", attribution)
             a.setdefault("source_url", url)
-            if wait is not None and is_open and not stale:
-                key = "max_wait_seconds" if lane == "standard" else "max_precheck_seconds"
-                if wait > a.get(key, -1):
-                    a[key] = wait
-                    if lane == "standard":
-                        a["as_of"] = _iso(pub_at or fetched_at)
+            key = {
+                "standard": "max_wait_seconds",
+                "precheck": "max_precheck_seconds",
+            }.get(lane)
+            if key and wait is not None and is_open and not stale and wait > a.get(key, -1):
+                a[key] = wait
+                if lane == "standard":
+                    a["as_of"] = _iso(pub_at or fetched_at)
             fetched_iso = _iso(fetched_at)
             if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
                 a["last_fetch"] = fetched_iso
@@ -124,7 +126,7 @@ async def api_summary():
             "source": "TSA checkpoint travel numbers (tsa.gov/travel/passenger-volumes)",
         }
     return JSONResponse({
-        "generated_at": _iso(datetime.now(timezone.utc)),
+        "generated_at": _iso(datetime.now(UTC)),
         "live_count": live,
         "no_data_count": len(airports) - live,
         "airports": list(airports.values()),
@@ -150,7 +152,8 @@ async def api_airport(iata: str):
             (iata,),
         )
         checkpoints = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
+        latest_checkpoints = []
         for cp_id, cp_name, lane in await cur.fetchall():
             await cur.execute(
                 """
@@ -162,6 +165,16 @@ async def api_airport(iata: str):
                 (cp_id,),
             )
             latest = await cur.fetchone()
+            if latest is not None:
+                latest_checkpoints.append((cp_id, cp_name, lane, latest))
+        airport_latest = max(
+            (latest[3] for _, _, _, latest in latest_checkpoints),
+            default=None,
+        )
+        for cp_id, cp_name, lane, latest in latest_checkpoints:
+            wait, is_open, pub_at, fetched_at, attribution, src_url = latest
+            if airport_latest is not None and (airport_latest - fetched_at).total_seconds() > 24 * 60 * 60:
+                continue
             await cur.execute(
                 """
                 SELECT extract(epoch FROM date_trunc('minute', fetched_at))::bigint AS m,
@@ -174,9 +187,6 @@ async def api_airport(iata: str):
                 (cp_id,),
             )
             history = [[m, w] for m, w in await cur.fetchall()]
-            if latest is None:
-                continue
-            wait, is_open, pub_at, fetched_at, attribution, src_url = latest
             checkpoints.append({
                 "name": cp_name,
                 "lane_type": lane,
@@ -190,7 +200,7 @@ async def api_airport(iata: str):
                 "history": history,
             })
     return JSONResponse({"airport": airport, "checkpoints": checkpoints,
-                         "generated_at": _iso(datetime.now(timezone.utc))})
+                         "generated_at": _iso(datetime.now(UTC))})
 
 
 @app.get("/healthz")
@@ -207,8 +217,10 @@ async def healthz():
         )
         rows = await cur.fetchall()
         await cur.execute("SELECT count(*) FROM observations")
-        obs_count = (await cur.fetchone())[0]
-    now = datetime.now(timezone.utc)
+        obs_row = await cur.fetchone()
+        assert obs_row is not None
+        obs_count = obs_row[0]
+    now = datetime.now(UTC)
     sources = [
         {
             "source": code,
