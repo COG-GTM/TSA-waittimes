@@ -126,9 +126,11 @@ function renderLeaderboard(data) {
   let html = '<div class="leaderboard-grid">';
   for (const [key, title] of sections) {
     const section = data[key] || { entries: [], quiet: true };
+    const shown = (section.entries || []).length;
+    const airports = shown + (shown === 1 ? " airport" : " airports");
     const quietText = key === "most_improved"
-      ? "No clear improvement in the last 3 hours."
-      : "Quiet right now — fewer than 3 airports reporting fresh waits.";
+      ? (shown ? "Only " + airports + " improved in the last 3 hours." : "No clear improvement in the last 3 hours.")
+      : "Quiet right now — " + (shown ? "only " + airports : "no airports") + " reporting fresh waits.";
     html += '<article class="leaderboard-card"><h2>' + title + "</h2>";
     if (section.quiet) {
       html += '<p class="leaderboard-quiet">' + quietText + "</p>";
