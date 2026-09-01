@@ -16923,8 +16923,9 @@
   "expected": {
     "observation_count": 34,
     "lane_types": {
+      "other": 9,
       "precheck": 11,
-      "standard": 23
+      "standard": 14
     },
     "open_count": 27,
     "closed_count": 7,
@@ -16941,7 +16942,7 @@
       },
       {
         "checkpoint_name": "A12",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 0,
         "is_open": true,
         "published_at": "2026-09-01T14:15:03+00:00"
@@ -16955,7 +16956,7 @@
       },
       {
         "checkpoint_name": "A21",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 120,
         "is_open": true,
         "published_at": "2026-09-01T14:15:03+00:00"
@@ -16976,7 +16977,7 @@
       },
       {
         "checkpoint_name": "A35",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 0,
         "is_open": false,
         "published_at": "2026-09-01T14:03:02+00:00"
@@ -16990,7 +16991,7 @@
       },
       {
         "checkpoint_name": "B30",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 120,
         "is_open": true,
         "published_at": "2026-09-01T09:30:02+00:00"
@@ -17011,7 +17012,7 @@
       },
       {
         "checkpoint_name": "B9",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 120,
         "is_open": true,
         "published_at": "2026-09-01T14:11:03+00:00"
@@ -17032,7 +17033,7 @@
       },
       {
         "checkpoint_name": "C10",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 0,
         "is_open": false,
         "published_at": "2026-08-20T11:53:02+00:00"
@@ -17053,7 +17054,7 @@
       },
       {
         "checkpoint_name": "C11",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 120,
         "is_open": true,
         "published_at": "2026-09-01T09:00:03+00:00"
@@ -17144,7 +17145,7 @@
       },
       {
         "checkpoint_name": "E33",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 299,
         "is_open": true,
         "published_at": "2026-09-01T14:15:03+00:00"
@@ -17158,7 +17159,7 @@
       },
       {
         "checkpoint_name": "E8",
-        "lane_type": "standard",
+        "lane_type": "other",
         "wait_seconds": 0,
         "is_open": true,
         "published_at": "2026-09-01T08:45:03+00:00"

@@ -9,6 +9,7 @@ import math
 import re
 import urllib.parse
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -28,7 +29,7 @@ def _ts(epoch: float | None) -> datetime | None:
 
 
 _PRECHECK_RE = re.compile(r"\bpre[\s-]?check\b|\bpre\b")
-_ALT_LANE_RE = re.compile(r"\b(clear|priority|premium|premier|employee|crew|staff|kcm)\b")
+_ALT_LANE_RE = re.compile(r"\b(clear|priority|premium|employee|crew|staff|kcm)\b")
 
 
 def _lane(*parts: str | None) -> str:
@@ -45,7 +46,7 @@ def _iso(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(str(value))
     except ValueError:
         return None
     return dt.astimezone(UTC) if dt.tzinfo else None
@@ -567,7 +568,7 @@ async def fetch_ord(client: httpx.AsyncClient) -> FetchResult:
     )
     r.raise_for_status()
     data = r.json()
-    parsed_rows = []
+    parsed_rows: list[tuple[str, str, str, dict[str, Any]]] = []
     for row in data:
         name_parts = str(row.get("name", "")).split(".")
         if len(name_parts) < 3 or name_parts[1].lower() == "paxfacing":
@@ -594,7 +595,7 @@ async def fetch_ord(client: httpx.AsyncClient) -> FetchResult:
         for checkpoint_name, _lane, segment, _row in parsed_rows
         if not segment.lower().startswith("overview")
     }
-    selected = {}
+    selected: dict[tuple[str, str], tuple[str, str, str, dict[str, Any]]] = {}
     for checkpoint_name, lane, segment, row in parsed_rows:
         if segment.lower().startswith("overview") and checkpoint_name in non_overview_checkpoints:
             continue

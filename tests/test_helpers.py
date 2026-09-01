@@ -1,7 +1,7 @@
 """Unit tests for the pure parsing helpers in app/sources/adapters.py."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -50,11 +50,11 @@ def test_lane(name: str, expected: str) -> None:
 
 
 def test_ts_epoch_seconds() -> None:
-    assert _ts(1735689600) == datetime(2025, 1, 1, tzinfo=timezone.utc)
+    assert _ts(1735689600) == datetime(2025, 1, 1, tzinfo=UTC)
 
 
 def test_ts_epoch_milliseconds() -> None:
-    assert _ts(1735689600000) == datetime(2025, 1, 1, tzinfo=timezone.utc)
+    assert _ts(1735689600000) == datetime(2025, 1, 1, tzinfo=UTC)
 
 
 def test_ts_seconds_and_milliseconds_agree() -> None:
@@ -69,4 +69,4 @@ def test_ts_missing(value: float | None) -> None:
 def test_ts_is_timezone_aware() -> None:
     result = _ts(1735689600)
     assert result is not None
-    assert result.tzinfo is timezone.utc
+    assert result.tzinfo is UTC

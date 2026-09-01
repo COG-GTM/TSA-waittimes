@@ -200,8 +200,8 @@
   "expected": {
     "observation_count": 10,
     "lane_types": {
-      "precheck": 4,
-      "standard": 6
+      "precheck": 3,
+      "standard": 7
     },
     "open_count": 10,
     "closed_count": 0,
@@ -239,7 +239,7 @@
       },
       {
         "checkpoint_name": "IAH Terminal C North Premier",
-        "lane_type": "precheck",
+        "lane_type": "standard",
         "wait_seconds": 180,
         "is_open": true,
         "published_at": "2026-09-01T14:04:10+00:00"

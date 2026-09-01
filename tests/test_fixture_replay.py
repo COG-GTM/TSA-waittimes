@@ -7,7 +7,7 @@ tests discover it automatically. No test here touches the network.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -108,7 +108,7 @@ def test_timestamps_are_timezone_aware(parsed: list[dict[str, Any]], fixture: di
         parsed_dt = datetime.fromisoformat(value)
         assert parsed_dt.tzinfo is not None
         # Epoch-milliseconds read as seconds would land in the far future.
-        assert parsed_dt.year <= datetime.now(tz=timezone.utc).year + 1
+        assert parsed_dt.year <= datetime.now(tz=UTC).year + 1
 
 
 def test_replay_rejects_unrecorded_requests(fixture: dict[str, Any]) -> None:

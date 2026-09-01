@@ -14,7 +14,7 @@ import asyncio
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +22,9 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.sources.adapters import SOURCES  # noqa: E402
-from app.sources.base import USER_AGENT, FetchResult, Source  # noqa: E402
-from tests.harness import (  # noqa: E402
+from app.sources.adapters import SOURCES
+from app.sources.base import USER_AGENT, FetchResult, Source
+from tests.harness import (
     FIXTURE_VERSION,
     fixture_path,
     observation_to_dict,
@@ -123,7 +123,7 @@ def main() -> int:
     fixture = {
         "version": FIXTURE_VERSION,
         "source": source.code,
-        "captured_at": datetime.now(tz=timezone.utc).isoformat(),
+        "captured_at": datetime.now(tz=UTC).isoformat(),
         "public_page": source.url,
         "attribution": source.attribution,
         "exchanges": exchanges,
