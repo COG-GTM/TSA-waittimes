@@ -4,6 +4,7 @@ Every adapter reads only publicly published data (the same JSON feeds the
 airports' own public websites load in a visitor's browser), identifies with an
 honest User-Agent, and polls no faster than once per minute.
 """
+import html
 import json
 import math
 import re
@@ -39,6 +40,26 @@ def _lane(*parts: str | None) -> str:
         return "other"
     return "standard"
 
+
+def _iso(value: str | None) -> datetime | None:
+    """Parse an ISO-8601 instant from a feed; returns tz-aware UTC or None."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt.astimezone(UTC) if dt.tzinfo else None
+
+
+def _phrase_minutes(text: str | None) -> int | None:
+    """Convert a wait phrase in minutes to seconds using its upper bound."""
+    if not text:
+        return None
+    nums = re.findall(r"\d+", str(text))
+    if not nums:
+        return None
+    return max(int(n) for n in nums) * 60
 
 # ---------------------------------------------------------------- SEA
 async def fetch_sea(client: httpx.AsyncClient) -> FetchResult:
@@ -439,6 +460,328 @@ async def fetch_pit(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=data, observations=obs)
 
 
+async def fetch_phx(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://api.phx.aero/avn-wait-times/raw?Key=4f85fe2ef5a240d59809b63de94ef536",
+        headers={
+            **HEADERS,
+            "Origin": "https://www.skyharbor.com",
+            "Referer": "https://www.skyharbor.com/",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    for queue in data.get("current", []):
+        projected = queue.get("projectedWaitTime")
+        if projected is None:
+            projected = (
+                queue.get("projectedMaxWaitMinutes") * 60
+                if queue.get("projectedMaxWaitMinutes") is not None
+                else None
+            )
+        wait = round(float(projected)) if projected is not None else None
+        name = queue["queueName"]
+        obs.append(Observation(name, _lane(name), wait, True, _iso(queue.get("time"))))
+    return FetchResult(raw=data, observations=obs)
+
+
+async def fetch_dtw(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://proxy.metroairport.com/SkyFiiTSAProxy.ashx",
+        headers={**HEADERS, "Referer": "https://www.metroairport.com/"},
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    for entry in data:
+        name = entry.get("Name")
+        if not name:
+            continue
+        wait_minutes = entry.get("WaitTime")
+        wait = round(float(wait_minutes) * 60) if wait_minutes is not None else None
+        obs.append(Observation(f"{name} Terminal", "standard", wait, True))
+    return FetchResult(raw=data, observations=obs)
+
+
+async def fetch_mia(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://waittime.api.aero/waittime/v2/current/MIA",
+        headers={
+            **HEADERS,
+            "x-apikey": "5d0cacea6e41416fdcde0c5c5a19d867",
+            "Origin": "https://www.miami-airport.com",
+            "Referer": "https://www.miami-airport.com/tsa-waittimes.asp",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    cutoff = datetime.now(UTC) - timedelta(days=7)
+    for queue in data.get("current", []):
+        status = (queue.get("status") or "").strip().lower()
+        is_open = status == "open"
+        published_at = _iso(queue.get("time"))
+        if published_at and published_at < cutoff:
+            continue
+        name = queue["queueName"]
+        lane = _lane(name)
+        projected = queue.get("projectedWaitTime")
+        wait = round(float(projected)) if is_open and projected is not None else None
+        obs.append(Observation(name, lane, wait, is_open, published_at))
+    return FetchResult(raw=data, observations=obs)
+
+
+async def fetch_dca(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://www.flyreagan.com/security-wait-times",
+        headers={
+            **HEADERS,
+            "Referer": "https://www.flyreagan.com/travel-information/security-information",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    for key, entry in data.get("response", {}).get("res", {}).items():
+        location = entry.get("location")
+        name = f"Checkpoint {key} ({location})" if location else f"Checkpoint {key}"
+        is_open = not entry.get("isDisabled")
+        obs.append(
+            Observation(name, "standard", _phrase_minutes(entry.get("waittime")) if is_open else None, is_open)
+        )
+        if "pre" in entry:
+            is_open = not entry.get("pre_disabled")
+            obs.append(
+                Observation(name, "precheck", _phrase_minutes(entry.get("pre")) if is_open else None, is_open)
+            )
+    return FetchResult(raw=data, observations=obs)
+
+
+async def fetch_ord(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://tsawaittimes.flychicago.com/tsawaittimes",
+        headers={
+            **HEADERS,
+            "Referer": "https://www.flychicago.com/ohare/travelerinfo/security/Pages/default.aspx",
+        },
+    )
+    r.raise_for_status()
+    data = r.json()
+    parsed_rows = []
+    for row in data:
+        name_parts = str(row.get("name", "")).split(".")
+        if len(name_parts) < 3 or name_parts[1].lower() == "paxfacing":
+            continue
+        wait_value = row.get("waitTimes")
+        if wait_value is None or wait_value == 424242:
+            continue
+        segment = name_parts[2]
+        match = re.search(r"[Tt](\d+)[Cc](\d+(?:[a-zA-Z](?=[A-Z]|$))?)", segment)
+        if not match:
+            continue
+        checkpoint_name = f"Terminal {match.group(1)} Checkpoint {match.group(2)}"
+        segment_lower = segment.lower()
+        if "precheck" in segment_lower:
+            lane = "precheck"
+        elif "general" in segment_lower or "totalwaittime" in segment_lower or "waittime" in segment_lower:
+            lane = "standard"
+        else:
+            continue
+        parsed_rows.append((checkpoint_name, lane, segment, row))
+
+    non_overview_checkpoints = {
+        checkpoint_name
+        for checkpoint_name, _lane, segment, _row in parsed_rows
+        if not segment.lower().startswith("overview")
+    }
+    selected = {}
+    for checkpoint_name, lane, segment, row in parsed_rows:
+        if segment.lower().startswith("overview") and checkpoint_name in non_overview_checkpoints:
+            continue
+        selected.setdefault((checkpoint_name, lane), (checkpoint_name, lane, segment, row))
+
+    obs = []
+    for checkpoint_name, lane, _segment, row in selected.values():
+        wait_value = row.get("waitTimes")
+        is_open = wait_value != 0
+        wait = round(float(wait_value)) if is_open and wait_value is not None else None
+        obs.append(Observation(checkpoint_name, lane, wait, is_open, _iso(row.get("t"))))
+    return FetchResult(raw=data, observations=obs)
+
+
+async def fetch_pdx(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://www.flypdx.com/TSAWaitTimesRefresh",
+        headers={**HEADERS, "Referer": "https://www.flypdx.com/"},
+    )
+    r.raise_for_status()
+    data = r.json()
+    obs = []
+    for entry in data.get("WaitTimes", []):
+        counter_name = entry.get("CounterName") or ""
+        display = entry.get("DisplayText")
+        try:
+            wait = int(float(display) * 60) if display is not None else None
+        except (TypeError, ValueError):
+            wait = None
+        if counter_name.startswith("North"):
+            checkpoint_name = "North Checkpoint"
+            is_open = not data.get("NorthCheckpointClosed", False)
+        elif counter_name.startswith("South"):
+            checkpoint_name = "South Checkpoint"
+            is_open = not data.get("SouthCheckpointClosed", False)
+        else:
+            checkpoint_name = counter_name
+            is_open = True
+        obs.append(
+            Observation(
+                checkpoint_name,
+                "precheck" if "precheck" in counter_name.lower() else "standard",
+                wait if is_open else None,
+                is_open,
+            )
+        )
+    return FetchResult(raw=data, observations=obs)
+
+
+def _clean_html(value: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", value)).strip()
+
+
+async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://www.mspairport.com/airport/security-screening/security-wait-times",
+        headers={"Accept": "text/html"},
+    )
+    r.raise_for_status()
+    text = r.text
+    marker = 'id="block-waittimesblock"'
+    if marker not in text:
+        return FetchResult(
+            raw={
+                "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
+                "updated": None,
+                "rows": [],
+                "html": text,
+            },
+            observations=[],
+        )
+    block = text[text.index(marker):]
+    timestamp_match = re.search(
+        r'security-wait-times-block__timestamp">\s*(Updated [^<]+)', block
+    )
+    published_at = None
+    updated = None
+    if timestamp_match:
+        updated = re.sub(r"\s+", " ", timestamp_match.group(1)).strip()
+        timestamp = updated.removeprefix("Updated ")
+        timestamp = timestamp.replace("a.m.", "AM").replace("p.m.", "PM")
+        try:
+            published_at = datetime.strptime(timestamp, "%m/%d/%Y %I:%M %p").replace(
+                tzinfo=ZoneInfo("America/Chicago")
+            ).astimezone(UTC)
+        except ValueError:
+            pass
+    obs = []
+    raw_rows = []
+    for chunk in block.split('<div class="security-wait-time ')[1:]:
+        name_match = re.search(
+            r'security-wait-time__checkpoint-name">\s*<div>(.*?)</div>', chunk, re.DOTALL
+        )
+        message_match = re.search(r'security-wait-time__message">(.*?)</div>', chunk, re.DOTALL)
+        time_match = re.search(r'security-wait-time__time">(.*?)</div>', chunk, re.DOTALL)
+        if not name_match or not message_match or not time_match:
+            continue
+        name = _clean_html(name_match.group(1))
+        message = _clean_html(message_match.group(1))
+        time_text = _clean_html(time_match.group(1))
+        raw_rows.append({"name": name, "message": message, "time": time_text})
+        is_open = message.upper() != "CLOSED" and bool(time_text)
+        obs.append(
+            Observation(
+                name,
+                "precheck" if "precheck" in message.lower() else "standard",
+                _phrase_minutes(time_text) if is_open else None,
+                is_open,
+                published_at,
+            )
+        )
+    return FetchResult(
+        raw={
+            "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
+            "updated": updated,
+            "rows": raw_rows,
+            "html_excerpt": text[:4000],
+        },
+        observations=obs,
+    )
+
+
+async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(
+        "https://www.flysfo.com/passengers/flight-info/check-in-security",
+        headers={"Accept": "text/html"},
+    )
+    r.raise_for_status()
+    text = r.text
+    table_match = re.search(r"flysfo-checkpoints-table.*?</table>", text, re.DOTALL)
+    if not table_match:
+        return FetchResult(
+            raw={
+                "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
+                "updated": None,
+                "rows": [],
+                "html": text,
+            },
+            observations=[],
+        )
+    updated_match = re.search(r'flysfo-checkpoints-updated">([^<]*)', text)
+    published_at = None
+    updated = None
+    if updated_match:
+        updated = _clean_html(updated_match.group(1))
+        timestamp_match = re.search(
+            r"([A-Z][a-z]{2} \d{1,2} at \d{1,2}:\d{2} [ap]m)", updated
+        )
+        if timestamp_match:
+            timestamp = timestamp_match.group(1).replace(" am", " AM").replace(" pm", " PM")
+            try:
+                zone = ZoneInfo("America/Los_Angeles")
+                published_at = datetime.strptime(timestamp, "%b %d at %I:%M %p").replace(
+                    year=datetime.now(zone).year, tzinfo=zone
+                ).astimezone(UTC)
+                now = datetime.now(UTC)
+                if published_at > now + timedelta(days=1):
+                    published_at = published_at.replace(year=published_at.year - 1)
+            except ValueError:
+                pass
+    obs = []
+    raw_rows = []
+    for row_match in re.finditer(r"<tr>(.*?)</tr>", table_match.group(0), re.DOTALL):
+        cells = [
+            _clean_html(cell)
+            for cell in re.findall(r"<td>(.*?)</td>", row_match.group(1), re.DOTALL)
+        ]
+        if len(cells) < 3:
+            continue
+        raw_rows.append(cells)
+        for lane, cell in (("standard", cells[1]), ("precheck", cells[2])):
+            if not re.search(r"\d", cell):
+                continue
+            wait = int(max(map(int, re.findall(r"\d+", cell)))) * 60
+            obs.append(Observation(cells[0], lane, wait, True, published_at))
+    return FetchResult(
+        raw={
+            "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
+            "updated": updated,
+            "rows": raw_rows,
+            "html_excerpt": text[:4000],
+        },
+        observations=obs,
+    )
+
+
 SOURCES: list[Source] = [
     Source("SEA", "Port of Seattle — SEA checkpoint wait times", "https://www.portseattle.org/sea-tac", "Port of Seattle (portseattle.org)", 120, fetch_sea),
     Source("DEN", "Denver International Airport — security wait times", "https://www.flydenver.com/security/", "Denver International Airport (flydenver.com)", 120, fetch_den),
@@ -455,4 +798,12 @@ SOURCES: list[Source] = [
     Source("EWR", "Newark Liberty International Airport — security wait times", "https://www.newarkairport.com/", "Port Authority of New York and New Jersey (newarkairport.com)", 120, fetch_ewr),
     Source("BOS", "Boston Logan International Airport — security wait times", "https://www.massport.com/logan-airport/", "Massachusetts Port Authority (massport.com)", 120, fetch_bos),
     Source("PIT", "Pittsburgh International Airport — security wait times", "https://flypittsburgh.com/pittsburgh-international-airport/security/", "Allegheny County Airport Authority (flypittsburgh.com)", 120, fetch_pit),
+    Source("PHX", "Phoenix Sky Harbor International Airport — security wait times", "https://www.skyharbor.com/", "City of Phoenix Aviation Department (skyharbor.com)", 120, fetch_phx),
+    Source("DTW", "Detroit Metropolitan Wayne County Airport — TSA wait times", "https://www.metroairport.com/", "Wayne County Airport Authority (metroairport.com)", 120, fetch_dtw),
+    Source("MIA", "Miami International Airport — TSA checkpoint wait times", "https://www.miami-airport.com/tsa-waittimes.asp", "Miami-Dade Aviation Department (miami-airport.com)", 120, fetch_mia),
+    Source("DCA", "Ronald Reagan Washington National Airport — security wait times", "https://www.flyreagan.com/travel-information/security-information", "Metropolitan Washington Airports Authority (flyreagan.com)", 120, fetch_dca),
+    Source("ORD", "O'Hare International Airport — TSA checkpoint wait times", "https://www.flychicago.com/ohare/travelerinfo/security/Pages/default.aspx", "Chicago Department of Aviation (flychicago.com)", 120, fetch_ord),
+    Source("PDX", "Portland International Airport — TSA wait times", "https://www.flypdx.com/", "Port of Portland (flypdx.com)", 120, fetch_pdx),
+    Source("MSP", "Minneapolis–St. Paul International Airport — security wait times", "https://www.mspairport.com/airport/security-screening/security-wait-times", "Metropolitan Airports Commission (mspairport.com)", 300, fetch_msp),
+    Source("SFO", "San Francisco International Airport — checkpoint wait times", "https://www.flysfo.com/passengers/flight-info/check-in-security", "San Francisco International Airport (flysfo.com)", 300, fetch_sfo),
 ]
