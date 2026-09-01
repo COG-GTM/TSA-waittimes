@@ -147,10 +147,14 @@ ORDER BY o.checkpoint_id, o.fetched_at DESC
 """
 
 LEADERBOARD_BASELINE_SQL = """
-SELECT c.airport_iata, max(o.wait_seconds)
-FROM observations o JOIN checkpoints c ON c.id = o.checkpoint_id
-WHERE c.lane_type = 'standard' AND o.is_open AND o.wait_seconds IS NOT NULL
-  AND o.fetched_at >= %s AND o.fetched_at <= %s
+SELECT airport_iata, max(wait_seconds)
+FROM (
+    SELECT DISTINCT ON (o.checkpoint_id) c.airport_iata, o.wait_seconds
+    FROM observations o JOIN checkpoints c ON c.id = o.checkpoint_id
+    WHERE c.lane_type = 'standard' AND o.is_open AND o.wait_seconds IS NOT NULL
+      AND o.fetched_at >= %s AND o.fetched_at <= %s
+    ORDER BY o.checkpoint_id, abs(extract(epoch FROM (o.fetched_at - %s)))
+) nearest
 GROUP BY 1
 """
 
@@ -188,6 +192,7 @@ def _faa_sort_key(event: dict) -> tuple[int, str]:
 async def api_leaderboard():
     assert db.pool is not None
     now = datetime.now(UTC)
+    target = now - leaderboard.BASELINE_AGE
     async with db.pool.connection() as conn, conn.cursor() as cur:
         await cur.execute("SELECT iata, name FROM airports")
         names = {r[0]: r[1] for r in await cur.fetchall()}
@@ -196,8 +201,9 @@ async def api_leaderboard():
         await cur.execute(
             LEADERBOARD_BASELINE_SQL,
             (
-                now - leaderboard.BASELINE_AGE - leaderboard.BASELINE_TOLERANCE,
-                now - leaderboard.BASELINE_AGE + leaderboard.BASELINE_TOLERANCE,
+                target - leaderboard.BASELINE_TOLERANCE,
+                target + leaderboard.BASELINE_TOLERANCE,
+                target,
             ),
         )
         baseline = await cur.fetchall()

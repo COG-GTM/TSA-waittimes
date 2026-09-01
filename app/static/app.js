@@ -126,9 +126,12 @@ function renderLeaderboard(data) {
   let html = '<div class="leaderboard-grid">';
   for (const [key, title] of sections) {
     const section = data[key] || { entries: [], quiet: true };
+    const quietText = key === "most_improved"
+      ? "No clear improvement in the last 3 hours."
+      : "Quiet right now — fewer than 3 airports reporting fresh waits.";
     html += '<article class="leaderboard-card"><h2>' + title + "</h2>";
     if (section.quiet) {
-      html += '<p class="leaderboard-quiet">Quiet right now — fewer than 3 airports reporting fresh waits.</p>';
+      html += '<p class="leaderboard-quiet">' + quietText + "</p>";
     }
     if (section.entries && section.entries.length) {
       html += "<ol>";

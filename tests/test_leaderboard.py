@@ -184,5 +184,8 @@ def test_api_leaderboard_uses_parameterized_baseline(monkeypatch: pytest.MonkeyP
     baseline_calls = [params for query, params in pool.executed if query == main.LEADERBOARD_BASELINE_SQL]
     assert len(baseline_calls) == 1
     assert baseline_calls[0] is not None
-    assert len(baseline_calls[0]) == 2
+    assert len(baseline_calls[0]) == 3
+    assert baseline_calls[0][0] < baseline_calls[0][2] < baseline_calls[0][1]
+    generated_at = datetime.fromisoformat(body["generated_at"])
+    assert abs((generated_at - baseline_calls[0][2]).total_seconds() - 3 * 60 * 60) < 2
     assert all(isinstance(value, datetime) and value.tzinfo is not None for value in baseline_calls[0])
