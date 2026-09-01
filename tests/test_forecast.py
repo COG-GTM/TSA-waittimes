@@ -103,6 +103,17 @@ def test_hour_of_week_uses_utc() -> None:
     assert forecast.hour_of_week(eastern) == forecast.hour_of_week(NOW)
 
 
+def test_forecast_helpers_exclude_future_points() -> None:
+    past = forecast.ObsPoint(NOW - timedelta(minutes=5), 600)
+    future = forecast.ObsPoint(NOW + timedelta(minutes=5), 3600)
+    points = [past, future]
+
+    assert forecast.recent_points(points, NOW) == [past]
+    bounded_points = [point for point in points if point.at <= NOW]
+    profile = forecast.hour_of_week_profile(bounded_points)
+    assert profile[forecast.hour_of_week(past.at)].samples == 1
+
+
 def test_profile_lookup_widens_and_falls_back() -> None:
     exact, exact_bucket = forecast.profile_lookup({10: profile_bucket(900.0, 3, [0, 7])}, 10)
     assert exact == 900.0
@@ -219,6 +230,21 @@ def test_stale_recent_observations_use_profile_only() -> None:
     assert result.method == "profile_only"
     assert result.basis["latest_observation_age_minutes"] == 45
     assert result.basis["trend_seconds_per_hour"] is None
+
+
+def test_future_observation_cannot_enable_stale_trend() -> None:
+    history = [
+        forecast.ObsPoint(NOW - timedelta(minutes=210 + 10 * index), 3000)
+        for index in range(21 * 24 * 6)
+    ]
+    stale_recent = points_from([(-105, 600), (-75, 1200), (-45, 1800)])
+    future = forecast.ObsPoint(NOW + timedelta(minutes=5), 3600)
+    result = forecast.build_forecast(history + stale_recent + [future], NOW)
+
+    assert result.available is True
+    assert result.method == "profile_only"
+    assert result.basis["latest_observation_age_minutes"] == 45
+    assert result.basis["history_points"] == len(history) + len(stale_recent)
 
 
 def test_stale_thin_history_is_unavailable() -> None:

@@ -4,6 +4,8 @@ The forecast combines the recent level and direction of an airport's
 standard-lane observations with an hour-of-week profile built from distinct
 UTC calendar days over the recent history. Recent observations matter most
 for the nearest horizon, but are excluded from the trend when they are stale.
+Observations after the forecast's reference time are discarded before any
+forecast input is calculated.
 """
 
 from __future__ import annotations
@@ -262,14 +264,15 @@ def _overall_confidence(labels: Sequence[str]) -> str:
 
 
 def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
-    """Build a forecast from raw standard-lane observation points."""
+    """Build a forecast from points at or before the reference time."""
 
-    recent = recent_points(points, now)
-    level = recent_level(points, now)
+    bounded_points = [point for point in points if point.at <= now]
+    recent = recent_points(bounded_points, now)
+    level = recent_level(bounded_points, now)
     slope = trend_slope(recent, now)
-    profile = hour_of_week_profile(points)
-    total_history = len(points)
-    latest = max(points, key=lambda point: point.at, default=None)
+    profile = hour_of_week_profile(bounded_points)
+    total_history = len(bounded_points)
+    latest = max(bounded_points, key=lambda point: point.at, default=None)
     latest_age = (
         (now - latest.at).total_seconds() / 60.0
         if latest is not None
