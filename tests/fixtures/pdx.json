@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "source": "PDX",
+  "captured_at": "2026-09-01T15:35:23.761026+00:00",
+  "public_page": "https://www.flypdx.com/",
+  "attribution": "Port of Portland (flypdx.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://www.flypdx.com/TSAWaitTimesRefresh",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "WaitTimes": [
+          {
+            "CounterId": 32652,
+            "CounterName": "NorthGeneral",
+            "PredictedDwell": 470,
+            "EstimatedDwell": 389,
+            "Occupancy": 80,
+            "DisplayText": "10"
+          },
+          {
+            "CounterId": 20351,
+            "CounterName": "NorthPrecheck",
+            "PredictedDwell": 227,
+            "EstimatedDwell": 144,
+            "Occupancy": 34,
+            "DisplayText": "6"
+          },
+          {
+            "CounterId": 32653,
+            "CounterName": "SouthGeneral",
+            "PredictedDwell": 725,
+            "EstimatedDwell": 554,
+            "Occupancy": 96,
+            "DisplayText": "15"
+          },
+          {
+            "CounterId": 20368,
+            "CounterName": "SouthPrecheck",
+            "PredictedDwell": 293,
+            "EstimatedDwell": 468,
+            "Occupancy": 35,
+            "DisplayText": "7"
+          }
+        ],
+        "ActiveLanes": [],
+        "NorthCheckpointClosed": false,
+        "NorthCheckpointCloseTime": "2026-09-01T21:30:00-07:00",
+        "NorthCheckpointOpenTime": "2026-09-01T03:00:00-07:00",
+        "SouthCheckpointClosed": false,
+        "SouthCheckpointCloseTime": "2026-09-01T21:00:00-07:00",
+        "SouthCheckpointOpenTime": "2026-09-01T03:00:00-07:00",
+        "RefreshPage": false,
+        "ShowQwtDebugInfo": false
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 4,
+    "lane_types": {
+      "precheck": 2,
+      "standard": 2
+    },
+    "open_count": 4,
+    "closed_count": 0,
+    "with_published_at": 0,
+    "null_wait_count": 0,
+    "max_wait_seconds": 900,
+    "observations": [
+      {
+        "checkpoint_name": "North Checkpoint",
+        "lane_type": "standard",
+        "wait_seconds": 600,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "North Checkpoint",
+        "lane_type": "precheck",
+        "wait_seconds": 360,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "South Checkpoint",
+        "lane_type": "standard",
+        "wait_seconds": 900,
+        "is_open": true,
+        "published_at": null
+      },
+      {
+        "checkpoint_name": "South Checkpoint",
+        "lane_type": "precheck",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "source": "ORD",
+  "captured_at": "2026-09-01T15:35:23.358678+00:00",
+  "public_page": "https://www.flychicago.com/ohare/travelerinfo/security/Pages/default.aspx",
+  "attribution": "Chicago Department of Aviation (flychicago.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://tsawaittimes.flychicago.com/tsawaittimes",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": [
+        {
+          "id": 1,
+          "name": "ord.paxfacing.WaitTimeSecurity02FLOOR.ProjectedQueueTime.5s.15s.mean",
+          "waitTimes": 424242,
+          "t": "9/1/2026 10:35:00 AM"
+        },
+        {
+          "id": 2,
+          "name": "ord.paxfacing.WaitTimeTSAFLOOR.ProjectedQueueTime.5s.15s.mean",
+          "waitTimes": 424242,
+          "t": "9/1/2026 10:35:01 AM"
+        },
+        {
+          "id": 3,
+          "name": "ord.paxfacing.WaitTimePAFLOOR.JourneyTime.5s.15s.mean",
+          "waitTimes": 424242,
+          "t": "9/1/2026 10:35:01 AM"
+        },
+        {
+          "id": 4,
+          "name": "ord.t2psec5.T2C5GeneralQueueProjQT.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 56.6524,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 5,
+          "name": "ord.t2psec5.T2C5PrecheckQueueProjQT.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 73.1752,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 6,
+          "name": "ord.t3psec6.T3C6TotalWaitTime.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 0,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 7,
+          "name": "ord.t3psec7.T3C7GeneralQueueProjQT.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 249.573,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 8,
+          "name": "ord.t3psec7a.OverviewT3C7aWaitTime.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 59.7103,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 9,
+          "name": "ord.t3psec7a.T3C7aPreCheckQueueProjQT.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 59.7104,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 10,
+          "name": "ord.t3psec8.T3C8GeneralQueueProjQT.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 102.669,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 11,
+          "name": "ord.t3psec8.T3C8PreCheckQueueProjQT.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 278.436,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 12,
+          "name": "ord.t3psec9.T3C9TotalWaitTime.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 0,
+          "t": "2026-09-01T16:34:45.000Z"
+        },
+        {
+          "id": 13,
+          "name": "ord.t5psec10.OverviewT5C10TotalWaitTime.ProjectedQueueTime.1m.15s.mean",
+          "waitTimes": 0,
+          "t": "2026-09-01T16:34:45.000Z"
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "observation_count": 9,
+    "lane_types": {
+      "precheck": 3,
+      "standard": 6
+    },
+    "open_count": 6,
+    "closed_count": 3,
+    "with_published_at": 9,
+    "null_wait_count": 3,
+    "max_wait_seconds": 278,
+    "observations": [
+      {
+        "checkpoint_name": "Terminal 2 Checkpoint 5",
+        "lane_type": "standard",
+        "wait_seconds": 57,
+        "is_open": true,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 2 Checkpoint 5",
+        "lane_type": "precheck",
+        "wait_seconds": 73,
+        "is_open": true,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 3 Checkpoint 6",
+        "lane_type": "standard",
+        "wait_seconds": null,
+        "is_open": false,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 3 Checkpoint 7",
+        "lane_type": "standard",
+        "wait_seconds": 250,
+        "is_open": true,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 3 Checkpoint 7a",
+        "lane_type": "precheck",
+        "wait_seconds": 60,
+        "is_open": true,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 3 Checkpoint 8",
+        "lane_type": "standard",
+        "wait_seconds": 103,
+        "is_open": true,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 3 Checkpoint 8",
+        "lane_type": "precheck",
+        "wait_seconds": 278,
+        "is_open": true,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 3 Checkpoint 9",
+        "lane_type": "standard",
+        "wait_seconds": null,
+        "is_open": false,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal 5 Checkpoint 10",
+        "lane_type": "standard",
+        "wait_seconds": null,
+        "is_open": false,
+        "published_at": "2026-09-01T16:34:45+00:00"
+      }
+    ]
+  }
+}

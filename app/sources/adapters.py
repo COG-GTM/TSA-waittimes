@@ -4,7 +4,6 @@ Every adapter reads only publicly published data (the same JSON feeds the
 airports' own public websites load in a visitor's browser), identifies with an
 honest User-Agent, and polls no faster than once per minute.
 """
-import html
 import json
 import math
 import re
@@ -645,143 +644,6 @@ async def fetch_pdx(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=data, observations=obs)
 
 
-def _clean_html(value: str) -> str:
-    return html.unescape(re.sub(r"<[^>]+>", "", value)).strip()
-
-
-async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
-    r = await client.get(
-        "https://www.mspairport.com/airport/security-screening/security-wait-times",
-        headers={"Accept": "text/html"},
-    )
-    r.raise_for_status()
-    text = r.text
-    marker = 'id="block-waittimesblock"'
-    if marker not in text:
-        return FetchResult(
-            raw={
-                "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
-                "updated": None,
-                "rows": [],
-                "html": text,
-            },
-            observations=[],
-        )
-    block = text[text.index(marker):]
-    timestamp_match = re.search(
-        r'security-wait-times-block__timestamp">\s*(Updated [^<]+)', block
-    )
-    published_at = None
-    updated = None
-    if timestamp_match:
-        updated = re.sub(r"\s+", " ", timestamp_match.group(1)).strip()
-        timestamp = updated.removeprefix("Updated ")
-        timestamp = timestamp.replace("a.m.", "AM").replace("p.m.", "PM")
-        try:
-            published_at = datetime.strptime(timestamp, "%m/%d/%Y %I:%M %p").replace(
-                tzinfo=ZoneInfo("America/Chicago")
-            ).astimezone(UTC)
-        except ValueError:
-            pass
-    obs = []
-    raw_rows = []
-    for chunk in block.split('<div class="security-wait-time ')[1:]:
-        name_match = re.search(
-            r'security-wait-time__checkpoint-name">\s*<div>(.*?)</div>', chunk, re.DOTALL
-        )
-        message_match = re.search(r'security-wait-time__message">(.*?)</div>', chunk, re.DOTALL)
-        time_match = re.search(r'security-wait-time__time">(.*?)</div>', chunk, re.DOTALL)
-        if not name_match or not message_match or not time_match:
-            continue
-        name = _clean_html(name_match.group(1))
-        message = _clean_html(message_match.group(1))
-        time_text = _clean_html(time_match.group(1))
-        raw_rows.append({"name": name, "message": message, "time": time_text})
-        is_open = message.upper() != "CLOSED" and bool(time_text)
-        obs.append(
-            Observation(
-                name,
-                "precheck" if "precheck" in message.lower() else "standard",
-                _phrase_minutes(time_text) if is_open else None,
-                is_open,
-                published_at,
-            )
-        )
-    return FetchResult(
-        raw={
-            "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
-            "updated": updated,
-            "rows": raw_rows,
-            "html_excerpt": text[:4000],
-        },
-        observations=obs,
-    )
-
-
-async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
-    r = await client.get(
-        "https://www.flysfo.com/passengers/flight-info/check-in-security",
-        headers={"Accept": "text/html"},
-    )
-    r.raise_for_status()
-    text = r.text
-    table_match = re.search(r"flysfo-checkpoints-table.*?</table>", text, re.DOTALL)
-    if not table_match:
-        return FetchResult(
-            raw={
-                "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
-                "updated": None,
-                "rows": [],
-                "html": text,
-            },
-            observations=[],
-        )
-    updated_match = re.search(r'flysfo-checkpoints-updated">([^<]*)', text)
-    published_at = None
-    updated = None
-    if updated_match:
-        updated = _clean_html(updated_match.group(1))
-        timestamp_match = re.search(
-            r"([A-Z][a-z]{2} \d{1,2} at \d{1,2}:\d{2} [ap]m)", updated
-        )
-        if timestamp_match:
-            timestamp = timestamp_match.group(1).replace(" am", " AM").replace(" pm", " PM")
-            try:
-                zone = ZoneInfo("America/Los_Angeles")
-                published_at = datetime.strptime(timestamp, "%b %d at %I:%M %p").replace(
-                    year=datetime.now(zone).year, tzinfo=zone
-                ).astimezone(UTC)
-                now = datetime.now(UTC)
-                if published_at > now + timedelta(days=1):
-                    published_at = published_at.replace(year=published_at.year - 1)
-            except ValueError:
-                pass
-    obs = []
-    raw_rows = []
-    for row_match in re.finditer(r"<tr>(.*?)</tr>", table_match.group(0), re.DOTALL):
-        cells = [
-            _clean_html(cell)
-            for cell in re.findall(r"<td>(.*?)</td>", row_match.group(1), re.DOTALL)
-        ]
-        if len(cells) < 3:
-            continue
-        raw_rows.append(cells)
-        for lane, cell in (("standard", cells[1]), ("precheck", cells[2])):
-            if not re.search(r"\d", cell):
-                continue
-            wait = int(max(map(int, re.findall(r"\d+", cell)))) * 60
-            obs.append(Observation(cells[0], lane, wait, True, published_at))
-    return FetchResult(
-        raw={
-            "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
-            "updated": updated,
-            "rows": raw_rows,
-            "html_excerpt": text[:4000],
-        },
-        observations=obs,
-    )
-
-
 SOURCES: list[Source] = [
     Source("SEA", "Port of Seattle — SEA checkpoint wait times", "https://www.portseattle.org/sea-tac", "Port of Seattle (portseattle.org)", 120, fetch_sea),
     Source("DEN", "Denver International Airport — security wait times", "https://www.flydenver.com/security/", "Denver International Airport (flydenver.com)", 120, fetch_den),
@@ -804,6 +666,4 @@ SOURCES: list[Source] = [
     Source("DCA", "Ronald Reagan Washington National Airport — security wait times", "https://www.flyreagan.com/travel-information/security-information", "Metropolitan Washington Airports Authority (flyreagan.com)", 120, fetch_dca),
     Source("ORD", "O'Hare International Airport — TSA checkpoint wait times", "https://www.flychicago.com/ohare/travelerinfo/security/Pages/default.aspx", "Chicago Department of Aviation (flychicago.com)", 120, fetch_ord),
     Source("PDX", "Portland International Airport — TSA wait times", "https://www.flypdx.com/", "Port of Portland (flypdx.com)", 120, fetch_pdx),
-    Source("MSP", "Minneapolis–St. Paul International Airport — security wait times", "https://www.mspairport.com/airport/security-screening/security-wait-times", "Metropolitan Airports Commission (mspairport.com)", 300, fetch_msp),
-    Source("SFO", "San Francisco International Airport — checkpoint wait times", "https://www.flysfo.com/passengers/flight-info/check-in-security", "San Francisco International Airport (flysfo.com)", 300, fetch_sfo),
 ]

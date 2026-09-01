@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "source": "EWR",
+  "captured_at": "2026-09-01T15:35:17.186503+00:00",
+  "public_page": "https://www.newarkairport.com/",
+  "attribution": "Port Authority of New York and New Jersey (newarkairport.com)",
+  "exchanges": [
+    {
+      "method": "POST",
+      "url": "https://www.newarkairport.com/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "data": {
+          "securityWaitTimes": [
+            {
+              "title": "Terminal A",
+              "terminal": "A",
+              "gate": "All Gates",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "TSAPre",
+              "isOpen": true,
+              "waitTime": 1,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:30 AM"
+            },
+            {
+              "title": "Terminal A",
+              "terminal": "A",
+              "gate": "All Gates",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 2,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:30 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "40-49",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "TSAPre",
+              "isOpen": true,
+              "waitTime": 6,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:30 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "40-49",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 6,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:30 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "51-57",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "TSAPre",
+              "isOpen": false,
+              "waitTime": 0,
+              "isWaitTimeAvailable": false,
+              "status": "",
+              "lastUpdated": "11:31 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "51-57",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 7,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:30 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "60-68",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "TSAPre",
+              "isOpen": false,
+              "waitTime": 0,
+              "isWaitTimeAvailable": false,
+              "status": "",
+              "lastUpdated": "11:31 AM"
+            },
+            {
+              "title": "Terminal B",
+              "terminal": "B",
+              "gate": "60-68",
+              "checkPoint": "Main ChekPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 13,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:30 AM"
+            },
+            {
+              "title": "Terminal C",
+              "terminal": "C",
+              "gate": "All Gates",
+              "checkPoint": "Main CheckPoint",
+              "queueType": "Reg",
+              "isOpen": true,
+              "waitTime": 7,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:31 AM"
+            },
+            {
+              "title": "Terminal C",
+              "terminal": "C",
+              "gate": "All Gates",
+              "checkPoint": "Main CheckPoint",
+              "queueType": "TSAPre",
+              "isOpen": true,
+              "waitTime": 2,
+              "isWaitTimeAvailable": true,
+              "status": "Open",
+              "lastUpdated": "11:31 AM"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 10,
+    "lane_types": {
+      "precheck": 5,
+      "standard": 5
+    },
+    "open_count": 8,
+    "closed_count": 2,
+    "with_published_at": 10,
+    "null_wait_count": 2,
+    "max_wait_seconds": 780,
+    "observations": [
+      {
+        "checkpoint_name": "Terminal A",
+        "lane_type": "precheck",
+        "wait_seconds": 60,
+        "is_open": true,
+        "published_at": "2026-09-01T15:30:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal A",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:30:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B \u2014 Gates 40-49",
+        "lane_type": "precheck",
+        "wait_seconds": 360,
+        "is_open": true,
+        "published_at": "2026-09-01T15:30:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B \u2014 Gates 40-49",
+        "lane_type": "standard",
+        "wait_seconds": 360,
+        "is_open": true,
+        "published_at": "2026-09-01T15:30:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B \u2014 Gates 51-57",
+        "lane_type": "precheck",
+        "wait_seconds": null,
+        "is_open": false,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B \u2014 Gates 51-57",
+        "lane_type": "standard",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": "2026-09-01T15:30:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B \u2014 Gates 60-68",
+        "lane_type": "precheck",
+        "wait_seconds": null,
+        "is_open": false,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal B \u2014 Gates 60-68",
+        "lane_type": "standard",
+        "wait_seconds": 780,
+        "is_open": true,
+        "published_at": "2026-09-01T15:30:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal C",
+        "lane_type": "standard",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      },
+      {
+        "checkpoint_name": "Terminal C",
+        "lane_type": "precheck",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:31:00+00:00"
+      }
+    ]
+  }
+}

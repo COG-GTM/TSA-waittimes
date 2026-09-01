@@ -1,0 +1,510 @@
+{
+  "version": 1,
+  "source": "MIA",
+  "captured_at": "2026-09-01T15:35:22.412768+00:00",
+  "public_page": "https://www.miami-airport.com/tsa-waittimes.asp",
+  "attribution": "Miami-Dade Aviation Department (miami-airport.com)",
+  "exchanges": [
+    {
+      "method": "GET",
+      "url": "https://waittime.api.aero/waittime/v2/current/MIA",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "json": {
+        "current": [
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2023-05-17T00:21:58-04:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "c945700aa6335c0c6064ae9cf3dfc945",
+            "queueName": "1 Priority",
+            "status": "Closed",
+            "time": "2023-05-17T04:21:58Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "9c5c33ed0c156e09a48737b216ef0b95",
+            "queueName": "1 TSA-Pre",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:04-04:00",
+            "projectedMaxWaitMinutes": 8,
+            "projectedMinWaitMinutes": 4,
+            "projectedWaitTime": 360,
+            "queueId": "4f93e5958ee08827033a0549c5e30191",
+            "queueName": "10 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:04Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "c2b48380fe698983e31217868b72218e",
+            "queueName": "10 Priority",
+            "status": "Closed",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 4,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 150,
+            "queueId": "206dcf67cea32b9b65030e2d8a3eca36",
+            "queueName": "2 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "3f921a5956b535d8363a6e944c055476",
+            "queueName": "2 Priority",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2020-04-28T21:32:01-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "C2PC",
+            "queueName": "2 TSA-Pre",
+            "status": "Closed",
+            "time": "2020-04-29T01:32:01Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-05-07T02:02:04-04:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "27be0fef68a76230b5f556facc32adc5",
+            "queueName": "3 General",
+            "status": "Open",
+            "time": "2026-05-07T06:02:04Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2020-04-28T21:32:02-04:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "3e9f90022b0afddb17eab0f765523724",
+            "queueName": "3 Priority",
+            "status": "Open",
+            "time": "2020-04-29T01:32:02Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-05-07T02:17:04-04:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "7d3f7b7b95cc12d8cdaf9acfc9839a0c",
+            "queueName": "4 General",
+            "status": "Open",
+            "time": "2026-05-07T06:17:04Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2024-12-16T01:24:01-05:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "14035e3d59390afa86d187d1c82cb7ed",
+            "queueName": "4 Priority",
+            "status": "Open",
+            "time": "2024-12-16T06:24:01Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "b5bac2a1aeaa37f051e7e29de370d58d",
+            "queueName": "5 Clear",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "6af5b5c644be80efc602095b13b715af",
+            "queueName": "5 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2020-04-28T21:32:01-04:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "2d296e981050ed4055168e81c76d5cc2",
+            "queueName": "5 Priority",
+            "status": "Closed",
+            "time": "2020-04-29T01:32:01Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "e2c8cf04d61345c01e444ed8138f9b6a",
+            "queueName": "5 TSA-Pre",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:04-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "9956bbd73f9fe5893988e5944fc4af5b",
+            "queueName": "6 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:04Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "b89ac02a7fa12ec0efae0cc767c03a84",
+            "queueName": "6 Priority",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "7fec776d3a82e1573754d11891954de1",
+            "queueName": "7 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "23fd377e2fcb3b99a34426bb7da13e38",
+            "queueName": "7 Priority",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "6e80647933ce47b6094e4c9b2bd0e78d",
+            "queueName": "8 Clear",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 13,
+            "projectedMinWaitMinutes": 9,
+            "projectedWaitTime": 660,
+            "queueId": "ee464d9eeddc800f76b635993d19910c",
+            "queueName": "8 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:04-04:00",
+            "projectedMaxWaitMinutes": 9,
+            "projectedMinWaitMinutes": 5,
+            "projectedWaitTime": 420,
+            "queueId": "22d5c4b744ab6d9a3d023a1e3cea2900",
+            "queueName": "8 Priority",
+            "status": "Open",
+            "time": "2026-09-01T15:33:04Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:04-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "73dc8db42df0d06bb39df69ae56796bb",
+            "queueName": "8 TSA-Pre",
+            "status": "Open",
+            "time": "2026-09-01T15:33:04Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 4,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 150,
+            "queueId": "f2b3c97821333bf8f30c7273e5d109a1",
+            "queueName": "9 Clear",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "651099c121fb6ebd0c94f06689336226",
+            "queueName": "9 General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "5338f23cd54311a30f1d05988d7b8442",
+            "queueName": "9 Priority",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2026-09-01T11:33:16-04:00",
+            "projectedMaxWaitMinutes": 3,
+            "projectedMinWaitMinutes": 1,
+            "projectedWaitTime": 120,
+            "queueId": "3d785f134075a0f2b4521a333f6127e5",
+            "queueName": "FIS General",
+            "status": "Open",
+            "time": "2026-09-01T15:33:16Z"
+          },
+          {
+            "airportCode": "MIA",
+            "airportName": "Miami International Airport",
+            "localTime": "2025-02-08T14:21:01-05:00",
+            "projectedMaxWaitMinutes": 0,
+            "projectedMinWaitMinutes": 0,
+            "projectedWaitTime": 0,
+            "queueId": "da7cf09b3166aaeee3cfb8f3bf6c2d6a",
+            "queueName": "FIS TSA-Pre",
+            "status": "Closed",
+            "time": "2025-02-08T19:21:01Z"
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "observation_count": 20,
+    "lane_types": {
+      "other": 9,
+      "precheck": 3,
+      "standard": 8
+    },
+    "open_count": 19,
+    "closed_count": 1,
+    "with_published_at": 20,
+    "null_wait_count": 1,
+    "max_wait_seconds": 660,
+    "observations": [
+      {
+        "checkpoint_name": "1 TSA-Pre",
+        "lane_type": "precheck",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "10 General",
+        "lane_type": "standard",
+        "wait_seconds": 360,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:04+00:00"
+      },
+      {
+        "checkpoint_name": "10 Priority",
+        "lane_type": "other",
+        "wait_seconds": null,
+        "is_open": false,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "2 General",
+        "lane_type": "standard",
+        "wait_seconds": 150,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "2 Priority",
+        "lane_type": "other",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "5 Clear",
+        "lane_type": "other",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "5 General",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "5 TSA-Pre",
+        "lane_type": "precheck",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "6 General",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:04+00:00"
+      },
+      {
+        "checkpoint_name": "6 Priority",
+        "lane_type": "other",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "7 General",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "7 Priority",
+        "lane_type": "other",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "8 Clear",
+        "lane_type": "other",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "8 General",
+        "lane_type": "standard",
+        "wait_seconds": 660,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "8 Priority",
+        "lane_type": "other",
+        "wait_seconds": 420,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:04+00:00"
+      },
+      {
+        "checkpoint_name": "8 TSA-Pre",
+        "lane_type": "precheck",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:04+00:00"
+      },
+      {
+        "checkpoint_name": "9 Clear",
+        "lane_type": "other",
+        "wait_seconds": 150,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "9 General",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "9 Priority",
+        "lane_type": "other",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      },
+      {
+        "checkpoint_name": "FIS General",
+        "lane_type": "standard",
+        "wait_seconds": 120,
+        "is_open": true,
+        "published_at": "2026-09-01T15:33:16+00:00"
+      }
+    ]
+  }
+}
