@@ -68,6 +68,9 @@ class ForecastCursor(Protocol):
     async def execute(self, query: str, params: tuple[str, datetime]) -> object:
         ...
 
+    async def fetchone(self) -> tuple[Any, ...] | None:
+        ...
+
     async def fetchall(self) -> list[tuple[Any, ...]]:
         ...
 
@@ -99,6 +102,20 @@ WITH per_minute AS (
     GROUP BY 1
 )
 SELECT minute, wait_seconds FROM per_minute ORDER BY minute
+"""
+
+LANE_STATE_SQL = """
+WITH latest AS (
+    SELECT DISTINCT ON (o.checkpoint_id) o.checkpoint_id, o.is_open, o.fetched_at
+    FROM observations o
+    JOIN checkpoints c ON c.id = o.checkpoint_id
+    WHERE c.airport_iata = %s
+      AND c.lane_type = 'standard'
+      AND o.fetched_at > %s
+    ORDER BY o.checkpoint_id, o.fetched_at DESC
+)
+SELECT max(fetched_at) AS latest_fetched_at, bool_or(is_open) AS any_open
+FROM latest
 """
 
 METHOD_NOTES = {
@@ -263,7 +280,9 @@ def _overall_confidence(labels: Sequence[str]) -> str:
     return min(labels, key=lambda label: rank[label], default="low")
 
 
-def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
+def build_forecast(
+    points: Sequence[ObsPoint], now: datetime, *, lanes_open: bool | None = None
+) -> Forecast:
     """Build a forecast from points at or before the reference time."""
 
     bounded_points = [point for point in points if point.at <= now]
@@ -283,6 +302,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         and len(recent) >= MIN_RECENT_POINTS
         and latest_age is not None
         and latest_age <= TREND_STALE_MINUTES
+        and lanes_open is not False
     )
     have_profile = total_history >= MIN_PROFILE_SAMPLES
     basis: dict[str, object] = {
@@ -297,11 +317,14 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         "profile_days": 0,
         "profile_samples": 0,
         "profile_scope": None,
+        "standard_lanes_open": lanes_open,
     }
 
     if not have_trend and not have_profile:
         reason = (
-            "stale_observations"
+            "checkpoints_closed"
+            if lanes_open is False
+            else "stale_observations"
             if latest_age is not None and latest_age > TREND_STALE_MINUTES
             else "insufficient_history"
         )
@@ -317,9 +340,7 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
     method = "blend" if have_trend and have_profile else "trend_only" if have_trend else "profile_only"
     horizons: list[HorizonForecast] = []
     labels: list[str] = []
-    profile_days = 0
-    profile_samples = 0
-    profile_scope: str | None = None
+    profile_support: ProfileBucket | None = None
     scope_rank = {"exact": 0, "nearby": 1, "global": 2}
     for horizon in HORIZON_MINUTES:
         valid_at = now + timedelta(minutes=horizon)
@@ -328,11 +349,15 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
         if not have_profile or profile_pred is None:
             profile_pred = None
             profile_bucket = None
-        if profile_bucket is not None:
-            profile_days = max(profile_days, profile_bucket.days)
-            profile_samples = max(profile_samples, profile_bucket.samples)
-            if profile_scope is None or scope_rank[profile_bucket.scope] > scope_rank[profile_scope]:
-                profile_scope = profile_bucket.scope
+        if profile_bucket is not None and (
+            profile_support is None
+            or scope_rank[profile_bucket.scope] > scope_rank[profile_support.scope]
+            or (
+                scope_rank[profile_bucket.scope] == scope_rank[profile_support.scope]
+                and profile_bucket.days < profile_support.days
+            )
+        ):
+            profile_support = profile_bucket
 
         if trend_pred is not None and profile_pred is not None:
             prediction = blend_weight(horizon) * trend_pred + (1 - blend_weight(horizon)) * profile_pred
@@ -362,9 +387,10 @@ def build_forecast(points: Sequence[ObsPoint], now: datetime) -> Forecast:
             )
         )
 
-    basis["profile_days"] = profile_days
-    basis["profile_samples"] = profile_samples
-    basis["profile_scope"] = profile_scope
+    if profile_support is not None:
+        basis["profile_days"] = profile_support.days
+        basis["profile_samples"] = profile_support.samples
+        basis["profile_scope"] = profile_support.scope
     return Forecast(
         available=True,
         reason=None,
@@ -385,6 +411,17 @@ async def load_points(cur: ForecastCursor, iata: str, now: datetime) -> list[Obs
         at = row[0].astimezone(UTC)
         points.append(ObsPoint(at=at, wait_seconds=int(row[1])))
     return points
+
+
+async def load_lane_state(cur: ForecastCursor, iata: str, now: datetime) -> bool | None:
+    """Load whether any standard checkpoint is currently open."""
+
+    cutoff = now - timedelta(days=HISTORY_DAYS)
+    await cur.execute(LANE_STATE_SQL, (iata, cutoff))
+    row = await cur.fetchone()
+    if row is None or row[1] is None:
+        return None
+    return bool(row[1])
 
 
 def _forecast_payload(airport: dict[str, str], forecast: Forecast, now: datetime) -> dict[str, object]:
@@ -422,20 +459,24 @@ async def get_forecast(
 ) -> dict[str, object]:
     """Return a cached or newly computed airport forecast payload."""
 
-    current = (now or datetime.now(UTC)).astimezone(UTC)
-    cached = _cache.get(iata)
-    if cached is not None:
-        cached_at, payload = cached
-        if time.monotonic() - cached_at < CACHE_TTL_SECONDS:
-            return payload
+    explicit_now = now is not None
+    current = (now if now is not None else datetime.now(UTC)).astimezone(UTC)
+    if not explicit_now:
+        cached = _cache.get(iata)
+        if cached is not None:
+            cached_at, payload = cached
+            if time.monotonic() - cached_at < CACHE_TTL_SECONDS:
+                return payload
 
     points = await load_points(cur, iata, current)
+    lanes_open = await load_lane_state(cur, iata, current)
     result = _forecast_payload(
         {"iata": iata, "name": name},
-        build_forecast(points, current),
+        build_forecast(points, current, lanes_open=lanes_open),
         current,
     )
-    _cache[iata] = (time.monotonic(), result)
+    if not explicit_now:
+        _cache[iata] = (time.monotonic(), result)
     return result
 
 

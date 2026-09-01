@@ -41,6 +41,39 @@ def test_steady_forecast() -> None:
     assert result.basis["trend_seconds_per_hour"] == 0
 
 
+def test_closed_lanes_disable_trend_on_rich_history() -> None:
+    result = forecast.build_forecast(steady_points(), NOW, lanes_open=False)
+
+    assert result.available is True
+    assert result.method == "profile_only"
+    assert result.basis["standard_lanes_open"] is False
+    assert result.basis["trend_seconds_per_hour"] is None
+
+
+def test_closed_lanes_make_thin_history_unavailable() -> None:
+    result = forecast.build_forecast(
+        points_from([(-5, 600), (-3, 600)]),
+        NOW,
+        lanes_open=False,
+    )
+
+    assert result.available is False
+    assert result.reason == "checkpoints_closed"
+    assert result.basis["standard_lanes_open"] is False
+
+
+def test_unknown_and_open_lane_state_have_same_forecast() -> None:
+    unknown = forecast.build_forecast(steady_points(), NOW)
+    open_lanes = forecast.build_forecast(steady_points(), NOW, lanes_open=True)
+
+    assert unknown.available == open_lanes.available
+    assert unknown.reason == open_lanes.reason
+    assert unknown.method == open_lanes.method
+    assert unknown.confidence == open_lanes.confidence
+    assert unknown.horizons == open_lanes.horizons
+    assert {**unknown.basis, "standard_lanes_open": True} == open_lanes.basis
+
+
 def test_rising_forecast_uses_trend_and_profile_blend() -> None:
     history = [
         forecast.ObsPoint(NOW - timedelta(minutes=30 * index), 3000)
@@ -247,6 +280,38 @@ def test_future_observation_cannot_enable_stale_trend() -> None:
     assert result.basis["history_points"] == len(history) + len(stale_recent)
 
 
+def test_basis_uses_one_weakest_profile_bucket() -> None:
+    exact_points = [
+        forecast.ObsPoint(NOW - timedelta(days=7 * index), 600)
+        for index in range(3)
+    ]
+    global_bucket_at = datetime(2026, 8, 28, 4, tzinfo=UTC)
+    global_points = [
+        forecast.ObsPoint(global_bucket_at - timedelta(days=7 * index), 1200)
+        for index in range(3)
+        for _ in range(3)
+    ]
+    points = exact_points + global_points
+    profile = forecast.hour_of_week_profile(points)
+    exact_value, exact_bucket = forecast.profile_lookup(profile, forecast.hour_of_week(NOW + timedelta(minutes=30)))
+    nearby_value, nearby_bucket = forecast.profile_lookup(profile, forecast.hour_of_week(NOW + timedelta(minutes=60)))
+    global_value, global_bucket = forecast.profile_lookup(profile, forecast.hour_of_week(NOW + timedelta(minutes=120)))
+    result = forecast.build_forecast(points, NOW)
+
+    assert exact_value is not None
+    assert exact_bucket is not None
+    assert exact_bucket.scope == "exact"
+    assert nearby_value is not None
+    assert nearby_bucket is not None
+    assert nearby_bucket.scope == "nearby"
+    assert global_value is not None
+    assert global_bucket is not None
+    assert global_bucket.scope == "global"
+    assert result.basis["profile_days"] == global_bucket.days
+    assert result.basis["profile_samples"] == global_bucket.samples
+    assert result.basis["profile_scope"] == global_bucket.scope
+
+
 def test_stale_thin_history_is_unavailable() -> None:
     result = forecast.build_forecast(points_from([(-90, 600), (-70, 700), (-50, 800)]), NOW)
 
@@ -270,12 +335,19 @@ def test_payload_method_note_matches_method(method: str) -> None:
 
 
 class FakeCursor:
-    def __init__(self, airport_row: tuple[str, str] | None, observation_rows: list[tuple[datetime, int]]):
+    def __init__(
+        self,
+        airport_row: tuple[str, str] | None,
+        observation_rows: list[tuple[datetime, int]],
+        lanes_open: bool | None = True,
+    ):
         self.airport_row = airport_row
         self.observation_rows = observation_rows
+        self.lanes_open = lanes_open
         self.current_query = ""
         self.airport_queries = 0
         self.observation_queries = 0
+        self.lane_state_queries = 0
 
     async def execute(self, query: str, _params: tuple[object, ...] = ()) -> None:
         self.current_query = query
@@ -287,6 +359,9 @@ class FakeCursor:
     async def fetchone(self):
         if "FROM airports WHERE iata" in self.current_query:
             return self.airport_row
+        if "WITH latest AS" in self.current_query:
+            self.lane_state_queries += 1
+            return (None, self.lanes_open)
         raise AssertionError(f"unexpected fetchone query: {self.current_query}")
 
     async def fetchall(self):
@@ -324,7 +399,10 @@ class FakePool:
 
 
 def rich_rows() -> list[tuple[datetime, int]]:
-    now = datetime.now(UTC)
+    return rich_rows_at(datetime.now(UTC))
+
+
+def rich_rows_at(now: datetime) -> list[tuple[datetime, int]]:
     return [
         (now - timedelta(minutes=30 * index), 600)
         for index in range(21 * 48 + 1)
@@ -356,6 +434,47 @@ async def test_forecast_endpoint_and_cache(monkeypatch: pytest.MonkeyPatch) -> N
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url="http://test") as client:
         response = await client.get("/api/airport/JFK/forecast")
     assert response.status_code == 200
+    assert cursor.observation_queries == 2
+
+
+@pytest.mark.asyncio
+async def test_forecast_endpoint_closed_lanes_uses_profile_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    cursor = FakeCursor(
+        ("JFK", "John F. Kennedy International Airport"),
+        rich_rows(),
+        lanes_open=False,
+    )
+    monkeypatch.setattr(main.db, "pool", FakePool(cursor))
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/airport/JFK/forecast")
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["available"] is True
+    assert payload["method"] == "profile_only"
+    assert payload["basis"]["standard_lanes_open"] is False
+    assert payload["basis"]["trend_seconds_per_hour"] is None
+    assert cursor.lane_state_queries == 1
+
+
+@pytest.mark.asyncio
+async def test_explicit_now_bypasses_forecast_cache() -> None:
+    cursor = FakeCursor(
+        ("JFK", "John F. Kennedy International Airport"),
+        rich_rows_at(NOW),
+    )
+    first = await forecast.get_forecast(cursor, "JFK", "John F. Kennedy International Airport", now=NOW)
+    second_now = NOW + timedelta(minutes=5)
+    second = await forecast.get_forecast(
+        cursor,
+        "JFK",
+        "John F. Kennedy International Airport",
+        now=second_now,
+    )
+
+    assert first["generated_at"] != second["generated_at"]
+    assert first["horizons"][0]["valid_at"] != second["horizons"][0]["valid_at"]
     assert cursor.observation_queries == 2
 
 
