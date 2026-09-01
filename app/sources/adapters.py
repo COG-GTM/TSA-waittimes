@@ -289,13 +289,15 @@ async def fetch_mia(client: httpx.AsyncClient) -> FetchResult:
         status = (queue.get("status") or "").strip().lower()
         is_open = status == "open"
         published_at = _iso(queue.get("time"))
-        if not is_open and published_at and published_at < cutoff:
+        if published_at and published_at < cutoff:
             continue
         name = queue["queueName"]
         name_lower = name.lower()
         lane = (
             "precheck"
             if "pre" in name_lower
+            else "other"
+            if "clear" in name_lower
             else "other"
             if "priority" in name_lower
             else "standard"
@@ -380,12 +382,13 @@ async def fetch_ord(client: httpx.AsyncClient) -> FetchResult:
     )
     r.raise_for_status()
     data = r.json()
-    selected = {}
+    parsed_rows = []
     for row in data:
         name_parts = str(row.get("name", "")).split(".")
         if len(name_parts) < 3 or name_parts[1].lower() == "paxfacing":
             continue
-        if row.get("waitTimes") == 424242:
+        wait_value = row.get("waitTimes")
+        if wait_value is None or wait_value == 424242:
             continue
         segment = name_parts[2]
         match = re.search(r"[Tt](\d+)[Cc](\d+(?:[a-zA-Z](?=[A-Z]|$))?)", segment)
@@ -399,22 +402,24 @@ async def fetch_ord(client: httpx.AsyncClient) -> FetchResult:
             lane = "standard"
         else:
             continue
-        key = (checkpoint_name, lane)
-        if key not in selected or (
-            selected[key][1].startswith("Overview") and not segment.startswith("Overview")
-        ):
-            selected[key] = (row, segment)
+        parsed_rows.append((checkpoint_name, lane, segment, row))
+
+    non_overview_checkpoints = {
+        checkpoint_name
+        for checkpoint_name, _lane, segment, _row in parsed_rows
+        if not segment.lower().startswith("overview")
+    }
+    selected = {}
+    for checkpoint_name, lane, segment, row in parsed_rows:
+        if segment.lower().startswith("overview") and checkpoint_name in non_overview_checkpoints:
+            continue
+        selected.setdefault((checkpoint_name, lane), (checkpoint_name, lane, segment, row))
 
     obs = []
-    for row, _segment in selected.values():
+    for checkpoint_name, lane, _segment, row in selected.values():
         wait_value = row.get("waitTimes")
         is_open = wait_value != 0
         wait = round(float(wait_value)) if is_open and wait_value is not None else None
-        name_parts = str(row.get("name", "")).split(".")
-        segment = name_parts[2]
-        match = re.search(r"[Tt](\d+)[Cc](\d+(?:[a-zA-Z](?=[A-Z]|$))?)", segment)
-        checkpoint_name = f"Terminal {match.group(1)} Checkpoint {match.group(2)}"
-        lane = "precheck" if "precheck" in segment.lower() else "standard"
         obs.append(Observation(checkpoint_name, lane, wait, is_open, _iso(row.get("t"))))
     return FetchResult(raw=data, observations=obs)
 
@@ -474,7 +479,10 @@ async def fetch_bos(client: httpx.AsyncClient) -> FetchResult:
     journeys = init_data[0]["result"]["data"]["journeys"]
     raws = {"init": init_data}
     obs = []
-    for journey, journey_data in sorted(journeys.items(), key=lambda item: item[1]["name"]):
+    for journey, journey_data in sorted(
+        journeys.items(), key=lambda item: item[1].get("name") or item[0]
+    ):
+        journey_name = journey_data.get("name") or journey
         update_input = json.dumps(
             {
                 "0": {
@@ -501,7 +509,7 @@ async def fetch_bos(client: httpx.AsyncClient) -> FetchResult:
             wait = round(float(value) * 60) if is_open and value is not None else None
             obs.append(
                 Observation(
-                    f"{journey_data['name']} — {path.get('name', key)}",
+                    f"{journey_name} — {path.get('name', key)}",
                     "precheck" if key == "precheck" else "standard",
                     wait,
                     is_open,
@@ -524,12 +532,23 @@ async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
     text = r.text
     marker = 'id="block-waittimesblock"'
     if marker not in text:
-        return FetchResult(raw=text, observations=[])
+        return FetchResult(
+            raw={
+                "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
+                "updated": None,
+                "rows": [],
+            },
+            observations=[],
+        )
     block = text[text.index(marker):]
-    timestamp_match = re.search(r'security-wait-times-block__timestamp">\s*Updated ([^<]+)', block)
+    timestamp_match = re.search(
+        r'security-wait-times-block__timestamp">\s*(Updated [^<]+)', block
+    )
     published_at = None
+    updated = None
     if timestamp_match:
-        timestamp = re.sub(r"\s+", " ", timestamp_match.group(1)).strip()
+        updated = re.sub(r"\s+", " ", timestamp_match.group(1)).strip()
+        timestamp = updated.removeprefix("Updated ")
         timestamp = timestamp.replace("a.m.", "AM").replace("p.m.", "PM")
         try:
             published_at = datetime.strptime(timestamp, "%m/%d/%Y %I:%M %p").replace(
@@ -538,6 +557,7 @@ async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
         except ValueError:
             pass
     obs = []
+    raw_rows = []
     for chunk in block.split('<div class="security-wait-time ')[1:]:
         name_match = re.search(
             r'security-wait-time__checkpoint-name">\s*<div>(.*?)</div>', chunk, re.DOTALL
@@ -549,6 +569,7 @@ async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
         name = _clean_html(name_match.group(1))
         message = _clean_html(message_match.group(1))
         time_text = _clean_html(time_match.group(1))
+        raw_rows.append({"name": name, "message": message, "time": time_text})
         is_open = message.upper() != "CLOSED" and bool(time_text)
         obs.append(
             Observation(
@@ -559,7 +580,14 @@ async def fetch_msp(client: httpx.AsyncClient) -> FetchResult:
                 published_at,
             )
         )
-    return FetchResult(raw=text, observations=obs)
+    return FetchResult(
+        raw={
+            "url": "https://www.mspairport.com/airport/security-screening/security-wait-times",
+            "updated": updated,
+            "rows": raw_rows,
+        },
+        observations=obs,
+    )
 
 
 async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
@@ -571,13 +599,21 @@ async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
     text = r.text
     table_match = re.search(r"flysfo-checkpoints-table.*?</table>", text, re.DOTALL)
     if not table_match:
-        return FetchResult(raw=text, observations=[])
+        return FetchResult(
+            raw={
+                "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
+                "updated": None,
+                "rows": [],
+            },
+            observations=[],
+        )
     updated_match = re.search(r'flysfo-checkpoints-updated">([^<]*)', text)
     published_at = None
+    updated = None
     if updated_match:
+        updated = _clean_html(updated_match.group(1))
         timestamp_match = re.search(
-            r"([A-Z][a-z]{2} \d{1,2} at \d{1,2}:\d{2} [ap]m)",
-            updated_match.group(1),
+            r"([A-Z][a-z]{2} \d{1,2} at \d{1,2}:\d{2} [ap]m)", updated
         )
         if timestamp_match:
             timestamp = timestamp_match.group(1).replace(" am", " AM").replace(" pm", " PM")
@@ -589,6 +625,7 @@ async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
             except ValueError:
                 pass
     obs = []
+    raw_rows = []
     for row_match in re.finditer(r"<tr>(.*?)</tr>", table_match.group(0), re.DOTALL):
         cells = [
             _clean_html(cell)
@@ -596,12 +633,20 @@ async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
         ]
         if len(cells) < 3:
             continue
+        raw_rows.append(cells)
         for lane, cell in (("standard", cells[1]), ("precheck", cells[2])):
             if not re.search(r"\d", cell):
                 continue
             wait = int(max(map(int, re.findall(r"\d+", cell)))) * 60
             obs.append(Observation(cells[0], lane, wait, True, published_at))
-    return FetchResult(raw=text, observations=obs)
+    return FetchResult(
+        raw={
+            "url": "https://www.flysfo.com/passengers/flight-info/check-in-security",
+            "updated": updated,
+            "rows": raw_rows,
+        },
+        observations=obs,
+    )
 
 
 SOURCES: list[Source] = [
@@ -621,6 +666,6 @@ SOURCES: list[Source] = [
     Source("ORD", "O'Hare International Airport — TSA checkpoint wait times", "https://www.flychicago.com/ohare/travelerinfo/security/Pages/default.aspx", "Chicago Department of Aviation (flychicago.com)", 120, fetch_ord),
     Source("PDX", "Portland International Airport — TSA wait times", "https://www.flypdx.com/", "Port of Portland (flypdx.com)", 120, fetch_pdx),
     Source("BOS", "Boston Logan International Airport — security wait times", "https://www.massport.com/logan-airport/at-the-airport/security-wait-times", "Massachusetts Port Authority (massport.com)", 180, fetch_bos),
-    Source("MSP", "Minneapolis–St. Paul International Airport — security wait times", "https://www.mspairport.com/airport/security-screening/security-wait-times", "Metropolitan Airports Commission (mspairport.com)", 120, fetch_msp),
-    Source("SFO", "San Francisco International Airport — checkpoint wait times", "https://www.flysfo.com/passengers/flight-info/check-in-security", "San Francisco International Airport (flysfo.com)", 120, fetch_sfo),
+    Source("MSP", "Minneapolis–St. Paul International Airport — security wait times", "https://www.mspairport.com/airport/security-screening/security-wait-times", "Metropolitan Airports Commission (mspairport.com)", 300, fetch_msp),
+    Source("SFO", "San Francisco International Airport — checkpoint wait times", "https://www.flysfo.com/passengers/flight-info/check-in-security", "San Francisco International Airport (flysfo.com)", 300, fetch_sfo),
 ]
