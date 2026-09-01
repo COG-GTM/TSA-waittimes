@@ -41,8 +41,9 @@ uvicorn app.main:app --port 8080
 
 ## Continuous deployment
 
-Every push to `main` deploys the application to Fly.io through the
-`.github/workflows/fly-deploy.yml` workflow. The repository must define a
+The application deploys to Fly.io through the `.github/workflows/fly-deploy.yml`
+workflow only after the `CI` workflow succeeds on `main`. `workflow_dispatch`
+remains available for manual deploys. The repository must define a
 `FLYIO_TSA_TOKEN` secret with permission to deploy the Fly.io application.
 The canonical public hostname is `waitpicture.com` (also available at
 `www.waitpicture.com`). The legacy `tsadelays.com` and `www.tsadelays.com`
