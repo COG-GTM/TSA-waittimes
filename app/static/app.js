@@ -133,7 +133,7 @@ function renderLeaderboard(data) {
     if (section.entries && section.entries.length) {
       html += "<ol>";
       section.entries.forEach((entry) => {
-        const freshness = agoMinutes(entry.as_of || entry.fetched_at);
+        const freshness = agoMinutes(entry.fetched_at || entry.as_of);
         const freshnessText = freshness === null ? "" : freshness + " min ago";
         const drop = key === "most_improved" && entry.drop_seconds > 0
           ? '<span class="leaderboard-drop">−' + esc(fmtMin(entry.drop_seconds)) + "</span>"
