@@ -10,6 +10,24 @@
   `STALE` badge on drill-down pages).
 - Fly health checks hit `/healthz` every 30s.
 
+## Operations dashboard
+
+- Open `/ops` for the noindex operations dashboard, or fetch `/api/ops` for
+  the same snapshot as JSON. It requires no authentication and is not linked
+  from the public navigation.
+- Source pills are **green** when the last success is less than twice the
+  configured refresh interval old, **amber** when it is older but under 30
+  minutes, and **red** when it is at least 30 minutes old, has no success, or
+  has consecutive failures.
+- A failed dashboard query degrades that field to a dash rather than failing
+  the page. Last cleanup is not persisted in the database; the poller only
+  logs successful cleanup events.
+- If the database is unreachable, `/api/ops` gives up acquiring a connection
+  after 3 s and returns the empty payload (all dashes).
+- Backoff is an estimate derived from `poll_health.consecutive_failures`; the
+  poller's actual counter is in-memory (reset on restart) and NWS zone-backfill
+  cycles keep their normal cadence.
+
 ## Restarting the scrapers
 
 The pollers run inside the web process (started on app startup).
@@ -85,3 +103,71 @@ that year.
 
 Every observation stores the source, the source's publish timestamp when
 available, fetch time, and a reference to the raw payload (`raw_payloads`).
+
+## Historical rollups and data retention
+
+The `observations_hourly` table stores one row for every checkpoint and UTC
+hour with observations. Its natural key is `(checkpoint_id, hour_bucket)`;
+`airport_iata` and `lane_type` are denormalized for query speed. The rollup
+loop runs every 15 minutes by default and re-rolls the current UTC hour plus
+the previous two hours. A startup backfill waits briefly for the app to come
+up, then rolls missing or incomplete hours oldest-first in small batches.
+
+### Analytics sampling model
+
+Typical waits summarize each airport-hour by its worst checkpoint average, so
+percentiles use equal-weighted hour buckets rather than raw observations.
+Forecast hour-of-week profiles average per-minute samples directly, giving
+densely polled periods more weight in the historical profile.
+
+Retention windows are measured back from the cleanup run's current timestamp:
+
+| Environment variable | Default | Cutoff measured from |
+|---|---:|---|
+| `RETENTION_RAW_PAYLOAD_DAYS` | 14 days | `raw_payloads.fetched_at` |
+| `RETENTION_OBSERVATION_DAYS` | 90 days | `observations.fetched_at` |
+| `RETENTION_FAA_EVENT_DAYS` | 180 days | `faa_airport_events.fetched_at` |
+| `RETENTION_WEATHER_ALERT_DAYS` | 180 days | `coalesce(expires, ends, fetched_at)` |
+
+Cleanup runs every 6 hours by default (`CLEANUP_INTERVAL_SECONDS`). It never
+deletes an observation unless its checkpoint/hour has an
+`observations_hourly` row. Expired observations, FAA events, and weather
+alerts are deleted in batches before expired raw payloads. Because raw payloads
+are referenced by foreign keys, cleanup first sets matching `raw_id` values to
+NULL in all three tables, then deletes the payload rows.
+
+Each successful cleanup emits exactly one JSON log line, for example:
+
+```text
+{"event": "retention_cleanup", "started_at": "2026-09-01T12:00:00+00:00", "duration_ms": 842, "cutoffs": {"observations": "2026-06-03T12:00:00+00:00", "raw_payloads": "2026-08-18T12:00:00+00:00", "faa_airport_events": "2026-03-05T12:00:00+00:00", "weather_alerts": "2026-03-05T12:00:00+00:00"}, "deleted": {"observations": 1200, "raw_payloads": 900, "faa_airport_events": 3, "weather_alerts": 8}, "raw_payload_refs_cleared": 1200}
+```
+
+On Fly, use `fly secrets set` to tune the retention windows, rollup cadence,
+lookback, or batch size via the `RETENTION_*`, `ROLLUP_*`,
+`CLEANUP_INTERVAL_SECONDS`, and `CLEANUP_BATCH_LIMIT` environment variables.
+Each table is deleted in batches of `CLEANUP_BATCH_LIMIT` (default 50000) with
+at most 20 passes per table per run, so a very large first cleanup drains over
+successive runs rather than in one long transaction.
+Grep logs with `fly logs | grep '"event": "retention_cleanup"'`.
+
+## Security audit log
+
+`app/security.py` emits one single-line JSON record to stdout (logger `audit`)
+for each security-relevant event: `rate_limited` (429 from the public API or
+`/embed/*`), `validation_failure` (a path parameter such as an IATA code that
+fails the whitelist), and `server_error` (any 5xx). Each record carries
+`timestamp` (UTC ISO-8601), `event`, `path`, `method`, `client_ip` and
+`status`; nothing else about the request is recorded. Behind the Fly proxy
+(`FLY_APP_NAME` set) `client_ip` comes from `Fly-Client-IP`, falling back to
+the first `X-Forwarded-For` hop; elsewhere proxy headers are ignored.
+
+```text
+{"timestamp":"2026-09-02T00:08:06.910+00:00","level":"INFO","event":"rate_limited","path":"/api/v1/airports","method":"GET","client_ip":"203.0.113.9","status":429}
+```
+
+Grep with `fly logs | grep '"event":"rate_limited"'`. Every response, including
+redirects, 404s and 5xx bodies, carries HSTS, `X-Content-Type-Options: nosniff`
+and a CSP; `X-Frame-Options: DENY` is set everywhere except `/embed/*`, which
+stays frameable via `frame-ancestors *`. Unhandled exceptions return the
+generic body `{"detail": "An error occurred"}`; the traceback goes to the
+application log only.

@@ -1,34 +1,36 @@
 """US Checkpoint Wait Picture — web app and API."""
+import asyncio
 import logging
 import os
-from collections.abc import Sequence
+import re
+from collections.abc import Coroutine
 from contextlib import asynccontextmanager
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.gzip import GZipMiddleware
 
-from . import db, poller, weather_alerts
-from .faa_events import FAA_ATTRIBUTION, FAA_SOURCE_CODE
-from .travel_calendar import TravelPeriod, period_payload
+from . import analytics, db, forecast, leaderboard, ops, poller, public_api, queries, security
+from .faa_events import FAA_ATTRIBUTION
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+log = logging.getLogger("main")
 
-STALE_SECONDS = 30 * 60
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
-FAA_EVENT_SEVERITY = {
-    "ground_stop": 5,
-    "closure": 4,
-    "ground_delay": 3,
-    "arrival_delay": 2,
-    "departure_delay": 1,
-}
-EASTERN = ZoneInfo("America/New_York")
+IATA_RE = re.compile(r"^[A-Z]{3}$")
+OPS_POOL_TIMEOUT = 3.0
+OPS_TOTAL_TIMEOUT = 5.0
+HEALTHZ_TIMEOUT = 3.0
+CACHE_TTL = timedelta(seconds=30)
+STATIC_CACHE_CONTROL = "public, max-age=300"
+SUMMARY_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
+LEADERBOARD_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
+TYPICAL_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
 
 
 @asynccontextmanager
@@ -41,9 +43,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="US Checkpoint Wait Picture", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 BASE = os.path.dirname(__file__)
 app.mount("/static", StaticFiles(directory=os.path.join(BASE, "static")), name="static")
+app.mount("/api/v1", public_api.v1_app)
 templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
 
 
@@ -58,167 +62,138 @@ async def canonical_host_redirect(request: Request, call_next):
     return await call_next(request)
 
 
+app.middleware("http")(security.security_middleware)
+
+
 @app.middleware("http")
-async def security_headers(request: Request, call_next):
-    resp = await call_next(request)
-    resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    resp.headers["X-Frame-Options"] = "DENY"
-    resp.headers["X-Content-Type-Options"] = "nosniff"
-    resp.headers["Content-Security-Policy"] = (
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+async def static_cache_control(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = STATIC_CACHE_CONTROL
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logging.getLogger(__name__).exception("unhandled error serving %s", request.url.path)
+    return security.apply_security_headers(
+        request, JSONResponse(security.GENERIC_ERROR, status_code=500)
     )
-    return resp
 
 
-def _iso(dt: datetime | None) -> str | None:
-    return dt.astimezone(UTC).isoformat() if dt else None
-
-
-ALERT_COLUMNS = """
-SELECT airport_iata, event, severity, headline, area_desc, sender_name, alert_url,
-       effective, onset, expires, ends, fetched_at
-FROM weather_alerts
+TYPICAL_HOURS_SQL = """
+SELECT hour_bucket, max(avg_wait_seconds)::int AS value_seconds, sum(sample_count)::int
+FROM observations_hourly
+WHERE airport_iata = %s AND lane_type = 'standard' AND avg_wait_seconds IS NOT NULL AND sample_count > 0
+GROUP BY 1
+ORDER BY 1
 """
-ACTIVE_ALERTS_SQL = ALERT_COLUMNS + "WHERE expires IS NULL OR expires > now()"
-AIRPORT_ALERTS_SQL = ALERT_COLUMNS + "WHERE airport_iata = %s AND (expires IS NULL OR expires > now())"
+# Hour-of-week is UTC-based because the airports table carries no timezone
+# (data/us_airports.json has iata/name/city/state/lat/lon/hub only).
 
 
-def _alert_dict(row: Sequence[Any]) -> dict[str, Any]:
-    (_iata, event, severity, headline, area_desc, sender, url,
-     effective, onset, expires, ends, fetched_at) = row
-    return {
-        "event": event,
-        "severity": severity,
-        "headline": headline,
-        "area": area_desc,
-        "sender": sender,
-        "url": url,
-        "effective": _iso(effective),
-        "onset": _iso(onset),
-        "expires": _iso(expires),
-        "ends": _iso(ends),
-        "fetched_at": _iso(fetched_at),
-        "source": weather_alerts.ATTRIBUTION,
-        "source_url": weather_alerts.PUBLIC_PAGE,
-    }
+async def _typical_buckets(cur, iata: str) -> list[analytics.TypicalBucket]:
+    await cur.execute(TYPICAL_HOURS_SQL, (iata,))
+    return analytics.typical_from_hours(await cur.fetchall())
 
 
-def _alert_sort_key(alert: dict[str, Any]) -> tuple[int, str]:
-    return (-weather_alerts.SEVERITY_RANK.get(alert["severity"], 0), alert["event"])
-
-
-def _today() -> date:
-    return datetime.now(UTC).astimezone(EASTERN).date()
-
-
-async def _travel_period(cur) -> dict | None:
-    today = _today()
-    await cur.execute(
-        """
-        SELECT name, start_date, end_date, intensity, note
-        FROM travel_periods
-        WHERE end_date >= %s
-        ORDER BY start_date, name
-        LIMIT 1
-        """,
-        (today,),
-    )
+async def _airport_name(cur, iata: str) -> tuple[str, str] | None:
+    await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
     row = await cur.fetchone()
-    if row is None:
+    return (row[0], row[1]) if row is not None else None
+
+
+LEADERBOARD_BASELINE_SQL = """
+SELECT airport_iata, max(wait_seconds)
+FROM (
+    SELECT DISTINCT ON (o.checkpoint_id) c.airport_iata, o.wait_seconds
+    FROM observations o JOIN checkpoints c ON c.id = o.checkpoint_id
+    WHERE c.lane_type = 'standard' AND o.is_open AND o.wait_seconds IS NOT NULL
+      AND o.fetched_at >= %s AND o.fetched_at <= %s
+    ORDER BY o.checkpoint_id, abs(extract(epoch FROM (o.fetched_at - %s)))
+) nearest
+GROUP BY 1
+"""
+
+
+
+def _cached(
+    cache: dict[str, tuple[datetime, dict[str, Any]]],
+    key: str,
+    now: datetime,
+) -> tuple[dict[str, Any], datetime] | None:
+    entry = cache.get(key)
+    if entry is None:
         return None
-    period = TravelPeriod(
-        name=row[0],
-        start=row[1],
-        end=row[2],
-        intensity=row[3],
-        note=row[4],
-    )
-    return period_payload(period, today)
+    expires_at, payload = entry
+    if expires_at <= now:
+        del cache[key]
+        return None
+    return payload, expires_at
 
 
-LATEST_OBS_SQL = """
-SELECT DISTINCT ON (o.checkpoint_id)
-    c.airport_iata, c.name, c.lane_type, o.wait_seconds, o.is_open,
-    o.source_published_at, o.fetched_at, s.attribution, s.url
-FROM observations o
-JOIN checkpoints c ON c.id = o.checkpoint_id
-JOIN sources s ON s.code = o.source_code
-ORDER BY o.checkpoint_id, o.fetched_at DESC
-"""
-
-FAA_EVENTS_SQL = """
-SELECT airport_iata, event_type, reason, avg_delay_seconds, start_time, end_time, update_time
-FROM faa_airport_events
-WHERE fetched_at = (
-        SELECT max(fetched_at) FROM raw_payloads WHERE source_code = %s
-      )
-  AND fetched_at > now() - interval '20 minutes'
-  AND (start_time IS NULL OR start_time <= now())
-  AND (end_time IS NULL OR end_time >= now())
-"""
+def _store_cached(
+    cache: dict[str, tuple[datetime, dict[str, Any]]],
+    key: str,
+    payload: dict[str, Any],
+    now: datetime,
+) -> tuple[dict[str, Any], datetime]:
+    expires_at = now + CACHE_TTL
+    cache[key] = (expires_at, payload)
+    return payload, expires_at
 
 
-def _faa_event_dict(row: tuple, *, include_iata: bool = False) -> dict:
-    airport_iata, event_type, reason, avg_delay_seconds, _start_time, end_time, update_time = row
-    event = {
-        "event_type": event_type,
-        "reason": reason,
-        "avg_delay_seconds": avg_delay_seconds,
-        "end_time": _iso(end_time),
-        "update_time": _iso(update_time),
-    }
-    if include_iata:
-        event["iata"] = airport_iata
-    return event
+def _cache_control(expires_at: datetime, now: datetime) -> str:
+    remaining = max(0, int((expires_at - now).total_seconds()))
+    return f"public, max-age={remaining}"
 
 
-def _faa_sort_key(event: dict) -> tuple[int, str]:
-    return (-FAA_EVENT_SEVERITY.get(event["event_type"], 0), event.get("iata", ""))
+async def _leaderboard_snapshot(now: datetime) -> dict[str, Any]:
+    assert db.pool is not None
+    target = now - leaderboard.BASELINE_AGE
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("SELECT iata, name FROM airports")
+        names = {r[0]: r[1] for r in await cur.fetchall()}
+        await cur.execute(queries.LATEST_OBS_SQL)
+        latest = await cur.fetchall()
+        await cur.execute(
+            LEADERBOARD_BASELINE_SQL,
+            (
+                target - leaderboard.BASELINE_TOLERANCE,
+                target + leaderboard.BASELINE_TOLERANCE,
+                target,
+            ),
+        )
+        baseline = await cur.fetchall()
+    return leaderboard.build(latest, baseline, names, now=now)
 
 
-@app.get("/api/summary")
-async def api_summary():
+@app.get("/api/leaderboard")
+async def api_leaderboard():
+    now = datetime.now(UTC)
+    cached = _cached(LEADERBOARD_CACHE, "global", now)
+    if cached is None:
+        payload = await _leaderboard_snapshot(now)
+        payload, expires_at = _store_cached(LEADERBOARD_CACHE, "global", payload, now)
+    else:
+        payload, expires_at = cached
+    return JSONResponse(payload, headers={"Cache-Control": _cache_control(expires_at, now)})
+
+
+async def _summary_snapshot() -> dict[str, Any]:
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
-        await cur.execute("SELECT iata, name, city, state, lat, lon, hub FROM airports")
-        airports = {
-            r[0]: {"iata": r[0], "name": r[1], "city": r[2], "state": r[3],
-                   "lat": r[4], "lon": r[5], "hub": r[6], "live": False}
-            for r in await cur.fetchall()
-        }
-        await cur.execute(LATEST_OBS_SQL)
-        now = datetime.now(UTC)
-        for iata, name, lane, wait, is_open, pub_at, fetched_at, attribution, url in await cur.fetchall():
-            a = airports.get(iata)
-            if a is None:
-                continue
-            stale = (now - fetched_at).total_seconds() > STALE_SECONDS
-            a["live"] = True
-            a.setdefault("stale", True)
-            a["stale"] = a["stale"] and stale
-            a.setdefault("source", attribution)
-            a.setdefault("source_url", url)
-            key = {
-                "standard": "max_wait_seconds",
-                "precheck": "max_precheck_seconds",
-            }.get(lane)
-            if key and wait is not None and is_open and not stale and wait > a.get(key, -1):
-                a[key] = wait
-                if lane == "standard":
-                    a["as_of"] = _iso(pub_at or fetched_at)
-            fetched_iso = _iso(fetched_at)
-            if fetched_iso and fetched_iso > (a.get("last_fetch") or ""):
-                a["last_fetch"] = fetched_iso
-        await cur.execute(ACTIVE_ALERTS_SQL)
+        airports = await queries.summary_airports(cur)
+        await cur.execute(queries.ACTIVE_ALERTS_SQL)
         for row in await cur.fetchall():
             a = airports.get(row[0])
             if a is None:
                 continue
-            alert = _alert_dict(row)
+            alert = queries.alert_dict(row)
             current = a.get("weather_alert")
-            if current is None or _alert_sort_key(alert) < _alert_sort_key(current):
+            if current is None or queries.alert_sort_key(alert) < queries.alert_sort_key(current):
                 a["weather_alert"] = alert
-        travel_period = await _travel_period(cur)
+        travel_period = await queries.travel_period(cur)
         await cur.execute(
             "SELECT date, travelers FROM tsa_throughput ORDER BY date DESC LIMIT 800"
         )
@@ -232,10 +207,10 @@ async def api_summary():
             """
         )
         tsa_history = [[week.isoformat(), int(avg)] for week, avg in await cur.fetchall()]
-        await cur.execute(FAA_EVENTS_SQL, (FAA_SOURCE_CODE,))
-        faa_events = [_faa_event_dict(row, include_iata=True) for row in await cur.fetchall()]
+        await cur.execute(queries.FAA_EVENTS_SQL, (queries.FAA_SOURCE_CODE,))
+        faa_events = [queries.faa_event_dict(row, include_iata=True) for row in await cur.fetchall()]
     live = sum(1 for a in airports.values() if a["live"])
-    faa_events.sort(key=_faa_sort_key)
+    faa_events.sort(key=queries.faa_sort_key)
     for event in faa_events:
         airport = airports.get(event["iata"])
         if airport is not None and "faa_event" not in airport:
@@ -256,8 +231,8 @@ async def api_summary():
             "source": "TSA checkpoint travel numbers (tsa.gov/travel/passenger-volumes)",
             "history": tsa_history,
         }
-    return JSONResponse({
-        "generated_at": _iso(datetime.now(UTC)),
+    return {
+        "generated_at": queries.iso(datetime.now(UTC)),
         "live_count": live,
         "no_data_count": len(airports) - live,
         "airports": list(airports.values()),
@@ -265,145 +240,180 @@ async def api_summary():
         "faa_events": faa_events,
         "faa_attribution": FAA_ATTRIBUTION,
         "travel_period": travel_period,
-    })
+    }
+
+
+@app.get("/api/summary")
+async def api_summary():
+    now = datetime.now(UTC)
+    cached = _cached(SUMMARY_CACHE, "global", now)
+    if cached is None:
+        payload = await _summary_snapshot()
+        payload, expires_at = _store_cached(SUMMARY_CACHE, "global", payload, now)
+    else:
+        payload, expires_at = cached
+    return JSONResponse(payload, headers={"Cache-Control": _cache_control(expires_at, now)})
 
 
 @app.get("/api/airport/{iata}")
-async def api_airport(iata: str):
-    iata = iata.upper()
+async def api_airport(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
-        await cur.execute("SELECT iata, name, city, state, lat, lon FROM airports WHERE iata = %s", (iata,))
+        detail = await queries.airport_detail(cur, iata)
+        if detail is not None:
+            typical_buckets = await _typical_buckets(cur, iata)
+            now = datetime.now(UTC)
+            typical_hour = next(
+                bucket for bucket in typical_buckets
+                if bucket.dow == now.weekday() and bucket.hour == now.hour
+            )
+            current_minutes = analytics.seconds_to_minutes(
+                max(
+                    (
+                        checkpoint["wait_seconds"]
+                        for checkpoint in detail["checkpoints"]
+                        if checkpoint["lane_type"] == "standard"
+                        and checkpoint["is_open"]
+                        and not checkpoint["stale"]
+                        and checkpoint["wait_seconds"] is not None
+                    ),
+                    default=None,
+                )
+            )
+            median_minutes = analytics.seconds_to_minutes(typical_hour.median_seconds)
+            delta_minutes = (
+                round(current_minutes - median_minutes, 1)
+                if current_minutes is not None and median_minutes is not None else None
+            )
+            detail["typical"] = {
+                "dow": typical_hour.dow,
+                "hour": typical_hour.hour,
+                "timezone": "UTC",
+                "median_minutes": median_minutes,
+                "p75_minutes": analytics.seconds_to_minutes(typical_hour.p75_seconds),
+                "sample_count": typical_hour.sample_count,
+                "current_minutes": current_minutes,
+                "delta_minutes": delta_minutes,
+            }
+    if detail is None:
+        raise HTTPException(404, "unknown airport")
+    return JSONResponse(detail)
+
+
+async def _typical_snapshot(iata: str) -> dict[str, Any]:
+    assert db.pool is not None
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        airport_row = await _airport_name(cur, iata)
+        if airport_row is None:
+            raise HTTPException(404, "unknown airport")
+        buckets = await _typical_buckets(cur, iata)
+    payload_buckets = [
+        {
+            "dow": bucket.dow,
+            "hour": bucket.hour,
+            "median_minutes": analytics.seconds_to_minutes(bucket.median_seconds),
+            "p75_minutes": analytics.seconds_to_minutes(bucket.p75_seconds),
+            "sample_count": bucket.sample_count,
+            "observation_count": bucket.observation_count,
+        }
+        for bucket in buckets
+    ]
+    return {
+        "airport": {"iata": airport_row[0], "name": airport_row[1]},
+        "lane_type": "standard",
+        "timezone": "UTC",
+        "buckets": payload_buckets,
+        "coverage": {
+            "buckets_with_data": sum(bucket.sample_count > 0 for bucket in buckets),
+            "total_buckets": len(buckets),
+            "hour_buckets": sum(bucket.sample_count for bucket in buckets),
+        },
+        "generated_at": queries.iso(datetime.now(UTC)),
+    }
+
+
+@app.get("/api/airport/{iata}/typical")
+async def api_airport_typical(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
+    now = datetime.now(UTC)
+    cached = _cached(TYPICAL_CACHE, iata, now)
+    if cached is None:
+        payload = await _typical_snapshot(iata)
+        payload, expires_at = _store_cached(TYPICAL_CACHE, iata, payload, now)
+    else:
+        payload, expires_at = cached
+    return JSONResponse(payload, headers={"Cache-Control": _cache_control(expires_at, now)})
+
+
+@app.get("/api/airport/{iata}/forecast")
+async def api_airport_forecast(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
+    assert db.pool is not None
+    async with db.pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
         row = await cur.fetchone()
         if row is None:
             raise HTTPException(404, "unknown airport")
-        airport = {"iata": row[0], "name": row[1], "city": row[2], "state": row[3], "lat": row[4], "lon": row[5]}
-        await cur.execute(AIRPORT_ALERTS_SQL, (iata,))
-        alerts = sorted((_alert_dict(r) for r in await cur.fetchall()), key=_alert_sort_key)
-        await cur.execute(
-            """
-            SELECT year, enplanements, national_rank, hub, source_name, source_url
-            FROM airport_enplanements WHERE airport_iata = %s ORDER BY year DESC LIMIT 1
-            """,
-            (iata,),
-        )
-        enplanement_row = await cur.fetchone()
-        airport["enplanements"] = (
-            {
-                "year": enplanement_row[0],
-                "enplanements": enplanement_row[1],
-                "rank": enplanement_row[2],
-                "hub": enplanement_row[3],
-                "source": enplanement_row[4],
-                "source_url": enplanement_row[5],
-            }
-            if enplanement_row is not None else None
-        )
-        travel_period = await _travel_period(cur)
-        await cur.execute(
-            """
-            SELECT c.id, c.name, c.lane_type FROM checkpoints c
-            WHERE c.airport_iata = %s ORDER BY c.name, c.lane_type
-            """,
-            (iata,),
-        )
-        checkpoints = []
-        now = datetime.now(UTC)
-        latest_checkpoints = []
-        for cp_id, cp_name, lane in await cur.fetchall():
-            await cur.execute(
-                """
-                SELECT o.wait_seconds, o.is_open, o.source_published_at, o.fetched_at,
-                       s.attribution, s.url
-                FROM observations o JOIN sources s ON s.code = o.source_code
-                WHERE o.checkpoint_id = %s ORDER BY o.fetched_at DESC LIMIT 1
-                """,
-                (cp_id,),
-            )
-            latest = await cur.fetchone()
-            if latest is not None:
-                latest_checkpoints.append((cp_id, cp_name, lane, latest))
-        airport_latest = max(
-            (latest[3] for _, _, _, latest in latest_checkpoints),
-            default=None,
-        )
-        for cp_id, cp_name, lane, latest in latest_checkpoints:
-            wait, is_open, pub_at, fetched_at, attribution, src_url = latest
-            if airport_latest is not None and (airport_latest - fetched_at).total_seconds() > 24 * 60 * 60:
-                continue
-            await cur.execute(
-                """
-                SELECT extract(epoch FROM date_trunc('minute', fetched_at))::bigint AS m,
-                       max(wait_seconds)
-                FROM observations
-                WHERE checkpoint_id = %s AND wait_seconds IS NOT NULL
-                  AND fetched_at > now() - interval '24 hours'
-                GROUP BY 1 ORDER BY 1
-                """,
-                (cp_id,),
-            )
-            history = [[m, w] for m, w in await cur.fetchall()]
-            checkpoints.append({
-                "name": cp_name,
-                "lane_type": lane,
-                "wait_seconds": wait,
-                "is_open": is_open,
-                "published_at": _iso(pub_at),
-                "fetched_at": _iso(fetched_at),
-                "stale": (now - fetched_at).total_seconds() > STALE_SECONDS,
-                "source": attribution,
-                "source_url": src_url,
-                "history": history,
-            })
-        await cur.execute(FAA_EVENTS_SQL + " AND airport_iata = %s", (FAA_SOURCE_CODE, iata))
-        faa_events = [_faa_event_dict(row) for row in await cur.fetchall()]
-        faa_events.sort(key=_faa_sort_key)
-    return JSONResponse({
-        "airport": airport,
-        "checkpoints": checkpoints,
-        "faa_events": faa_events,
-        "faa_attribution": FAA_ATTRIBUTION,
-        "weather_alerts": alerts,
-        "travel_period": travel_period,
-        "generated_at": _iso(datetime.now(UTC)),
-    })
+        payload = await forecast.get_forecast(cur, row[0], row[1])
+    return JSONResponse(payload)
+
+
+async def _healthz_snapshot() -> dict[str, Any]:
+    assert db.pool is not None
+    async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn, conn.cursor() as cur:
+        await cur.execute("SET LOCAL statement_timeout = 10000")
+        return await queries.source_health(cur)
+
+
+async def _bounded(
+    coro: Coroutine[Any, Any, dict[str, Any]],
+    timeout: float,  # noqa: ASYNC109 - task cancellation must not be awaited
+) -> dict[str, Any] | None:
+    """Run coro with a hard deadline; abandon it on timeout."""
+    task = asyncio.create_task(coro)
+    task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+    try:
+        _done, pending = await asyncio.wait({task}, timeout=timeout)
+    except asyncio.CancelledError:
+        task.cancel()
+        raise
+    if pending:
+        task.cancel()
+        return None
+    return task.result()
 
 
 @app.get("/healthz")
 async def healthz():
+    try:
+        payload = await _bounded(_healthz_snapshot(), HEALTHZ_TIMEOUT)
+        if payload is None:
+            payload = {"status": "degraded", "detail": "database unavailable"}
+    except Exception:
+        log.warning("healthz db check failed", exc_info=True)
+        payload = {"status": "degraded", "detail": "database unavailable"}
+    return JSONResponse(payload, status_code=200)
+
+
+async def _ops_snapshot(now: datetime) -> dict[str, Any]:
     assert db.pool is not None
-    async with db.pool.connection() as conn, conn.cursor() as cur:
-        await cur.execute(
-            """
-                SELECT s.code, h.last_success_at, h.last_attempt_at, h.last_error,
-                       h.last_error_at, h.consecutive_failures
-                FROM sources s LEFT JOIN poll_health h ON h.source_code = s.code
-                ORDER BY s.code
-                """
-        )
-        rows = await cur.fetchall()
-        await cur.execute("SELECT count(*) FROM observations")
-        obs_row = await cur.fetchone()
-        assert obs_row is not None
-        obs_count = obs_row[0]
+    async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn, conn.cursor() as cur:
+        await cur.execute("SET LOCAL statement_timeout = 10000")
+        return await ops.build_ops(conn, now=now)
+
+
+@app.get("/api/ops")
+async def api_ops():
     now = datetime.now(UTC)
-    sources = [
-        {
-            "source": code,
-            "last_success_at": _iso(ls),
-            "last_attempt_at": _iso(la),
-            "last_error": err,
-            "last_error_at": _iso(ea),
-            "consecutive_failures": cf or 0,
-            "healthy": ls is not None and (now - ls).total_seconds() < STALE_SECONDS,
-        }
-        for code, ls, la, err, ea, cf in rows
-    ]
-    all_ok = all(s["healthy"] for s in sources)
-    return JSONResponse(
-        {"status": "ok" if all_ok else "degraded", "observations": obs_count, "sources": sources},
-        status_code=200,
-    )
+    try:
+        payload = await _bounded(_ops_snapshot(now), OPS_TOTAL_TIMEOUT)
+        if payload is None:
+            payload = ops.empty_payload(now)
+    except Exception:
+        log.warning("ops snapshot failed", exc_info=True)
+        payload = ops.empty_payload(now)
+    return JSONResponse(payload)
 
 
 @app.get("/")
@@ -413,4 +423,20 @@ async def index(request: Request):
 
 @app.get("/airport/{iata}")
 async def airport_page(request: Request, iata: str):
-    return templates.TemplateResponse(request, "airport.html", {"iata": iata.upper()})
+    iata = security.require_iata(iata, request)
+    return templates.TemplateResponse(request, "airport.html", {"iata": iata})
+
+
+@app.get("/ops")
+async def ops_page(request: Request):
+    return templates.TemplateResponse(request, "ops.html")
+
+
+@app.get("/embed/{iata}", response_class=HTMLResponse)
+async def embed(iata: str, request: Request):
+    return await public_api.embed_response(iata, request)
+
+
+@app.get("/api", response_class=HTMLResponse)
+async def api_docs(request: Request):
+    return templates.TemplateResponse(request, "api_docs.html")

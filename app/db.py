@@ -15,6 +15,15 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@lo
 
 pool: AsyncConnectionPool | None = None
 
+POOL_KWARGS = {
+    "options": "-c timezone=UTC",
+    "tcp_user_timeout": 15000,
+    "keepalives": 1,
+    "keepalives_idle": 5,
+    "keepalives_interval": 2,
+    "keepalives_count": 3,
+}
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS airports (
     iata TEXT PRIMARY KEY,
@@ -75,6 +84,19 @@ CREATE TABLE IF NOT EXISTS observations (
 );
 CREATE INDEX IF NOT EXISTS idx_obs_checkpoint_time ON observations (checkpoint_id, fetched_at DESC);
 CREATE INDEX IF NOT EXISTS idx_obs_time ON observations (fetched_at DESC);
+
+CREATE TABLE IF NOT EXISTS observations_hourly (
+    airport_iata TEXT NOT NULL REFERENCES airports(iata),
+    checkpoint_id INTEGER NOT NULL REFERENCES checkpoints(id),
+    lane_type TEXT NOT NULL,
+    hour_bucket TIMESTAMPTZ NOT NULL,
+    avg_wait_seconds INTEGER,
+    max_wait_seconds INTEGER,
+    sample_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (checkpoint_id, hour_bucket)
+);
+CREATE INDEX IF NOT EXISTS idx_obs_hourly_airport ON observations_hourly (airport_iata, lane_type, hour_bucket);
 
 CREATE TABLE IF NOT EXISTS poll_health (
     source_code TEXT PRIMARY KEY REFERENCES sources(code),
@@ -147,7 +169,13 @@ CREATE TABLE IF NOT EXISTS travel_periods (
 
 async def init() -> None:
     global pool
-    pool = AsyncConnectionPool(DATABASE_URL, min_size=1, max_size=8, open=False)
+    pool = AsyncConnectionPool(
+        DATABASE_URL,
+        kwargs=POOL_KWARGS,
+        min_size=2,
+        max_size=8,
+        open=False,
+    )
     await pool.open()
     async with pool.connection() as conn:
         await conn.execute(SCHEMA)

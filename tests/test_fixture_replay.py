@@ -10,6 +10,7 @@ import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -50,7 +51,15 @@ def fixture(code: str) -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def parsed(code: str, fixture: dict[str, Any]) -> list[dict[str, Any]]:
-    result = asyncio.run(replay(SOURCES_BY_CODE[code], fixture))
+    captured_at = datetime.fromisoformat(fixture["captured_at"])
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> datetime:
+            return captured_at.astimezone(tz) if tz is not None else captured_at.replace(tzinfo=None)
+
+    with patch("app.sources.adapters.datetime", FrozenDateTime):
+        result = asyncio.run(replay(SOURCES_BY_CODE[code], fixture))
     return [observation_to_dict(ob) for ob in result.observations]
 
 
