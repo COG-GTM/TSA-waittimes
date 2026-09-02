@@ -94,7 +94,8 @@ async def store_result(
                 INSERT INTO poll_health (source_code, last_success_at, last_attempt_at, consecutive_failures)
                 VALUES (%s, now(), now(), 0)
                 ON CONFLICT (source_code) DO UPDATE SET
-                    last_success_at = now(), last_attempt_at = now(), consecutive_failures = 0
+                    last_success_at = now(), last_attempt_at = now(),
+                    last_error = NULL, last_error_at = NULL, consecutive_failures = 0
                 """,
                 (source.code,),
             )
@@ -253,7 +254,8 @@ async def poll_faa_events(client: httpx.AsyncClient) -> None:
                     INSERT INTO poll_health (source_code, last_success_at, last_attempt_at, consecutive_failures)
                     VALUES (%s, now(), now(), 0)
                     ON CONFLICT (source_code) DO UPDATE SET
-                        last_success_at = now(), last_attempt_at = now(), consecutive_failures = 0
+                        last_success_at = now(), last_attempt_at = now(),
+                        last_error = NULL, last_error_at = NULL, consecutive_failures = 0
                     """,
                     (FAA_SOURCE_CODE,),
                 )

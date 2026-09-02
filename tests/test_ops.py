@@ -6,7 +6,8 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from app import main, ops
+from app import main, ops, poller, queries
+from app.sources.base import FetchResult, Observation, Source
 
 NOW = datetime(2026, 1, 1, 12, tzinfo=UTC)
 
@@ -154,6 +155,94 @@ async def test_build_ops_handles_source_inventory_failure() -> None:
     assert payload["system"]["observations_rows"] == 100
     assert payload["system"]["db_size_bytes"] == 4096
     assert connection.rollback_count == 1
+
+
+@pytest.mark.asyncio
+async def test_successful_poll_clears_source_health_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Cursor:
+        def __init__(self, connection: "Connection") -> None:
+            self.connection = connection
+            self.query = ""
+            self.result: tuple[Any, ...] | None = None
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+        async def execute(self, query: str, _params: tuple[Any, ...] = ()) -> None:
+            self.query = query
+            if "INSERT INTO raw_payloads" in query or "INSERT INTO checkpoints" in query:
+                self.result = (1,)
+            elif "INSERT INTO poll_health" in query:
+                self.connection.last_error = None
+                self.connection.last_error_at = None
+            elif "FROM sources s" in query:
+                self.result = (
+                    "TEST",
+                    NOW,
+                    NOW,
+                    self.connection.last_error,
+                    self.connection.last_error_at,
+                    0,
+                )
+            elif query == "SELECT count(*) FROM observations":
+                self.result = (1,)
+
+        async def fetchone(self) -> tuple[Any, ...] | None:
+            return self.result
+
+        async def fetchall(self) -> list[tuple[Any, ...]]:
+            return [self.result] if self.result is not None else []
+
+    class Connection:
+        def __init__(self) -> None:
+            self.last_error: str | None = None
+            self.last_error_at: datetime | None = None
+            self._cursor = Cursor(self)
+
+        def cursor(self) -> Cursor:
+            return self._cursor
+
+        async def execute(self, query: str, params: tuple[Any, ...] = ()) -> None:
+            if "INSERT INTO poll_health" in query:
+                self.last_error = str(params[1])
+                self.last_error_at = NOW
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+    class Pool:
+        def __init__(self, connection: Connection) -> None:
+            self._connection = connection
+
+        def connection(self, **_kwargs: object) -> Connection:
+            return self._connection
+
+    source = Source("TEST", "Test source", "https://example.test", "Test", 60, None)
+    connection = Connection()
+    monkeypatch.setattr(poller.db, "pool", Pool(connection))
+
+    await poller.record_failure(source, RuntimeError("feed failed"))
+    failed = await queries.source_health(connection.cursor())
+    assert failed["sources"][0]["last_error"] == "RuntimeError: feed failed"
+
+    await poller.store_result(
+        source,
+        FetchResult(
+            raw={"ok": True},
+            observations=[Observation("Checkpoint", "standard", 60)],
+        ),
+    )
+    recovered = await queries.source_health(connection.cursor())
+    assert recovered["sources"][0]["last_error"] is None
+    assert recovered["sources"][0]["last_error_at"] is None
 
 
 @pytest.fixture
