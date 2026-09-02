@@ -10,6 +10,19 @@
   `STALE` badge on drill-down pages).
 - Fly health checks hit `/healthz` every 30s.
 
+## Operations dashboard
+
+- Open `/ops` for the noindex operations dashboard, or fetch `/api/ops` for
+  the same snapshot as JSON. It requires no authentication and is not linked
+  from the public navigation.
+- Source pills are **green** when the last success is less than twice the
+  configured refresh interval old, **amber** when it is older but under 30
+  minutes, and **red** when it is at least 30 minutes old, has no success, or
+  has consecutive failures.
+- A failed dashboard query degrades that field to a dash rather than failing
+  the page. Last cleanup is not persisted in the database; the poller only
+  logs successful cleanup events.
+
 ## Restarting the scrapers
 
 The pollers run inside the web process (started on app startup).

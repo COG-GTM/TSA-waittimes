@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block title %}US Checkpoint Wait Picture{% endblock %}</title>
+{% block head %}{% endblock %}
 <link rel="stylesheet" href="/static/leaflet.css">
 <link rel="stylesheet" href="/static/app.css">
 </head>
@@ -16,6 +17,7 @@
 <main>{% block content %}{% endblock %}</main>
 <footer class="footer">
   Cognition demo built from publicly published airport data. Not affiliated with TSA. Demonstration only.
+  <a class="ops-footer-link" href="/ops">Operations</a>
 </footer>
 <script src="/static/leaflet.js"></script>
 <script src="/static/app.js"></script>
