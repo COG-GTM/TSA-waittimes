@@ -61,7 +61,10 @@ def check_rate_limit(client_ip: str) -> int | None:
         for key in expired:
             del _rate_limits[key]
         if len(_rate_limits) >= MAX_TRACKED_CLIENTS:
-            oldest = min(_rate_limits, key=lambda key: _rate_limits[key][0])
+            candidates = [
+                key for key, (_ws, count) in _rate_limits.items() if count < RATE_LIMIT
+            ] or list(_rate_limits)
+            oldest = min(candidates, key=lambda key: _rate_limits[key][0])
             del _rate_limits[oldest]
     window_start, count = _rate_limits.get(client_ip, (now, 0))
     if now - window_start >= RATE_WINDOW_SECONDS:

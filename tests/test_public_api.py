@@ -295,6 +295,18 @@ def test_rate_limiter_bounds_clients_and_preserves_existing_limits(
     assert set(public_api._rate_limits) == {"limited", "new"}
     assert public_api.check_rate_limit("limited") is not None
 
+    public_api.reset_rate_limiter()
+    public_api._rate_limits.update({
+        "blocked-oldest": (20.0, public_api.RATE_LIMIT),
+        "under-limit": (30.0, 1),
+    })
+    public_api._last_prune = 70.0
+
+    assert public_api.check_rate_limit("new") is None
+    assert "blocked-oldest" in public_api._rate_limits
+    assert "under-limit" not in public_api._rate_limits
+    assert public_api.check_rate_limit("blocked-oldest") is not None
+
 
 @pytest.mark.asyncio
 async def test_api_docs(client):
