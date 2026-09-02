@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any, Self
 
@@ -198,6 +199,62 @@ async def test_api_ops_endpoint_fallback(client, api_pool, monkeypatch: pytest.M
     assert response.status_code == 200
     assert response.json()["sources"] == []
     assert response.json()["sources_available"] is False
+
+
+@pytest.mark.asyncio
+async def test_api_ops_endpoint_timeout_returns_empty_payload(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def hanging_snapshot(_now: datetime) -> dict[str, Any]:
+        await asyncio.sleep(60)
+        return {}
+
+    monkeypatch.setattr(main, "_ops_snapshot", hanging_snapshot)
+    monkeypatch.setattr(main, "OPS_TOTAL_TIMEOUT", 0.01)
+
+    response = await client.get("/api/ops")
+
+    assert response.status_code == 200
+    assert response.json()["sources"] == []
+    assert response.json()["sources_available"] is False
+
+
+@pytest.mark.asyncio
+async def test_healthz_db_failure_returns_degraded_status(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def failed_snapshot() -> dict[str, Any]:
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr(main, "_healthz_snapshot", failed_snapshot)
+
+    response = await client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "degraded",
+        "detail": "database unavailable",
+    }
+
+
+@pytest.mark.asyncio
+async def test_healthz_timeout_returns_degraded_status(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def hanging_snapshot() -> dict[str, Any]:
+        await asyncio.sleep(60)
+        return {}
+
+    monkeypatch.setattr(main, "_healthz_snapshot", hanging_snapshot)
+    monkeypatch.setattr(main, "OPS_TOTAL_TIMEOUT", 0.01)
+
+    response = await client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "degraded"
 
 
 @pytest.mark.asyncio

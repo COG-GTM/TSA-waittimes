@@ -1,9 +1,11 @@
 """US Checkpoint Wait Picture — web app and API."""
+import asyncio
 import logging
 import os
 import re
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -20,6 +22,7 @@ CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
 IATA_RE = re.compile(r"^[A-Z]{3}$")
 OPS_POOL_TIMEOUT = 3.0
+OPS_TOTAL_TIMEOUT = 5.0
 
 
 @asynccontextmanager
@@ -276,21 +279,33 @@ async def api_airport_forecast(iata: str, request: Request):
     return JSONResponse(payload)
 
 
+async def _healthz_snapshot() -> dict[str, Any]:
+    assert db.pool is not None
+    async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn, conn.cursor() as cur:
+        return await queries.source_health(cur)
+
+
 @app.get("/healthz")
 async def healthz():
+    try:
+        payload = await asyncio.wait_for(_healthz_snapshot(), timeout=OPS_TOTAL_TIMEOUT)
+    except Exception:
+        log.warning("healthz db check failed", exc_info=True)
+        payload = {"status": "degraded", "detail": "database unavailable"}
+    return JSONResponse(payload, status_code=200)
+
+
+async def _ops_snapshot(now: datetime) -> dict[str, Any]:
     assert db.pool is not None
-    async with db.pool.connection() as conn, conn.cursor() as cur:
-        health = await queries.source_health(cur)
-    return JSONResponse(health, status_code=200)
+    async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn:
+        return await ops.build_ops(conn, now=now)
 
 
 @app.get("/api/ops")
 async def api_ops():
     now = datetime.now(UTC)
     try:
-        assert db.pool is not None
-        async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn:
-            payload = await ops.build_ops(conn, now=now)
+        payload = await asyncio.wait_for(_ops_snapshot(now), timeout=OPS_TOTAL_TIMEOUT)
     except Exception:
         log.warning("ops snapshot failed", exc_info=True)
         payload = ops.empty_payload(now)
