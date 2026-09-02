@@ -9,6 +9,7 @@ import math
 import re
 import urllib.parse
 from datetime import UTC, datetime, timedelta
+from html.parser import HTMLParser
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -645,6 +646,118 @@ async def fetch_pdx(client: httpx.AsyncClient) -> FetchResult:
     return FetchResult(raw=data, observations=obs)
 
 
+# ---------------------------------------------------------------- SFO (server-rendered table on flysfo.com; no JSON feed)
+SFO_URL = "https://www.flysfo.com/passengers/flight-info/security-wait-times"
+SFO_TZ = ZoneInfo("America/Los_Angeles")
+_SFO_UPDATED_RE = re.compile(r"Checkpoint data last updated:\s*([A-Za-z]{3}\s+\d{1,2}\s+at\s+\d{1,2}:\d{2}\s*[AaPp][Mm])")
+_SFO_MINUTES_RE = re.compile(r"(\d+)\s*min")
+
+
+class _SfoPageParser(HTMLParser):
+    """Collect every table on the page as rows of cell text, plus all visible text."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.tables: list[list[list[str]]] = []
+        self.text: list[str] = []
+        self._table: list[list[str]] | None = None
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "table":
+            self._table = []
+        elif tag == "tr" and self._table is not None:
+            self._row = []
+        elif tag in ("td", "th") and self._row is not None:
+            self._cell = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("td", "th") and self._cell is not None and self._row is not None:
+            self._row.append(" ".join("".join(self._cell).split()))
+            self._cell = None
+        elif tag == "tr" and self._row is not None and self._table is not None:
+            self._table.append(self._row)
+            self._row = None
+        elif tag == "table" and self._table is not None:
+            self.tables.append(self._table)
+            self._table = None
+
+    def handle_data(self, data: str) -> None:
+        self.text.append(data)
+        if self._cell is not None:
+            self._cell.append(data)
+
+
+def _sfo_wait_seconds(text: str | None) -> int | None:
+    """SFO publishes phrases like '4 mins' or 'Not Available'; only a minute count is a reading."""
+    if not text:
+        return None
+    match = _SFO_MINUTES_RE.search(text)
+    return int(match.group(1)) * 60 if match else None
+
+
+def _sfo_published_at(text: str | None, now: datetime) -> datetime | None:
+    """Parse 'Sep 01 at 02:11 pm' (Pacific, no year) as the most recent past instant."""
+    if not text:
+        return None
+    try:
+        parsed = datetime.strptime(" ".join(text.split()), "%b %d at %I:%M %p")  # noqa: DTZ007
+    except ValueError:
+        return None
+    now_pt = now.astimezone(SFO_TZ)
+    cutoff = now + timedelta(minutes=5)
+    for year in (now_pt.year, now_pt.year - 1):
+        try:
+            local = parsed.replace(year=year, tzinfo=SFO_TZ)
+        except ValueError:  # Feb 29 in a non-leap year
+            continue
+        # During the DST fall-back hour a wall time names two instants (fold 0/1).
+        past = [c for c in (local.replace(fold=f).astimezone(UTC) for f in (0, 1)) if c <= cutoff]
+        if past:
+            return max(past)
+    return None
+
+
+def _sfo_checkpoint_table(tables: list[list[list[str]]]) -> tuple[list[str], list[list[str]]] | None:
+    for table in tables:
+        if len(table) < 2 or len(table[0]) < 2:
+            continue
+        header = [cell.lower() for cell in table[0]]
+        if "checkpoint" in header[0] and any("general" in h or "precheck" in h.replace(" ", "") for h in header[1:]):
+            return table[0], table[1:]
+    return None
+
+
+async def fetch_sfo(client: httpx.AsyncClient) -> FetchResult:
+    r = await client.get(SFO_URL, headers={"Accept": "text/html"})
+    r.raise_for_status()
+    parser = _SfoPageParser()
+    parser.feed(r.text)
+    parser.close()
+
+    found = _sfo_checkpoint_table(parser.tables)
+    if found is None:
+        raise ValueError("SFO: checkpoint wait-time table not found on page")
+    header, rows = found
+    updated_match = _SFO_UPDATED_RE.search(" ".join(" ".join(parser.text).split()))
+    updated_text = updated_match.group(1) if updated_match else None
+    published_at = _sfo_published_at(updated_text, datetime.now(UTC))
+
+    obs = []
+    for row in rows:
+        name = row[0].strip()
+        if not name:
+            continue
+        for lane_header, cell in zip(header[1:], row[1:], strict=False):
+            wait = _sfo_wait_seconds(cell)
+            obs.append(Observation(name[:120], _lane(lane_header), wait, wait is not None, published_at))
+    if not obs:
+        raise ValueError("SFO: checkpoint table had no rows")
+    raw = {"header": header, "rows": rows, "updated": updated_text}
+    return FetchResult(raw=raw, observations=obs)
+
+
 SOURCES: list[Source] = [
     Source("SEA", "Port of Seattle — SEA checkpoint wait times", "https://www.portseattle.org/sea-tac", "Port of Seattle (portseattle.org)", 120, fetch_sea),
     Source("DEN", "Denver International Airport — security wait times", "https://www.flydenver.com/security/", "Denver International Airport (flydenver.com)", 120, fetch_den),
@@ -667,4 +780,5 @@ SOURCES: list[Source] = [
     Source("DCA", "Ronald Reagan Washington National Airport — security wait times", "https://www.flyreagan.com/travel-information/security-information", "Metropolitan Washington Airports Authority (flyreagan.com)", 120, fetch_dca),
     Source("ORD", "O'Hare International Airport — TSA checkpoint wait times", "https://www.flychicago.com/ohare/travelerinfo/security/Pages/default.aspx", "Chicago Department of Aviation (flychicago.com)", 120, fetch_ord),
     Source("PDX", "Portland International Airport — TSA wait times", "https://www.flypdx.com/", "Port of Portland (flypdx.com)", 120, fetch_pdx),
+    Source("SFO", "San Francisco International Airport — security checkpoint wait times", SFO_URL, "San Francisco International Airport (flysfo.com)", 120, fetch_sfo),
 ]

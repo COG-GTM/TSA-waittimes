@@ -39,6 +39,12 @@ def test_fixture_parses_expected_events() -> None:
     )
     assert departure.avg_delay_seconds == 1800
 
+    sfo = next(event for event in events if event.airport_iata == "SFO")
+    assert sfo.reason == "low ceilings"
+    assert sfo.avg_delay_seconds == 3000
+    assert sfo.start_time == datetime(2026, 9, 1, 15, 0, tzinfo=UTC)
+    assert sfo.end_time == datetime(2026, 9, 1, 20, 59, tzinfo=UTC)
+
 
 @pytest.mark.parametrize(
     ("text", "expected"),

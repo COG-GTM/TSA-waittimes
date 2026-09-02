@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.sources.adapters import SOURCES
 from app.sources.base import USER_AGENT, FetchResult, Source
+from app.sources.curl_transport import CURL_ORIGINS, curl_mounts
 from tests.harness import (
     FIXTURE_VERSION,
     fixture_path,
@@ -33,15 +34,18 @@ from tests.harness import (
 CODE_RE = re.compile(r"^[A-Z]{3}$")
 
 
-class RecordingTransport(httpx.AsyncHTTPTransport):
-    """Performs real requests while recording each request/response pair."""
+class RecordingTransport(httpx.AsyncBaseTransport):
+    """Performs real requests through ``inner`` while recording each request/response pair."""
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.exchanges: list[dict[str, Any]] = []
+    def __init__(self, inner: httpx.AsyncBaseTransport, exchanges: list[dict[str, Any]]) -> None:
+        self._inner = inner
+        self.exchanges = exchanges
+
+    async def aclose(self) -> None:
+        await self._inner.aclose()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        response = await super().handle_async_request(request)
+        response = await self._inner.handle_async_request(request)
         await response.aread()
         exchange: dict[str, Any] = {
             "method": request.method,
@@ -66,15 +70,19 @@ def find_source(code: str) -> Source:
 
 
 async def probe(source: Source) -> tuple[FetchResult, list[dict[str, Any]]]:
-    transport = RecordingTransport()
+    exchanges: list[dict[str, Any]] = []
     async with httpx.AsyncClient(
-        transport=transport,
+        transport=RecordingTransport(httpx.AsyncHTTPTransport(), exchanges),
+        mounts={
+            origin: RecordingTransport(transport, exchanges)
+            for origin, transport in curl_mounts(*CURL_ORIGINS).items()
+        },
         headers={"User-Agent": USER_AGENT},
         timeout=30,
         follow_redirects=True,
     ) as client:
         result = await source.fetch(client)
-    return result, transport.exchanges
+    return result, exchanges
 
 
 def summarize(observations: list[dict[str, Any]]) -> dict[str, Any]:

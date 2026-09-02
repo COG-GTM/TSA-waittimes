@@ -20,6 +20,7 @@ from .faa_events import (
 )
 from .sources.adapters import SOURCES
 from .sources.base import USER_AGENT, FetchResult, Source
+from .sources.curl_transport import CURL_ORIGINS, curl_mounts
 from .tsa_throughput import FIRST_YEAR, fetch_tsa_throughput, fetch_tsa_year
 
 log = logging.getLogger("poller")
@@ -625,6 +626,7 @@ async def start() -> None:
         headers={"User-Agent": USER_AGENT},
         timeout=30,
         follow_redirects=True,
+        mounts=curl_mounts(*CURL_ORIGINS),
     )
     for s in SOURCES:
         _tasks.append(asyncio.create_task(poll_source(s, _client)))

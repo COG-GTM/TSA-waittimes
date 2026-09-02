@@ -47,7 +47,10 @@ each entry holds the airport code, source name, public URL, attribution string,
 and `refresh_seconds` (default 120s — no source is polled faster than once per
 minute). The `sources` table is upserted from this list at startup.
 
-Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS, PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX.
+Verified live sources: SEA, DEN, MCO, IAH, HOU, DFW, CLT, CVG, SLC, LAS, BOS, PIT, JFK, LGA, EWR, PHX, DTW, MIA, DCA, ORD, PDX, SFO.
+SFO is the only HTML source (flysfo.com renders its checkpoint table server-side);
+its origin is routed through `CurlTransport` (`app/sources/curl_transport.py`)
+because the site's CDN edge returns 403 to httpx's TLS handshake.
 TSA daily throughput is fetched from tsa.gov/travel/passenger-volumes every 6h.
 At startup, a separate one-time task sequentially backfills missing national
 throughput years from 2019 through the last completed year. It waits briefly
@@ -78,6 +81,8 @@ affecting the web process.
 |---|---|---|
 | Source unhealthy, HTTP 401/403 | Airport rotated its public API key | Re-inspect the airport site's own requests; update the key in `adapters.py` |
 | Source unhealthy, parse errors | Feed shape changed | Check `raw_payloads` for that source; adjust the adapter |
+| SFO unhealthy, "checkpoint wait-time table not found" | flysfo.com page redesign | Compare the live page with `tests/fixtures/sfo.json`; adjust `_sfo_checkpoint_table` |
+| SFO unhealthy, HTTP 403 | flysfo.com edge blocking the datacenter IP or curl TLS fingerprint | Confirm with `curl -A "$UA" <SFO_URL>`; if only httpx-shaped clients are blocked, check `CURL_ORIGINS` still covers the host |
 | All sources unhealthy | DB or egress problem | Check `fly logs`; verify `DATABASE_URL` |
 | Suspected feed change | Feed shape changed | `python scripts/probe_source.py <CODE>` — prints a live fetch and refreshes `tests/fixtures/<code>.json`; then run `pytest` |
 | TSA strip missing | tsa.gov blocking datacenter IPs | Non-fatal; retried every 30 min |
