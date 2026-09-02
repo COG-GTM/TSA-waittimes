@@ -9,6 +9,7 @@ from . import poller, queries
 log = logging.getLogger("ops")
 
 STARTED_AT = datetime.now(UTC)
+STATEMENT_TIMEOUT_SQL = "SET LOCAL statement_timeout = 10000"
 STATUS_AMBER_SECONDS = 30 * 60
 IATA_RE = re.compile(r"^[A-Z]{3}$")
 
@@ -48,6 +49,7 @@ def truncate_error(err: str | None, limit: int = 160) -> str | None:
 async def _safe(conn: Any, sql: str, params: tuple[Any, ...] = ()) -> list[Any] | None:
     try:
         async with conn.cursor() as cur:
+            await cur.execute(STATEMENT_TIMEOUT_SQL)
             await cur.execute(sql, params)
             return await cur.fetchall()
     except Exception:

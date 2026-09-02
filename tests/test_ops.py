@@ -131,6 +131,9 @@ async def test_build_ops_is_resilient_to_query_failure() -> None:
     assert payload["system"]["observations_rows"] == 100
     assert payload["data_sources"]["tsa_throughput"]["latest_date"] == "2026-01-01"
     assert connection.rollback_count == 1
+    failed_query = "SELECT pg_database_size(current_database())"
+    failed_index = connection.queries.index(failed_query)
+    assert connection.queries[failed_index + 1] == ops.STATEMENT_TIMEOUT_SQL
 
 
 @pytest.mark.asyncio
@@ -275,7 +278,7 @@ async def test_api_ops_endpoint_shape(client, api_pool, monkeypatch: pytest.Monk
         "generated_at", "sources", "sources_available", "system", "data_sources", "status_counts",
     }
     assert response.json()["sources_available"] is False
-    assert "SET statement_timeout = 10000" in api_pool.queries
+    assert ops.STATEMENT_TIMEOUT_SQL in api_pool.queries
 
 
 @pytest.mark.asyncio
