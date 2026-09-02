@@ -22,9 +22,25 @@ from typing import Any
 import httpx
 
 from app.sources.base import USER_AGENT, FetchResult, Observation, Source
+from app.sources.credentials import FEED_CREDENTIALS
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_VERSION = 1
+
+# Stand-in credential values used both when recording fixtures (real values are
+# rewritten to these before anything is written to disk) and when replaying them.
+FIXTURE_CREDENTIALS: dict[str, str] = {
+    name: "fixture-" + name.lower().replace("_", "-") for name in FEED_CREDENTIALS
+}
+
+
+def redact_credentials(exchanges: list[dict[str, Any]], secrets: dict[str, str]) -> list[dict[str, Any]]:
+    """Replace live credential values in recorded exchanges with their fixture placeholders."""
+    text = json.dumps(exchanges)
+    for name, value in secrets.items():
+        if value:
+            text = text.replace(value, FIXTURE_CREDENTIALS[name])
+    return json.loads(text)
 
 
 def fixture_path(code: str) -> Path:

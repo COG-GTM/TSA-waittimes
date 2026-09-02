@@ -76,7 +76,8 @@ affecting the web process.
 
 | Symptom | Likely cause | Action |
 |---|---|---|
-| Source unhealthy, HTTP 401/403 | Airport rotated its public API key | Re-inspect the airport site's own requests; update the key in `adapters.py` |
+| Source unhealthy, `FEED_KEY_<CODE> is not configured` | Vendor key missing from the environment | `fly secrets set FEED_KEY_<CODE>=...` (names in `app/sources/credentials.py`) |
+| Source unhealthy, HTTP 401/403 | Airport rotated its public API key | Re-inspect the airport site's own requests; `fly secrets set FEED_KEY_<CODE>=<new key>` — never commit the key |
 | Source unhealthy, parse errors | Feed shape changed | Check `raw_payloads` for that source; adjust the adapter |
 | All sources unhealthy | DB or egress problem | Check `fly logs`; verify `DATABASE_URL` |
 | Suspected feed change | Feed shape changed | `python scripts/probe_source.py <CODE>` — prints a live fetch and refreshes `tests/fixtures/<code>.json`; then run `pytest` |

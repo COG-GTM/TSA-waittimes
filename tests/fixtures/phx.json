@@ -7,7 +7,7 @@
   "exchanges": [
     {
       "method": "GET",
-      "url": "https://api.phx.aero/avn-wait-times/raw?Key=4f85fe2ef5a240d59809b63de94ef536",
+      "url": "https://api.phx.aero/avn-wait-times/raw?Key=fixture-feed-key-phx",
       "status": 200,
       "content_type": "application/json; charset=UTF-8",
       "json": {
