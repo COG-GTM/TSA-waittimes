@@ -49,6 +49,8 @@ class FakeCursor:
 
     async def fetchall(self) -> list[Any]:
         if "FROM sources s" in self.query:
+            if self.connection.fail_sources:
+                raise RuntimeError("source inventory unavailable")
             return [
                 ("AAA", "Good source", 120, NOW - timedelta(seconds=100),
                  NOW - timedelta(seconds=50), None, None, 0),
@@ -83,8 +85,9 @@ class FakeCursor:
 
 
 class FakeConnection:
-    def __init__(self, *, fail_db_size: bool = False) -> None:
+    def __init__(self, *, fail_db_size: bool = False, fail_sources: bool = False) -> None:
         self.fail_db_size = fail_db_size
+        self.fail_sources = fail_sources
         self.queries: list[str] = []
         self.rollback_count = 0
 
@@ -114,14 +117,30 @@ async def test_build_ops_is_resilient_to_query_failure() -> None:
     connection = FakeConnection(fail_db_size=True)
     payload = await ops.build_ops(connection, now=NOW)
 
-    assert set(payload) == {"generated_at", "sources", "system", "data_sources", "status_counts"}
+    assert set(payload) == {
+        "generated_at", "sources", "sources_available", "system", "data_sources", "status_counts",
+    }
+    assert payload["sources_available"] is True
     assert payload["sources"][0]["status"] == "green"
     assert payload["sources"][1]["status"] == "red"
-    assert payload["sources"][1]["backoff_seconds"] == ops.poller.MAX_BACKOFF
+    assert payload["sources"][1]["estimated_backoff_seconds"] == ops.poller.MAX_BACKOFF
     assert payload["sources"][1]["last_error"] == "x" * 160 + "…"
     assert payload["system"]["db_size_bytes"] is None
     assert payload["system"]["observations_rows"] == 100
     assert payload["data_sources"]["tsa_throughput"]["latest_date"] == "2026-01-01"
+    assert connection.rollback_count == 1
+
+
+@pytest.mark.asyncio
+async def test_build_ops_handles_source_inventory_failure() -> None:
+    connection = FakeConnection(fail_sources=True)
+    payload = await ops.build_ops(connection, now=NOW)
+
+    assert payload["sources"] == []
+    assert payload["sources_available"] is False
+    assert payload["status_counts"] == {"green": None, "amber": None, "red": None}
+    assert payload["system"]["observations_rows"] == 100
+    assert payload["system"]["db_size_bytes"] == 4096
     assert connection.rollback_count == 1
 
 
@@ -151,7 +170,10 @@ async def test_api_ops_endpoint_shape(client, api_pool, monkeypatch: pytest.Monk
     response = await client.get("/api/ops")
 
     assert response.status_code == 200
-    assert set(response.json()) == {"generated_at", "sources", "system", "data_sources", "status_counts"}
+    assert set(response.json()) == {
+        "generated_at", "sources", "sources_available", "system", "data_sources", "status_counts",
+    }
+    assert response.json()["sources_available"] is False
 
 
 @pytest.mark.asyncio
@@ -164,6 +186,7 @@ async def test_api_ops_endpoint_fallback(client, api_pool, monkeypatch: pytest.M
 
     assert response.status_code == 200
     assert response.json()["sources"] == []
+    assert response.json()["sources_available"] is False
 
 
 @pytest.mark.asyncio

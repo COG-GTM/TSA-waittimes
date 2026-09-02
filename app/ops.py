@@ -67,6 +67,7 @@ def empty_payload(now: datetime) -> dict[str, Any]:
     return {
         "generated_at": queries.iso(now),
         "sources": [],
+        "sources_available": False,
         "system": {
             "open_checkpoints": None,
             "fresh_airports": None,
@@ -84,7 +85,7 @@ def empty_payload(now: datetime) -> dict[str, Any]:
             "weather_alerts": {"rows": None, "latest_at": None},
             "tsa_throughput": {"rows": None, "latest_date": None, "latest_at": None},
         },
-        "status_counts": {"green": 0, "amber": 0, "red": 0},
+        "status_counts": {"green": None, "amber": None, "red": None},
     }
 
 
@@ -102,6 +103,7 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
         ORDER BY s.code
         """,
     )
+    sources_available = source_rows is not None
     observation_rows = await _safe(
         conn,
         """
@@ -118,7 +120,11 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
     )
 
     sources: list[dict[str, Any]] = []
-    status_counts = {"green": 0, "amber": 0, "red": 0}
+    status_counts: dict[str, int | None] = (
+        {"green": 0, "amber": 0, "red": 0}
+        if sources_available else
+        {"green": None, "amber": None, "red": None}
+    )
     for code, name, refresh_seconds, last_success, last_attempt, last_error, last_error_at, failures in (
         source_rows or []
     ):
@@ -128,7 +134,9 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
             refresh_seconds,
             now=now,
         )
-        status_counts[status] += 1
+        count = status_counts[status]
+        assert count is not None
+        status_counts[status] = count + 1
         age = (
             max(0, int((now - last_success).total_seconds()))
             if last_success is not None else None
@@ -142,7 +150,7 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
             "last_success_age_seconds": age,
             "last_attempt_at": queries.iso(last_attempt),
             "consecutive_failures": failures,
-            "backoff_seconds": backoff_seconds(refresh_seconds, failures),
+            "estimated_backoff_seconds": backoff_seconds(refresh_seconds, failures),
             "last_error": truncate_error(last_error),
             "last_error_at": queries.iso(last_error_at),
             "observations_last_hour": (
@@ -152,6 +160,7 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
             "status": status,
         })
     payload["sources"] = sources
+    payload["sources_available"] = sources_available
     payload["status_counts"] = status_counts
 
     latest_observations = await _safe(

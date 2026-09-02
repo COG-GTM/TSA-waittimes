@@ -22,6 +22,9 @@
 - A failed dashboard query degrades that field to a dash rather than failing
   the page. Last cleanup is not persisted in the database; the poller only
   logs successful cleanup events.
+- Backoff is an estimate derived from `poll_health.consecutive_failures`; the
+  poller's actual counter is in-memory (reset on restart) and NWS zone-backfill
+  cycles keep their normal cadence.
 
 ## Restarting the scrapers
 

@@ -193,6 +193,7 @@ a { color: inherit; }
 .ops-table th, .ops-table td { padding: 7px 6px; border-bottom: 1px solid var(--border); }
 .ops-table td { white-space: nowrap; }
 .ops-table td.err { max-width: 320px; overflow: hidden; color: var(--muted); text-overflow: ellipsis; }
+.ops-empty { color: var(--muted); text-align: center; padding: 12px; }
 .pill { display: inline-block; border-radius: 8px; padding: 1px 7px; font-size: 10.5px;
   font-weight: 700; text-transform: uppercase; }
 .pill-green { background: var(--green); color: #fff; }

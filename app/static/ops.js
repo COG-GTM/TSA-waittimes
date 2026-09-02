@@ -79,25 +79,32 @@
     ]);
 
     const body = byId("ops-sources").querySelector("tbody");
-    body.innerHTML = (payload.sources || []).map((source) => {
-      const status = ["green", "amber", "red"].includes(source.status) ? source.status : "red";
-      const code = source.iata && /^[A-Z]{3}$/.test(source.iata) ? source.iata : null;
-      const airport = code
-        ? `<a href="/airport/${escOps(code)}">${escOps(code)}</a>`
-        : escOps(source.code);
-      const error = source.last_error == null ? "—" : escOps(source.last_error);
-      return `<tr>
-        <td>${airport}</td>
-        <td>${escOps(source.name)}</td>
-        <td><span class="pill pill-${status}">${status}</span></td>
-        <td>${escOps(fmtTimestamp(source.last_success_at))}</td>
-        <td>${escOps(fmtAge(source.last_success_age_seconds))}</td>
-        <td>${escOps(fmtInt(source.consecutive_failures))}</td>
-        <td>${escOps(fmtAge(source.backoff_seconds))}</td>
-        <td>${escOps(fmtInt(source.observations_last_hour))}</td>
-        <td class="err" title="${error}">${error}</td>
-      </tr>`;
-    }).join("");
+    const sources = payload.sources || [];
+    if (payload.sources_available === false) {
+      body.innerHTML = '<tr><td colspan="9" class="ops-empty">Source inventory unavailable</td></tr>';
+    } else if (sources.length === 0) {
+      body.innerHTML = '<tr><td colspan="9" class="ops-empty">No sources registered</td></tr>';
+    } else {
+      body.innerHTML = sources.map((source) => {
+        const status = ["green", "amber", "red"].includes(source.status) ? source.status : "red";
+        const code = source.iata && /^[A-Z]{3}$/.test(source.iata) ? source.iata : null;
+        const airport = code
+          ? `<a href="/airport/${escOps(code)}">${escOps(code)}</a>`
+          : escOps(source.code);
+        const error = source.last_error == null ? "—" : escOps(source.last_error);
+        return `<tr>
+          <td>${airport}</td>
+          <td>${escOps(source.name)}</td>
+          <td><span class="pill pill-${status}">${status}</span></td>
+          <td>${escOps(fmtTimestamp(source.last_success_at))}</td>
+          <td>${escOps(fmtAge(source.last_success_age_seconds))}</td>
+          <td>${escOps(fmtInt(source.consecutive_failures))}</td>
+          <td>${escOps(fmtAge(source.estimated_backoff_seconds))}</td>
+          <td>${escOps(fmtInt(source.observations_last_hour))}</td>
+          <td class="err" title="${error}">${error}</td>
+        </tr>`;
+      }).join("");
+    }
     const generated = payload.generated_at ? new Date(payload.generated_at) : null;
     const generatedText = generated && !Number.isNaN(generated.getTime())
       ? generated.toISOString().slice(11, 19)
