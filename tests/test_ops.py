@@ -258,6 +258,36 @@ async def test_healthz_timeout_returns_degraded_status(
 
 
 @pytest.mark.asyncio
+async def test_bounded_cancels_snapshot_when_caller_is_cancelled() -> None:
+    started = asyncio.Event()
+    finished = asyncio.Event()
+    inner_task: asyncio.Task[Any] | None = None
+
+    async def hanging_snapshot() -> dict[str, Any]:
+        nonlocal inner_task
+        current_task = asyncio.current_task()
+        assert current_task is not None
+        inner_task = current_task
+        started.set()
+        try:
+            await asyncio.sleep(60)
+        finally:
+            finished.set()
+        return {}
+
+    outer_task = asyncio.create_task(main._bounded(hanging_snapshot(), timeout=60))
+    await started.wait()
+    outer_task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await outer_task
+
+    await asyncio.wait_for(finished.wait(), timeout=1)
+    assert inner_task is not None
+    assert inner_task.cancelled()
+
+
+@pytest.mark.asyncio
 async def test_ops_page(client) -> None:
     response = await client.get("/ops")
 

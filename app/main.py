@@ -293,10 +293,14 @@ async def _bounded(
 ) -> dict[str, Any] | None:
     """Run coro with a hard deadline; abandon it on timeout."""
     task = asyncio.create_task(coro)
-    _done, pending = await asyncio.wait({task}, timeout=timeout)
+    task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+    try:
+        _done, pending = await asyncio.wait({task}, timeout=timeout)
+    except asyncio.CancelledError:
+        task.cancel()
+        raise
     if pending:
         task.cancel()
-        task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
         return None
     return task.result()
 
