@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import re
+from collections.abc import Coroutine
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -23,6 +24,7 @@ REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpictu
 IATA_RE = re.compile(r"^[A-Z]{3}$")
 OPS_POOL_TIMEOUT = 3.0
 OPS_TOTAL_TIMEOUT = 5.0
+HEALTHZ_TIMEOUT = 3.0
 
 
 @asynccontextmanager
@@ -285,10 +287,26 @@ async def _healthz_snapshot() -> dict[str, Any]:
         return await queries.source_health(cur)
 
 
+async def _bounded(
+    coro: Coroutine[Any, Any, dict[str, Any]],
+    timeout: float,  # noqa: ASYNC109 - task cancellation must not be awaited
+) -> dict[str, Any] | None:
+    """Run coro with a hard deadline; abandon it on timeout."""
+    task = asyncio.create_task(coro)
+    _done, pending = await asyncio.wait({task}, timeout=timeout)
+    if pending:
+        task.cancel()
+        task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        return None
+    return task.result()
+
+
 @app.get("/healthz")
 async def healthz():
     try:
-        payload = await asyncio.wait_for(_healthz_snapshot(), timeout=OPS_TOTAL_TIMEOUT)
+        payload = await _bounded(_healthz_snapshot(), HEALTHZ_TIMEOUT)
+        if payload is None:
+            payload = {"status": "degraded", "detail": "database unavailable"}
     except Exception:
         log.warning("healthz db check failed", exc_info=True)
         payload = {"status": "degraded", "detail": "database unavailable"}
@@ -305,7 +323,9 @@ async def _ops_snapshot(now: datetime) -> dict[str, Any]:
 async def api_ops():
     now = datetime.now(UTC)
     try:
-        payload = await asyncio.wait_for(_ops_snapshot(now), timeout=OPS_TOTAL_TIMEOUT)
+        payload = await _bounded(_ops_snapshot(now), OPS_TOTAL_TIMEOUT)
+        if payload is None:
+            payload = ops.empty_payload(now)
     except Exception:
         log.warning("ops snapshot failed", exc_info=True)
         payload = ops.empty_payload(now)

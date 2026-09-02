@@ -249,7 +249,7 @@ async def test_healthz_timeout_returns_degraded_status(
         return {}
 
     monkeypatch.setattr(main, "_healthz_snapshot", hanging_snapshot)
-    monkeypatch.setattr(main, "OPS_TOTAL_TIMEOUT", 0.01)
+    monkeypatch.setattr(main, "HEALTHZ_TIMEOUT", 0.01)
 
     response = await client.get("/healthz")
 
