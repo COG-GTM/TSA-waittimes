@@ -2,7 +2,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from app import public_api
+from app import public_api, security
 from app.main import app as main_app
 
 AIRPORT = {
@@ -210,7 +210,7 @@ async def test_rate_limit_and_reset(client, patched_loaders):
 async def test_fly_client_ips_have_independent_rate_limits(
     client, patched_loaders, monkeypatch
 ):
-    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", True)
+    monkeypatch.setattr(security, "TRUST_PROXY_CLIENT_IP", True)
     first_ip = {"Fly-Client-IP": "203.0.113.10"}
     second_ip = {"Fly-Client-IP": "203.0.113.11"}
     responses = [await client.get("/api/v1/status", headers=first_ip) for _ in range(60)]
@@ -224,7 +224,7 @@ async def test_fly_client_ips_have_independent_rate_limits(
 async def test_direct_clients_share_rate_limit_despite_fly_headers(
     client, patched_loaders, monkeypatch
 ):
-    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", False)
+    monkeypatch.setattr(security, "TRUST_PROXY_CLIENT_IP", False)
     first_ip = {"Fly-Client-IP": "203.0.113.10"}
     second_ip = {"Fly-Client-IP": "203.0.113.11"}
     responses = [await client.get("/api/v1/status", headers=first_ip) for _ in range(60)]
@@ -235,7 +235,7 @@ async def test_direct_clients_share_rate_limit_despite_fly_headers(
 
 @pytest.mark.asyncio
 async def test_rate_limiter_prunes_expired_entries(client, patched_loaders, monkeypatch):
-    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", True)
+    monkeypatch.setattr(security, "TRUST_PROXY_CLIENT_IP", True)
     monkeypatch.setattr(public_api.time, "monotonic", lambda: 0.0)
     await client.get("/api/v1/status", headers={"Fly-Client-IP": "203.0.113.10"})
     await client.get("/api/v1/status", headers={"Fly-Client-IP": "203.0.113.11"})
@@ -252,7 +252,7 @@ async def test_rate_limiter_prunes_expired_entries(client, patched_loaders, monk
 async def test_rate_limiter_prunes_unique_clients_at_window_boundaries(
     client, patched_loaders, monkeypatch
 ):
-    monkeypatch.setattr(public_api, "TRUST_PROXY_CLIENT_IP", True)
+    monkeypatch.setattr(security, "TRUST_PROXY_CLIENT_IP", True)
     current_time = 0.0
     monkeypatch.setattr(public_api.time, "monotonic", lambda: current_time)
 

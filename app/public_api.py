@@ -1,7 +1,5 @@
 """Versioned public API and embeddable airport widget."""
 import html
-import os
-import re
 import time
 from datetime import UTC, datetime
 from math import ceil
@@ -10,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from . import db, queries
+from . import db, queries, security
 
 DATA_NOTICE = (
     "Wait times are aggregated from officially published public data sources; "
@@ -18,8 +16,6 @@ DATA_NOTICE = (
 )
 RATE_LIMIT = 60
 RATE_WINDOW_SECONDS = 60
-IATA_PATTERN = re.compile(r"^[A-Za-z]{3}$")
-TRUST_PROXY_CLIENT_IP = "FLY_APP_NAME" in os.environ
 _rate_limits: dict[str, tuple[float, int]] = {}
 _last_prune: float = 0.0
 
@@ -40,37 +36,38 @@ def reset_rate_limiter() -> None:
     _last_prune = 0.0
 
 
-@v1_app.middleware("http")
-async def rate_limit(request: Request, call_next):
+def check_rate_limit(client_ip: str) -> int | None:
+    """Count one request for ``client_ip``; return Retry-After seconds when over the limit."""
     global _last_prune
     now = time.monotonic()
     if now - _last_prune >= RATE_WINDOW_SECONDS:
         cutoff = now - RATE_WINDOW_SECONDS
         expired = [
-            client_ip
-            for client_ip, (window_start, _count) in _rate_limits.items()
+            key
+            for key, (window_start, _count) in _rate_limits.items()
             if window_start < cutoff
         ]
-        for client_ip in expired:
-            del _rate_limits[client_ip]
+        for key in expired:
+            del _rate_limits[key]
         _last_prune = now
-    if TRUST_PROXY_CLIENT_IP:
-        client_ip = request.headers.get("fly-client-ip") or (
-            request.client.host if request.client else "unknown"
-        )
-    else:
-        client_ip = request.client.host if request.client else "unknown"
     window_start, count = _rate_limits.get(client_ip, (now, 0))
     if now - window_start >= RATE_WINDOW_SECONDS:
         window_start, count = now, 0
     if count >= RATE_LIMIT:
-        retry_after = max(1, ceil(window_start + RATE_WINDOW_SECONDS - now))
+        return max(1, ceil(window_start + RATE_WINDOW_SECONDS - now))
+    _rate_limits[client_ip] = (window_start, count + 1)
+    return None
+
+
+@v1_app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    retry_after = check_rate_limit(security.client_ip(request))
+    if retry_after is not None:
         return JSONResponse(
             {"detail": "rate limit exceeded", "data_notice": DATA_NOTICE},
             status_code=429,
             headers={"Retry-After": str(retry_after)},
         )
-    _rate_limits[client_ip] = (window_start, count + 1)
     return await call_next(request)
 
 
@@ -122,10 +119,6 @@ async def load_embed(iata: str) -> dict | None:
     return await load_airport(iata)
 
 
-def _valid_iata(iata: str) -> bool:
-    return IATA_PATTERN.fullmatch(iata) is not None
-
-
 def _now_iso() -> str:
     return queries.iso(datetime.now(UTC)) or ""
 
@@ -173,13 +166,14 @@ async def airports():
 
 
 @v1_app.get("/airport/{iata}")
-async def airport(iata: str):
-    if not _valid_iata(iata):
+async def airport(iata: str, request: Request):
+    code = security.validate_iata(iata, request)
+    if code is None:
         return JSONResponse(
             {"detail": "unknown airport", "data_notice": DATA_NOTICE},
             status_code=404,
         )
-    detail = await load_airport(iata.upper())
+    detail = await load_airport(code)
     if detail is None:
         return JSONResponse(
             {"detail": "unknown airport", "data_notice": DATA_NOTICE},
@@ -197,10 +191,18 @@ async def status():
     })
 
 
-async def embed_response(iata: str) -> Response:
-    if not _valid_iata(iata):
+async def embed_response(iata: str, request: Request) -> Response:
+    retry_after = check_rate_limit(security.client_ip(request))
+    if retry_after is not None:
+        return JSONResponse(
+            {"detail": "rate limit exceeded"},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+    code = security.validate_iata(iata, request)
+    if code is None:
         return JSONResponse({"detail": "unknown airport"}, status_code=404)
-    detail = await load_embed(iata.upper())
+    detail = await load_embed(code)
     if detail is None:
         return JSONResponse({"detail": "unknown airport"}, status_code=404)
     airport_data = detail["airport"]

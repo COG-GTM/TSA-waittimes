@@ -124,3 +124,25 @@ Each table is deleted in batches of `CLEANUP_BATCH_LIMIT` (default 50000) with
 at most 20 passes per table per run, so a very large first cleanup drains over
 successive runs rather than in one long transaction.
 Grep logs with `fly logs | grep '"event": "retention_cleanup"'`.
+
+## Security audit log
+
+`app/security.py` emits one single-line JSON record to stdout (logger `audit`)
+for each security-relevant event: `rate_limited` (429 from the public API or
+`/embed/*`), `validation_failure` (a path parameter such as an IATA code that
+fails the whitelist), and `server_error` (any 5xx). Each record carries
+`timestamp` (UTC ISO-8601), `event`, `path`, `method`, `client_ip` and
+`status`; nothing else about the request is recorded. Behind the Fly proxy
+(`FLY_APP_NAME` set) `client_ip` comes from `Fly-Client-IP`, falling back to
+the first `X-Forwarded-For` hop; elsewhere proxy headers are ignored.
+
+```text
+{"timestamp":"2026-09-02T00:08:06.910+00:00","level":"INFO","event":"rate_limited","path":"/api/v1/airports","method":"GET","client_ip":"203.0.113.9","status":429}
+```
+
+Grep with `fly logs | grep '"event":"rate_limited"'`. Every response, including
+redirects, 404s and 5xx bodies, carries HSTS, `X-Content-Type-Options: nosniff`
+and a CSP; `X-Frame-Options: DENY` is set everywhere except `/embed/*`, which
+stays frameable via `frame-ancestors *`. Unhandled exceptions return the
+generic body `{"detail": "An error occurred"}`; the traceback goes to the
+application log only.
