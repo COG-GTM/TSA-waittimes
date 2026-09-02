@@ -275,6 +275,7 @@ async def test_api_ops_endpoint_shape(client, api_pool, monkeypatch: pytest.Monk
         "generated_at", "sources", "sources_available", "system", "data_sources", "status_counts",
     }
     assert response.json()["sources_available"] is False
+    assert "SET statement_timeout = 10000" in api_pool.queries
 
 
 @pytest.mark.asyncio

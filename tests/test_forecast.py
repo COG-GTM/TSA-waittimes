@@ -404,12 +404,14 @@ class FakeCursor:
         self.lanes_open = lanes_open
         self.current_query = ""
         self.executions: list[tuple[str, tuple[object, ...]]] = []
+        self.current_params: tuple[object, ...] = ()
         self.airport_queries = 0
         self.observation_queries = 0
         self.lane_state_queries = 0
 
     async def execute(self, query: str, _params: tuple[object, ...] = ()) -> None:
         self.current_query = query
+        self.current_params = _params
         self.executions.append((query, _params))
         if "FROM airports WHERE iata" in query:
             self.airport_queries += 1
@@ -426,6 +428,13 @@ class FakeCursor:
 
     async def fetchall(self):
         if "WITH per_minute AS" in self.current_query:
+            if len(self.current_params) == 3:
+                cutoff = self.current_params[1]
+                reference = self.current_params[2]
+                return [
+                    row for row in self.observation_rows
+                    if row[0] > cutoff and row[0] <= reference
+                ]
             return self.observation_rows
         raise AssertionError(f"unexpected fetchall query: {self.current_query}")
 
@@ -473,6 +482,23 @@ async def test_load_lane_state_binds_reference_time() -> None:
         NOW,
         timedelta(minutes=forecast.TREND_STALE_MINUTES),
     )
+
+
+@pytest.mark.asyncio
+async def test_load_points_bounds_reference_time() -> None:
+    future = NOW + timedelta(seconds=30)
+    cursor = FakeCursor(
+        ("JFK", "John F. Kennedy International Airport"),
+        [(NOW - timedelta(seconds=30), 600), (future, 3600)],
+    )
+
+    points = await forecast.load_points(cursor, "JFK", NOW)
+
+    query, params = cursor.executions[-1]
+    assert "o.fetched_at <= %s" in forecast.FORECAST_SQL
+    assert query == forecast.FORECAST_SQL
+    assert params == ("JFK", NOW - timedelta(days=forecast.HISTORY_DAYS), NOW)
+    assert points == [forecast.ObsPoint(NOW - timedelta(seconds=30), 600)]
 
 
 def rich_rows() -> list[tuple[datetime, int]]:

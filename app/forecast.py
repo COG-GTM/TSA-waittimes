@@ -107,6 +107,7 @@ WITH per_minute AS (
       AND o.wait_seconds IS NOT NULL
       AND o.is_open
       AND o.fetched_at > %s
+      AND o.fetched_at <= %s
     GROUP BY 1
 )
 SELECT minute, wait_seconds FROM per_minute ORDER BY minute
@@ -441,7 +442,7 @@ async def load_points(cur: ForecastCursor, iata: str, now: datetime) -> list[Obs
     """Load recent standard-lane observations for an airport."""
 
     cutoff = now - timedelta(days=HISTORY_DAYS)
-    await cur.execute(FORECAST_SQL, (iata, cutoff))
+    await cur.execute(FORECAST_SQL, (iata, cutoff, now))
     points = []
     for row in await cur.fetchall():
         at = row[0].astimezone(UTC)

@@ -362,6 +362,7 @@ async def api_airport_forecast(iata: str, request: Request):
 async def _healthz_snapshot() -> dict[str, Any]:
     assert db.pool is not None
     async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn, conn.cursor() as cur:
+        await cur.execute("SET statement_timeout = 10000")
         return await queries.source_health(cur)
 
 
@@ -397,7 +398,8 @@ async def healthz():
 
 async def _ops_snapshot(now: datetime) -> dict[str, Any]:
     assert db.pool is not None
-    async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn:
+    async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn, conn.cursor() as cur:
+        await cur.execute("SET statement_timeout = 10000")
         return await ops.build_ops(conn, now=now)
 
 

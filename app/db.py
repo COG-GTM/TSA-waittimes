@@ -15,6 +15,15 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@lo
 
 pool: AsyncConnectionPool | None = None
 
+POOL_KWARGS = {
+    "options": "-c timezone=UTC",
+    "tcp_user_timeout": 15000,
+    "keepalives": 1,
+    "keepalives_idle": 5,
+    "keepalives_interval": 2,
+    "keepalives_count": 3,
+}
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS airports (
     iata TEXT PRIMARY KEY,
@@ -162,7 +171,7 @@ async def init() -> None:
     global pool
     pool = AsyncConnectionPool(
         DATABASE_URL,
-        kwargs={"options": "-c timezone=UTC"},
+        kwargs=POOL_KWARGS,
         min_size=2,
         max_size=8,
         open=False,
