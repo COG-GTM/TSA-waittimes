@@ -86,13 +86,18 @@ async def travel_period(cur, current_date: date | None = None) -> dict | None:
 
 
 LATEST_OBS_SQL = """
-SELECT DISTINCT ON (o.checkpoint_id)
-    c.airport_iata, c.name, c.lane_type, o.wait_seconds, o.is_open,
-    o.source_published_at, o.fetched_at, s.attribution, s.url
-FROM observations o
-JOIN checkpoints c ON c.id = o.checkpoint_id
-JOIN sources s ON s.code = o.source_code
-ORDER BY o.checkpoint_id, o.fetched_at DESC
+SELECT c.airport_iata, c.name, c.lane_type, latest.wait_seconds, latest.is_open,
+       latest.source_published_at, latest.fetched_at, latest.attribution, latest.url
+FROM checkpoints c
+CROSS JOIN LATERAL (
+    SELECT o.wait_seconds, o.is_open, o.source_published_at, o.fetched_at,
+           s.attribution, s.url
+    FROM observations o
+    JOIN sources s ON s.code = o.source_code
+    WHERE o.checkpoint_id = c.id
+    ORDER BY o.fetched_at DESC
+    LIMIT 1
+) latest
 """
 
 FAA_EVENTS_SQL = """
@@ -188,47 +193,51 @@ async def airport_detail(cur, iata: str) -> dict | None:
     current_travel_period = await travel_period(cur)
     await cur.execute(
         """
-        SELECT c.id, c.name, c.lane_type FROM checkpoints c
-        WHERE c.airport_iata = %s ORDER BY c.name, c.lane_type
+        SELECT c.id, c.name, c.lane_type, latest.wait_seconds, latest.is_open,
+               latest.source_published_at, latest.fetched_at, latest.attribution, latest.url
+        FROM checkpoints c
+        CROSS JOIN LATERAL (
+            SELECT o.wait_seconds, o.is_open, o.source_published_at, o.fetched_at,
+                   s.attribution, s.url
+            FROM observations o
+            JOIN sources s ON s.code = o.source_code
+            WHERE o.checkpoint_id = c.id
+            ORDER BY o.fetched_at DESC
+            LIMIT 1
+        ) latest
+        WHERE c.airport_iata = %s
+        ORDER BY c.name, c.lane_type
         """,
         (iata,),
     )
     checkpoints = []
     now = datetime.now(UTC)
-    latest_checkpoints = []
-    for cp_id, cp_name, lane in await cur.fetchall():
-        await cur.execute(
-            """
-            SELECT o.wait_seconds, o.is_open, o.source_published_at, o.fetched_at,
-                   s.attribution, s.url
-            FROM observations o JOIN sources s ON s.code = o.source_code
-            WHERE o.checkpoint_id = %s ORDER BY o.fetched_at DESC LIMIT 1
-            """,
-            (cp_id,),
-        )
-        latest = await cur.fetchone()
-        if latest is not None:
-            latest_checkpoints.append((cp_id, cp_name, lane, latest))
+    latest_checkpoints = await cur.fetchall()
     airport_latest = max(
-        (latest[3] for _, _, _, latest in latest_checkpoints),
+        (latest[6] for latest in latest_checkpoints),
         default=None,
     )
-    for cp_id, cp_name, lane, latest in latest_checkpoints:
-        wait, is_open, pub_at, fetched_at, attribution, src_url = latest
+    history_by_checkpoint: dict[int, list[list[int | None]]] = {}
+    await cur.execute(
+        """
+        SELECT o.checkpoint_id,
+               extract(epoch FROM date_trunc('minute', o.fetched_at))::bigint AS m,
+               max(o.wait_seconds)
+        FROM observations o
+        JOIN checkpoints c ON c.id = o.checkpoint_id
+        WHERE c.airport_iata = %s AND o.wait_seconds IS NOT NULL
+          AND o.fetched_at > now() - interval '24 hours'
+        GROUP BY o.checkpoint_id, 2
+        ORDER BY o.checkpoint_id, 2
+        """,
+        (iata,),
+    )
+    for checkpoint_id, minute, wait in await cur.fetchall():
+        history_by_checkpoint.setdefault(checkpoint_id, []).append([minute, wait])
+    for cp_id, cp_name, lane, wait, is_open, pub_at, fetched_at, attribution, src_url in latest_checkpoints:
         if airport_latest is not None and (airport_latest - fetched_at).total_seconds() > 24 * 60 * 60:
             continue
-        await cur.execute(
-            """
-            SELECT extract(epoch FROM date_trunc('minute', fetched_at))::bigint AS m,
-                   max(wait_seconds)
-            FROM observations
-            WHERE checkpoint_id = %s AND wait_seconds IS NOT NULL
-              AND fetched_at > now() - interval '24 hours'
-            GROUP BY 1 ORDER BY 1
-            """,
-            (cp_id,),
-        )
-        history = [[m, w] for m, w in await cur.fetchall()]
+        history = history_by_checkpoint.get(cp_id, [])
         checkpoints.append({
             "name": cp_name,
             "lane_type": lane,
