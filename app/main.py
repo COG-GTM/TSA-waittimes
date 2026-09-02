@@ -1,6 +1,7 @@
 """US Checkpoint Wait Picture — web app and API."""
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -9,8 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import analytics, db, forecast, leaderboard, ops, poller, public_api, queries
-from . import security
+from . import analytics, db, forecast, leaderboard, ops, poller, public_api, queries, security
 from .faa_events import FAA_ATTRIBUTION
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
