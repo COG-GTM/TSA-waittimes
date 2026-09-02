@@ -3,7 +3,7 @@ from typing import Self
 from zoneinfo import ZoneInfo
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from app import analytics, db, main, poller
 
@@ -108,8 +108,10 @@ async def test_typical_buckets_executes_parameterized_sql() -> None:
 @pytest.mark.asyncio
 async def test_typical_endpoint_rejects_invalid_iata_without_echoing_input() -> None:
     submitted = "not-an-airport"
+    request = Request({"type": "http", "method": "GET", "path": f"/api/airport/{submitted}/typical",
+                       "headers": [], "query_string": b"", "client": ("127.0.0.1", 1234)})
     with pytest.raises(HTTPException) as exc_info:
-        await main.api_airport_typical(submitted)
+        await main.api_airport_typical(submitted, request)
     assert exc_info.value.status_code == 404
     assert submitted not in str(exc_info.value.detail)
 

@@ -1,7 +1,6 @@
 """US Checkpoint Wait Picture — web app and API."""
 import logging
 import os
-import re
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -10,14 +9,13 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import analytics, db, forecast, leaderboard, poller, public_api, queries
+from . import analytics, db, forecast, leaderboard, poller, public_api, queries, security
 from .faa_events import FAA_ATTRIBUTION
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
-IATA_RE = re.compile(r"^[A-Z]{3}$")
 
 
 @asynccontextmanager
@@ -48,20 +46,15 @@ async def canonical_host_redirect(request: Request, call_next):
     return await call_next(request)
 
 
-@app.middleware("http")
-async def security_headers(request: Request, call_next):
-    resp = await call_next(request)
-    resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    is_embed = request.url.path.startswith("/embed/")
-    if not is_embed:
-        resp.headers["X-Frame-Options"] = "DENY"
-    resp.headers["X-Content-Type-Options"] = "nosniff"
-    resp.headers["Content-Security-Policy"] = (
-        "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors *"
-        if is_embed else
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+app.middleware("http")(security.security_middleware)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logging.getLogger(__name__).exception("unhandled error serving %s", request.url.path)
+    return security.apply_security_headers(
+        request, JSONResponse(security.GENERIC_ERROR, status_code=500)
     )
-    return resp
 
 
 TYPICAL_HOURS_SQL = """
@@ -85,12 +78,6 @@ async def _airport_name(cur, iata: str) -> tuple[str, str] | None:
     row = await cur.fetchone()
     return (row[0], row[1]) if row is not None else None
 
-
-def _validated_iata(iata: str) -> str:
-    normalized = iata.upper()
-    if not IATA_RE.fullmatch(normalized):
-        raise HTTPException(404, "unknown airport")
-    return normalized
 
 LEADERBOARD_BASELINE_SQL = """
 SELECT airport_iata, max(wait_seconds)
@@ -193,8 +180,8 @@ async def api_summary():
 
 
 @app.get("/api/airport/{iata}")
-async def api_airport(iata: str):
-    iata = _validated_iata(iata)
+async def api_airport(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
         detail = await queries.airport_detail(cur, iata)
@@ -239,8 +226,8 @@ async def api_airport(iata: str):
 
 
 @app.get("/api/airport/{iata}/typical")
-async def api_airport_typical(iata: str):
-    iata = _validated_iata(iata)
+async def api_airport_typical(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
         airport_row = await _airport_name(cur, iata)
@@ -273,10 +260,8 @@ async def api_airport_typical(iata: str):
 
 
 @app.get("/api/airport/{iata}/forecast")
-async def api_airport_forecast(iata: str):
-    iata = iata.upper()
-    if not IATA_RE.match(iata):
-        raise HTTPException(404, "unknown airport")
+async def api_airport_forecast(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
         await cur.execute("SELECT iata, name FROM airports WHERE iata = %s", (iata,))
@@ -302,12 +287,13 @@ async def index(request: Request):
 
 @app.get("/airport/{iata}")
 async def airport_page(request: Request, iata: str):
-    return templates.TemplateResponse(request, "airport.html", {"iata": iata.upper()})
+    iata = security.require_iata(iata, request)
+    return templates.TemplateResponse(request, "airport.html", {"iata": iata})
 
 
 @app.get("/embed/{iata}", response_class=HTMLResponse)
-async def embed(iata: str):
-    return await public_api.embed_response(iata)
+async def embed(iata: str, request: Request):
+    return await public_api.embed_response(iata, request)
 
 
 @app.get("/api", response_class=HTMLResponse)
