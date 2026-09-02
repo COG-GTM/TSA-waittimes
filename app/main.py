@@ -5,13 +5,14 @@ import os
 import re
 from collections.abc import Coroutine
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import analytics, db, forecast, leaderboard, ops, poller, public_api, queries, security
 from .faa_events import FAA_ATTRIBUTION
@@ -25,6 +26,12 @@ IATA_RE = re.compile(r"^[A-Z]{3}$")
 OPS_POOL_TIMEOUT = 3.0
 OPS_TOTAL_TIMEOUT = 5.0
 HEALTHZ_TIMEOUT = 3.0
+CACHE_TTL = timedelta(seconds=30)
+CACHE_CONTROL = "public, max-age=30"
+STATIC_CACHE_CONTROL = "public, max-age=3600"
+SUMMARY_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
+LEADERBOARD_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
+TYPICAL_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
 
 
 @asynccontextmanager
@@ -37,6 +44,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="US Checkpoint Wait Picture", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 BASE = os.path.dirname(__file__)
 app.mount("/static", StaticFiles(directory=os.path.join(BASE, "static")), name="static")
@@ -56,6 +64,14 @@ async def canonical_host_redirect(request: Request, call_next):
 
 
 app.middleware("http")(security.security_middleware)
+
+
+@app.middleware("http")
+async def static_cache_control(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = STATIC_CACHE_CONTROL
+    return response
 
 
 @app.exception_handler(Exception)
@@ -102,10 +118,33 @@ GROUP BY 1
 
 
 
-@app.get("/api/leaderboard")
-async def api_leaderboard():
+def _cached(
+    cache: dict[str, tuple[datetime, dict[str, Any]]],
+    key: str,
+    now: datetime,
+) -> dict[str, Any] | None:
+    entry = cache.get(key)
+    if entry is None:
+        return None
+    expires_at, payload = entry
+    if expires_at <= now:
+        del cache[key]
+        return None
+    return payload
+
+
+def _store_cached(
+    cache: dict[str, tuple[datetime, dict[str, Any]]],
+    key: str,
+    payload: dict[str, Any],
+    now: datetime,
+) -> dict[str, Any]:
+    cache[key] = (now + CACHE_TTL, payload)
+    return payload
+
+
+async def _leaderboard_snapshot(now: datetime) -> dict[str, Any]:
     assert db.pool is not None
-    now = datetime.now(UTC)
     target = now - leaderboard.BASELINE_AGE
     async with db.pool.connection() as conn, conn.cursor() as cur:
         await cur.execute("SELECT iata, name FROM airports")
@@ -121,11 +160,20 @@ async def api_leaderboard():
             ),
         )
         baseline = await cur.fetchall()
-    return JSONResponse(leaderboard.build(latest, baseline, names, now=now))
+    return leaderboard.build(latest, baseline, names, now=now)
 
 
-@app.get("/api/summary")
-async def api_summary():
+@app.get("/api/leaderboard")
+async def api_leaderboard():
+    now = datetime.now(UTC)
+    payload = _cached(LEADERBOARD_CACHE, "global", now)
+    if payload is None:
+        payload = await _leaderboard_snapshot(now)
+        _store_cached(LEADERBOARD_CACHE, "global", payload, now)
+    return JSONResponse(payload, headers={"Cache-Control": CACHE_CONTROL})
+
+
+async def _summary_snapshot() -> dict[str, Any]:
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
         airports = await queries.summary_airports(cur)
@@ -176,7 +224,7 @@ async def api_summary():
             "source": "TSA checkpoint travel numbers (tsa.gov/travel/passenger-volumes)",
             "history": tsa_history,
         }
-    return JSONResponse({
+    return {
         "generated_at": queries.iso(datetime.now(UTC)),
         "live_count": live,
         "no_data_count": len(airports) - live,
@@ -185,7 +233,17 @@ async def api_summary():
         "faa_events": faa_events,
         "faa_attribution": FAA_ATTRIBUTION,
         "travel_period": travel_period,
-    })
+    }
+
+
+@app.get("/api/summary")
+async def api_summary():
+    now = datetime.now(UTC)
+    payload = _cached(SUMMARY_CACHE, "global", now)
+    if payload is None:
+        payload = await _summary_snapshot()
+        _store_cached(SUMMARY_CACHE, "global", payload, now)
+    return JSONResponse(payload, headers={"Cache-Control": CACHE_CONTROL})
 
 
 @app.get("/api/airport/{iata}")
@@ -234,9 +292,7 @@ async def api_airport(iata: str, request: Request):
     return JSONResponse(detail)
 
 
-@app.get("/api/airport/{iata}/typical")
-async def api_airport_typical(iata: str, request: Request):
-    iata = security.require_iata(iata, request)
+async def _typical_snapshot(iata: str) -> dict[str, Any]:
     assert db.pool is not None
     async with db.pool.connection() as conn, conn.cursor() as cur:
         airport_row = await _airport_name(cur, iata)
@@ -254,7 +310,7 @@ async def api_airport_typical(iata: str, request: Request):
         }
         for bucket in buckets
     ]
-    return JSONResponse({
+    return {
         "airport": {"iata": airport_row[0], "name": airport_row[1]},
         "lane_type": "standard",
         "timezone": "UTC",
@@ -265,7 +321,18 @@ async def api_airport_typical(iata: str, request: Request):
             "hour_buckets": sum(bucket.sample_count for bucket in buckets),
         },
         "generated_at": queries.iso(datetime.now(UTC)),
-    })
+    }
+
+
+@app.get("/api/airport/{iata}/typical")
+async def api_airport_typical(iata: str, request: Request):
+    iata = security.require_iata(iata, request)
+    now = datetime.now(UTC)
+    payload = _cached(TYPICAL_CACHE, iata, now)
+    if payload is None:
+        payload = await _typical_snapshot(iata)
+        _store_cached(TYPICAL_CACHE, iata, payload, now)
+    return JSONResponse(payload, headers={"Cache-Control": CACHE_CONTROL})
 
 
 @app.get("/api/airport/{iata}/forecast")

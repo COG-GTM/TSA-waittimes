@@ -163,7 +163,7 @@ async def init() -> None:
     pool = AsyncConnectionPool(
         DATABASE_URL,
         kwargs={"options": "-c timezone=UTC"},
-        min_size=1,
+        min_size=2,
         max_size=8,
         open=False,
     )
