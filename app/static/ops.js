@@ -122,6 +122,9 @@
     }
   }
 
+  byId("ops-sources").querySelector("tbody").innerHTML =
+    '<tr><td colspan="9" class="ops-empty">Loading…</td></tr>';
+  byId("ops-updated").textContent = "Loading…";
   refresh();
   window.setInterval(refresh, 60000);
 })();

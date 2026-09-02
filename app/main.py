@@ -19,6 +19,7 @@ log = logging.getLogger("main")
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
 IATA_RE = re.compile(r"^[A-Z]{3}$")
+OPS_POOL_TIMEOUT = 3.0
 
 
 @asynccontextmanager
@@ -301,7 +302,7 @@ async def api_ops():
     now = datetime.now(UTC)
     try:
         assert db.pool is not None
-        async with db.pool.connection() as conn:
+        async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn:
             payload = await ops.build_ops(conn, now=now)
     except Exception:
         log.warning("ops snapshot failed", exc_info=True)

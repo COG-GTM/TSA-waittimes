@@ -108,7 +108,7 @@ class FakePool:
     def __init__(self, connection: FakeConnection) -> None:
         self.connection_value = connection
 
-    def connection(self) -> FakeConnection:
+    def connection(self, *, timeout: float | None = None) -> FakeConnection:
         return self.connection_value
 
 
