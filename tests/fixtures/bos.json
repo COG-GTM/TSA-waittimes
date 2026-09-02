@@ -7,7 +7,7 @@
   "exchanges": [
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t6CQ1P0Y3%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t6CQ1P0Y3%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -41,7 +41,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tKK3PDVP9%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tKK3PDVP9%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -66,7 +66,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tXT4B8KMX%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tXT4B8KMX%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -100,7 +100,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tF1JP9828%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tF1JP9828%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -134,7 +134,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tSGV88H0D%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tSGV88H0D%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -168,7 +168,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tWEBCSW2Q%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tWEBCSW2Q%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -193,7 +193,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tCLRGFHM9%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%229uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tCLRGFHM9%22%2C%20%22slug%22%3A%20%22tSTQVPRW1%22%2C%20%22domainSlug%22%3A%20%22BOS%22%2C%20%22token%22%3A%20%22fixture-feed-key-bos%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [

@@ -16,6 +16,7 @@ import httpx
 import lzstring
 
 from .base import FetchResult, Observation, Source
+from .credentials import feed_credential
 
 HEADERS = {"Accept": "application/json"}
 
@@ -80,7 +81,7 @@ async def fetch_den(client: httpx.AsyncClient) -> FetchResult:
         "https://app.flyfruition.com/api/public/tsa",
         headers={
             **HEADERS,
-            "x-api-key": "vqw8ruvwqpv02pqu938bh5p028",
+            "x-api-key": feed_credential("FEED_KEY_DEN"),
             "Origin": "https://www.flydenver.com",
             "Referer": "https://www.flydenver.com/",
         },
@@ -120,7 +121,7 @@ def _den_wait_seconds(wait: str | None) -> int | None:
 async def _airportlabs(
     client: httpx.AsyncClient,
     url: str,
-    key: str,
+    key_name: str,
     version: str,
     origin: str,
     *,
@@ -130,7 +131,7 @@ async def _airportlabs(
         url,
         headers={
             **HEADERS,
-            "api-key": key,
+            "api-key": feed_credential(key_name),
             "api-version": version,
             "Origin": origin,
             "Referer": origin + "/",
@@ -165,42 +166,42 @@ async def _airportlabs(
 async def fetch_mco(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.goaa.aero/wait-times/checkpoint/MCO",
-        "8eaac7209c824616a8fe58d22268cd59", "140", "https://flymco.com",
+        "FEED_KEY_MCO", "140", "https://flymco.com",
     )
 
 
 async def fetch_iah(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.houstonairports.mobi/wait-times/checkpoint/iah",
-        "9ACB3B733BE94B11A03B6E84CA87E895", "120", "https://www.fly2houston.com",
+        "FEED_KEY_HOUSTON", "120", "https://www.fly2houston.com",
     )
 
 
 async def fetch_hou(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.houstonairports.mobi/wait-times/checkpoint/hou",
-        "9ACB3B733BE94B11A03B6E84CA87E895", "120", "https://www.fly2houston.com",
+        "FEED_KEY_HOUSTON", "120", "https://www.fly2houston.com",
     )
 
 
 async def fetch_dfw(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.dfwairport.mobi/wait-times/checkpoint/DFW",
-        "87856E0636AA4BF282150FCBE1AD63DE", "170", "https://www.dfwairport.com",
+        "FEED_KEY_DFW", "170", "https://www.dfwairport.com",
     )
 
 
 async def fetch_clt(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.cltairport.mobi/wait-times/checkpoint/CLT",
-        "5ccb418715f9428ca6cb4df1635d4815", "130", "https://www.cltairport.com",
+        "FEED_KEY_CLT", "130", "https://www.cltairport.com",
     )
 
 
 async def fetch_cvg(client: httpx.AsyncClient) -> FetchResult:
     return await _airportlabs(
         client, "https://api.cvgairport.mobi/checkpoints/CVG",
-        "b6461a439f1047ac950a920866b86fef", "100", "https://www.cvgairport.com",
+        "FEED_KEY_CVG", "100", "https://www.cvgairport.com",
         collection="checkpoints",
     )
 
@@ -221,7 +222,6 @@ async def fetch_slc(client: httpx.AsyncClient) -> FetchResult:
 
 # ---------------------------------------------------------------- Zensors vendor (LAS / BOS)
 LAS_SLUG = "t1LQGTAPA"
-LAS_TOKEN = "3Ll9yq2riLZctX1CZ94FRgLcScJimgXx"
 LAS_JOURNEYS = {
     "t2K25H6KA": "T1 - A/B Gates",
     "tGMD2ET8Y": "T1 - C/D Gates",
@@ -229,7 +229,6 @@ LAS_JOURNEYS = {
 }
 
 BOS_SLUG = "tSTQVPRW1"
-BOS_TOKEN = "9uBjlxUu2dTQydGHYGtoDYxH5TE0vHOl"
 BOS_JOURNEYS = {
     "t6CQ1P0Y3": "Checkpoint 1: A Gates",
     "tKK3PDVP9": "Checkpoint 2: A Gates PreCheck Only",
@@ -423,11 +422,11 @@ async def fetch_ewr(client: httpx.AsyncClient) -> FetchResult:
 
 
 async def fetch_las(client: httpx.AsyncClient) -> FetchResult:
-    return await _zensors(client, "LAS", LAS_SLUG, LAS_TOKEN, LAS_JOURNEYS)
+    return await _zensors(client, "LAS", LAS_SLUG, feed_credential("FEED_KEY_LAS"), LAS_JOURNEYS)
 
 
 async def fetch_bos(client: httpx.AsyncClient) -> FetchResult:
-    return await _zensors(client, "BOS", BOS_SLUG, BOS_TOKEN, BOS_JOURNEYS)
+    return await _zensors(client, "BOS", BOS_SLUG, feed_credential("FEED_KEY_BOS"), BOS_JOURNEYS)
 
 
 # ---------------------------------------------------------------- PIT (ACAA wait-times API used by flypittsburgh.com; Zensors-derived)
@@ -436,7 +435,7 @@ async def fetch_pit(client: httpx.AsyncClient) -> FetchResult:
         "https://acaa-dna-api-prod.azure-api.net/tsa/wait-times",
         headers={
             **HEADERS,
-            "Ocp-Apim-Subscription-Key": "92cd43f60453443098d08528bf0c994e",
+            "Ocp-Apim-Subscription-Key": feed_credential("FEED_KEY_PIT"),
             "Origin": "https://flypittsburgh.com",
             "Referer": "https://flypittsburgh.com/",
         },
@@ -462,7 +461,8 @@ async def fetch_pit(client: httpx.AsyncClient) -> FetchResult:
 
 async def fetch_phx(client: httpx.AsyncClient) -> FetchResult:
     r = await client.get(
-        "https://api.phx.aero/avn-wait-times/raw?Key=4f85fe2ef5a240d59809b63de94ef536",
+        "https://api.phx.aero/avn-wait-times/raw",
+        params={"Key": feed_credential("FEED_KEY_PHX")},
         headers={
             **HEADERS,
             "Origin": "https://www.skyharbor.com",
@@ -509,7 +509,7 @@ async def fetch_mia(client: httpx.AsyncClient) -> FetchResult:
         "https://waittime.api.aero/waittime/v2/current/MIA",
         headers={
             **HEADERS,
-            "x-apikey": "5d0cacea6e41416fdcde0c5c5a19d867",
+            "x-apikey": feed_credential("FEED_KEY_MIA"),
             "Origin": "https://www.miami-airport.com",
             "Referer": "https://www.miami-airport.com/tsa-waittimes.asp",
         },
