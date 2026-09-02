@@ -27,8 +27,7 @@ OPS_POOL_TIMEOUT = 3.0
 OPS_TOTAL_TIMEOUT = 5.0
 HEALTHZ_TIMEOUT = 3.0
 CACHE_TTL = timedelta(seconds=30)
-CACHE_CONTROL = "public, max-age=30"
-STATIC_CACHE_CONTROL = "public, max-age=3600"
+STATIC_CACHE_CONTROL = "public, max-age=300"
 SUMMARY_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
 LEADERBOARD_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
 TYPICAL_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
@@ -122,7 +121,7 @@ def _cached(
     cache: dict[str, tuple[datetime, dict[str, Any]]],
     key: str,
     now: datetime,
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any], datetime] | None:
     entry = cache.get(key)
     if entry is None:
         return None
@@ -130,7 +129,7 @@ def _cached(
     if expires_at <= now:
         del cache[key]
         return None
-    return payload
+    return payload, expires_at
 
 
 def _store_cached(
@@ -138,9 +137,15 @@ def _store_cached(
     key: str,
     payload: dict[str, Any],
     now: datetime,
-) -> dict[str, Any]:
-    cache[key] = (now + CACHE_TTL, payload)
-    return payload
+) -> tuple[dict[str, Any], datetime]:
+    expires_at = now + CACHE_TTL
+    cache[key] = (expires_at, payload)
+    return payload, expires_at
+
+
+def _cache_control(expires_at: datetime, now: datetime) -> str:
+    remaining = max(0, int((expires_at - now).total_seconds()))
+    return f"public, max-age={remaining}"
 
 
 async def _leaderboard_snapshot(now: datetime) -> dict[str, Any]:
@@ -166,11 +171,13 @@ async def _leaderboard_snapshot(now: datetime) -> dict[str, Any]:
 @app.get("/api/leaderboard")
 async def api_leaderboard():
     now = datetime.now(UTC)
-    payload = _cached(LEADERBOARD_CACHE, "global", now)
-    if payload is None:
+    cached = _cached(LEADERBOARD_CACHE, "global", now)
+    if cached is None:
         payload = await _leaderboard_snapshot(now)
-        _store_cached(LEADERBOARD_CACHE, "global", payload, now)
-    return JSONResponse(payload, headers={"Cache-Control": CACHE_CONTROL})
+        payload, expires_at = _store_cached(LEADERBOARD_CACHE, "global", payload, now)
+    else:
+        payload, expires_at = cached
+    return JSONResponse(payload, headers={"Cache-Control": _cache_control(expires_at, now)})
 
 
 async def _summary_snapshot() -> dict[str, Any]:
@@ -239,11 +246,13 @@ async def _summary_snapshot() -> dict[str, Any]:
 @app.get("/api/summary")
 async def api_summary():
     now = datetime.now(UTC)
-    payload = _cached(SUMMARY_CACHE, "global", now)
-    if payload is None:
+    cached = _cached(SUMMARY_CACHE, "global", now)
+    if cached is None:
         payload = await _summary_snapshot()
-        _store_cached(SUMMARY_CACHE, "global", payload, now)
-    return JSONResponse(payload, headers={"Cache-Control": CACHE_CONTROL})
+        payload, expires_at = _store_cached(SUMMARY_CACHE, "global", payload, now)
+    else:
+        payload, expires_at = cached
+    return JSONResponse(payload, headers={"Cache-Control": _cache_control(expires_at, now)})
 
 
 @app.get("/api/airport/{iata}")
@@ -328,11 +337,13 @@ async def _typical_snapshot(iata: str) -> dict[str, Any]:
 async def api_airport_typical(iata: str, request: Request):
     iata = security.require_iata(iata, request)
     now = datetime.now(UTC)
-    payload = _cached(TYPICAL_CACHE, iata, now)
-    if payload is None:
+    cached = _cached(TYPICAL_CACHE, iata, now)
+    if cached is None:
         payload = await _typical_snapshot(iata)
-        _store_cached(TYPICAL_CACHE, iata, payload, now)
-    return JSONResponse(payload, headers={"Cache-Control": CACHE_CONTROL})
+        payload, expires_at = _store_cached(TYPICAL_CACHE, iata, payload, now)
+    else:
+        payload, expires_at = cached
+    return JSONResponse(payload, headers={"Cache-Control": _cache_control(expires_at, now)})
 
 
 @app.get("/api/airport/{iata}/forecast")
