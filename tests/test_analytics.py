@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Self
 from zoneinfo import ZoneInfo
@@ -172,3 +173,137 @@ async def test_roll_up_hours_masks_waits_from_closed_checkpoints(
     assert await poller.roll_up_hours([hour]) == 1
     assert "CASE WHEN o.is_open THEN o.wait_seconds" in cursor.query
     assert cursor.upsert_params[0][4:7] == (600, 600, 1)
+
+
+@pytest.mark.asyncio
+async def test_backfill_rerolls_rollups_finalized_before_hour_close(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_hour = analytics.hour_bucket(datetime.now(UTC))
+    incomplete_hour = current_hour - timedelta(hours=2)
+    complete_hour = current_hour - timedelta(hours=3)
+    selected_hours: list[datetime] = []
+
+    class Cursor:
+        def __init__(self) -> None:
+            self.query = ""
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def execute(self, query: str, _params: tuple[object, ...] = ()) -> None:
+            self.query = query
+
+        async def fetchall(self) -> list[tuple[datetime, int] | tuple[datetime, int, datetime]]:
+            if "FROM observations_hourly" in self.query:
+                return [
+                    (incomplete_hour, 2, incomplete_hour + timedelta(minutes=30)),
+                    (complete_hour, 2, complete_hour + timedelta(hours=2)),
+                ]
+            return [(incomplete_hour, 2), (complete_hour, 2)]
+
+    class Connection:
+        def __init__(self, cursor: Cursor) -> None:
+            self._cursor = cursor
+
+        def cursor(self) -> Cursor:
+            return self._cursor
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+    class Pool:
+        def __init__(self, connection: Connection) -> None:
+            self._connection = connection
+
+        def connection(self) -> Connection:
+            return self._connection
+
+    async def no_sleep(_seconds: float) -> None:
+        return None
+
+    async def fake_roll_up(hours: Sequence[datetime]) -> int:
+        selected_hours.extend(hours)
+        return 0
+
+    cursor = Cursor()
+    monkeypatch.setattr(db, "pool", Pool(Connection(cursor)))
+    monkeypatch.setattr(poller.asyncio, "sleep", no_sleep)
+    monkeypatch.setattr(poller, "roll_up_hours", fake_roll_up)
+
+    await poller.backfill_rollups()
+
+    assert selected_hours == [incomplete_hour]
+    assert "min(updated_at)" in cursor.query
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("rollup_finalized", "expected_deleted"), [(False, 0), (True, 1)])
+async def test_cleanup_only_deletes_observations_after_rollup_finalization(
+    monkeypatch: pytest.MonkeyPatch,
+    rollup_finalized: bool,
+    expected_deleted: int,
+) -> None:
+    class Cursor:
+        def __init__(self) -> None:
+            self.query = ""
+            self.observation_query = ""
+            self.observation_deletes = 0
+            self.rowcount = 0
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def execute(self, query: str, _params: tuple[object, ...] = ()) -> None:
+            self.query = query
+            if "DELETE FROM observations" in query:
+                self.observation_query = query
+                self.observation_deletes += 1
+                self.rowcount = int(rollup_finalized and self.observation_deletes == 1)
+            else:
+                self.rowcount = 0
+
+        async def fetchall(self) -> list[tuple[int]]:
+            return []
+
+    class Connection:
+        def __init__(self, cursor: Cursor) -> None:
+            self._cursor = cursor
+            self.commit_count = 0
+
+        def cursor(self) -> Cursor:
+            return self._cursor
+
+        async def commit(self) -> None:
+            self.commit_count += 1
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+    class Pool:
+        def __init__(self, connection: Connection) -> None:
+            self._connection = connection
+
+        def connection(self) -> Connection:
+            return self._connection
+
+    cursor = Cursor()
+    connection = Connection(cursor)
+    monkeypatch.setattr(db, "pool", Pool(connection))
+
+    summary = await poller.cleanup_once(datetime.now(UTC))
+
+    assert summary["deleted"]["observations"] == expected_deleted
+    assert "h.updated_at >= h.hour_bucket + interval '1 hour'" in cursor.observation_query

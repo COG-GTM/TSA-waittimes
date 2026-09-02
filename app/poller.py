@@ -456,16 +456,30 @@ async def backfill_rollups() -> None:
             )
             observation_counts: dict[datetime, int] = dict(await cur.fetchall())
             await cur.execute(
-                "SELECT hour_bucket, count(*) FROM observations_hourly GROUP BY 1"
+                """
+                SELECT hour_bucket, count(*), min(updated_at)
+                FROM observations_hourly
+                GROUP BY 1
+                """
             )
-            rollup_counts: dict[datetime, int] = dict(await cur.fetchall())
+            rollup_counts: dict[datetime, tuple[int, datetime | None]] = {
+                hour: (count, min_updated_at)
+                for hour, count, min_updated_at in await cur.fetchall()
+            }
 
         current_hour = analytics.hour_bucket(datetime.now(UTC))
-        hours = [
-            hour for hour, checkpoint_count in observation_counts.items()
-            if hour >= current_hour
-            or rollup_counts.get(hour, 0) < checkpoint_count
-        ]
+        hours = []
+        for hour, checkpoint_count in observation_counts.items():
+            rollup_count, min_updated_at = rollup_counts.get(hour, (0, None))
+            if (
+                hour >= current_hour
+                or rollup_count < checkpoint_count
+                or (
+                    min_updated_at is not None
+                    and min_updated_at < hour + timedelta(hours=1)
+                )
+            ):
+                hours.append(hour)
         written = 0
         batches = 0
         for start in range(0, len(hours), 6):
@@ -508,6 +522,7 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
                           WHERE h.checkpoint_id = o2.checkpoint_id
                             AND o2.fetched_at >= h.hour_bucket
                             AND o2.fetched_at < h.hour_bucket + interval '1 hour'
+                            AND h.updated_at >= h.hour_bucket + interval '1 hour'
                       )
                     LIMIT %s
                 )
