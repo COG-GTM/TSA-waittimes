@@ -25,6 +25,7 @@ from .tsa_throughput import FIRST_YEAR, fetch_tsa_throughput, fetch_tsa_year
 log = logging.getLogger("poller")
 
 MAX_BACKOFF = 900  # 15 min
+LAST_CLEANUP_AT: datetime | None = None
 FAA_SOURCE = Source(
     FAA_SOURCE_CODE,
     "FAA National Airspace System Status",
@@ -494,6 +495,7 @@ async def backfill_rollups() -> None:
 
 
 async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
+    global LAST_CLEANUP_AT
     started = datetime.now(UTC)
     cleanup_now = now or started
     cutoffs = {
@@ -587,6 +589,7 @@ async def cleanup_once(now: datetime | None = None) -> dict[str, Any]:
             deleted["raw_payloads"] += max(cur.rowcount, 0)
             await conn.commit()
 
+    LAST_CLEANUP_AT = started
     summary = {
         "event": "retention_cleanup",
         "started_at": started.isoformat(),

@@ -113,6 +113,13 @@ loop runs every 15 minutes by default and re-rolls the current UTC hour plus
 the previous two hours. A startup backfill waits briefly for the app to come
 up, then rolls missing or incomplete hours oldest-first in small batches.
 
+### Analytics sampling model
+
+Typical waits summarize each airport-hour by its worst checkpoint average, so
+percentiles use equal-weighted hour buckets rather than raw observations.
+Forecast hour-of-week profiles average per-minute samples directly, giving
+densely polled periods more weight in the historical profile.
+
 Retention windows are measured back from the cleanup run's current timestamp:
 
 | Environment variable | Default | Cutoff measured from |

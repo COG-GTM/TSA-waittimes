@@ -302,8 +302,13 @@ async def test_cleanup_only_deletes_observations_after_rollup_finalization(
     cursor = Cursor()
     connection = Connection(cursor)
     monkeypatch.setattr(db, "pool", Pool(connection))
+    monkeypatch.setattr(poller, "LAST_CLEANUP_AT", None)
 
+    started_before = datetime.now(UTC)
     summary = await poller.cleanup_once(datetime.now(UTC))
+    started_after = datetime.now(UTC)
 
     assert summary["deleted"]["observations"] == expected_deleted
     assert "h.updated_at >= h.hour_bucket + interval '1 hour'" in cursor.observation_query
+    assert poller.LAST_CLEANUP_AT is not None
+    assert started_before <= poller.LAST_CLEANUP_AT <= started_after

@@ -16,6 +16,7 @@ DATA_NOTICE = (
 )
 RATE_LIMIT = 60
 RATE_WINDOW_SECONDS = 60
+MAX_TRACKED_CLIENTS = 10_000
 _rate_limits: dict[str, tuple[float, int]] = {}
 _last_prune: float = 0.0
 
@@ -50,6 +51,18 @@ def check_rate_limit(client_ip: str) -> int | None:
         for key in expired:
             del _rate_limits[key]
         _last_prune = now
+    if client_ip not in _rate_limits and len(_rate_limits) >= MAX_TRACKED_CLIENTS:
+        cutoff = now - RATE_WINDOW_SECONDS
+        expired = [
+            key
+            for key, (window_start, _count) in _rate_limits.items()
+            if window_start < cutoff
+        ]
+        for key in expired:
+            del _rate_limits[key]
+        if len(_rate_limits) >= MAX_TRACKED_CLIENTS:
+            oldest = min(_rate_limits, key=lambda key: _rate_limits[key][0])
+            del _rate_limits[oldest]
     window_start, count = _rate_limits.get(client_ip, (now, 0))
     if now - window_start >= RATE_WINDOW_SECONDS:
         window_start, count = now, 0

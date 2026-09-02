@@ -204,6 +204,7 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
         "observations_hourly_rows": _first(hourly_count),
         "raw_payloads_rows": _first(raw_count),
         "last_rollup_at": queries.iso(_first(last_rollup)),
+        "last_cleanup_at": queries.iso(poller.LAST_CLEANUP_AT),
         "db_size_bytes": _first(db_size),
     })
 

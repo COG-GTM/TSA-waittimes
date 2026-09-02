@@ -267,6 +267,35 @@ async def test_rate_limiter_prunes_unique_clients_at_window_boundaries(
         assert len(public_api._rate_limits) <= 10
 
 
+def test_rate_limiter_bounds_clients_and_preserves_existing_limits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(public_api, "MAX_TRACKED_CLIENTS", 2)
+    monkeypatch.setattr(public_api.time, "monotonic", lambda: 70.0)
+    public_api._rate_limits.update({
+        "expired": (0.0, 1),
+        "limited": (20.0, public_api.RATE_LIMIT),
+    })
+    public_api._last_prune = 70.0
+
+    assert public_api.check_rate_limit("new") is None
+    assert "expired" not in public_api._rate_limits
+    assert set(public_api._rate_limits) == {"limited", "new"}
+    assert public_api.check_rate_limit("limited") is not None
+
+    public_api.reset_rate_limiter()
+    public_api._rate_limits.update({
+        "oldest": (10.0, 1),
+        "limited": (20.0, public_api.RATE_LIMIT),
+    })
+    public_api._last_prune = 70.0
+
+    assert public_api.check_rate_limit("new") is None
+    assert "oldest" not in public_api._rate_limits
+    assert set(public_api._rate_limits) == {"limited", "new"}
+    assert public_api.check_rate_limit("limited") is not None
+
+
 @pytest.mark.asyncio
 async def test_api_docs(client):
     response = await client.get("/api")

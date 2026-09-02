@@ -132,6 +132,17 @@ async def test_build_ops_is_resilient_to_query_failure() -> None:
 
 
 @pytest.mark.asyncio
+async def test_build_ops_reports_last_cleanup_at(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ops.poller, "LAST_CLEANUP_AT", NOW)
+
+    payload = await ops.build_ops(FakeConnection(), now=NOW)
+
+    assert payload["system"]["last_cleanup_at"] == NOW.isoformat()
+
+
+@pytest.mark.asyncio
 async def test_build_ops_handles_source_inventory_failure() -> None:
     connection = FakeConnection(fail_sources=True)
     payload = await ops.build_ops(connection, now=NOW)
