@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Operations — US Checkpoint Wait Picture{% endblock %}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+<section class="ops">
+  <div class="ops-header">
+    <h1>Operations</h1>
+    <span id="ops-updated" class="updated"></span>
+  </div>
+  <div class="ops-summary" aria-label="Source status summary">
+    <span class="ops-summary-chip pill pill-green">Green <b id="ops-green">—</b></span>
+    <span class="ops-summary-chip pill pill-amber">Amber <b id="ops-amber">—</b></span>
+    <span class="ops-summary-chip pill pill-red">Red <b id="ops-red">—</b></span>
+  </div>
+  <div class="ops-grid">
+    <section class="ops-panel">
+      <h2>System</h2>
+      <dl id="ops-system"></dl>
+    </section>
+    <section class="ops-panel">
+      <h2>FAA NAS events</h2>
+      <dl id="ops-faa"></dl>
+    </section>
+    <section class="ops-panel">
+      <h2>NWS weather alerts</h2>
+      <dl id="ops-weather"></dl>
+    </section>
+    <section class="ops-panel">
+      <h2>TSA throughput</h2>
+      <dl id="ops-tsa"></dl>
+    </section>
+    <section class="ops-panel ops-sources">
+      <h2>Sources</h2>
+      <div class="ops-table-wrap">
+        <table class="ops-table" id="ops-sources">
+          <thead>
+            <tr>
+              <th>Airport</th>
+              <th>Source</th>
+              <th>Status</th>
+              <th>Last success</th>
+              <th>Age</th>
+              <th>Failures</th>
+              <th title="Estimated from stored consecutive failures; the poller's in-memory counter resets on restart and NWS zone backfill keeps its normal cadence">Est. backoff</th>
+              <th>Obs/1h</th>
+              <th>Last error</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/ops.js"></script>{% endblock %}

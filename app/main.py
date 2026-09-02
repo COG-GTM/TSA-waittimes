@@ -9,13 +9,17 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import analytics, db, forecast, leaderboard, poller, public_api, queries, security
+from . import analytics, db, forecast, leaderboard, ops, poller, public_api, queries
+from . import security
 from .faa_events import FAA_ATTRIBUTION
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+log = logging.getLogger("main")
 
 CANONICAL_HOST = "waitpicture.com"
 REDIRECT_HOSTS = frozenset({"tsadelays.com", "www.tsadelays.com", "www.waitpicture.com"})
+IATA_RE = re.compile(r"^[A-Z]{3}$")
+OPS_POOL_TIMEOUT = 3.0
 
 
 @asynccontextmanager
@@ -280,6 +284,19 @@ async def healthz():
     return JSONResponse(health, status_code=200)
 
 
+@app.get("/api/ops")
+async def api_ops():
+    now = datetime.now(UTC)
+    try:
+        assert db.pool is not None
+        async with db.pool.connection(timeout=OPS_POOL_TIMEOUT) as conn:
+            payload = await ops.build_ops(conn, now=now)
+    except Exception:
+        log.warning("ops snapshot failed", exc_info=True)
+        payload = ops.empty_payload(now)
+    return JSONResponse(payload)
+
+
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
@@ -289,6 +306,11 @@ async def index(request: Request):
 async def airport_page(request: Request, iata: str):
     iata = security.require_iata(iata, request)
     return templates.TemplateResponse(request, "airport.html", {"iata": iata})
+
+
+@app.get("/ops")
+async def ops_page(request: Request):
+    return templates.TemplateResponse(request, "ops.html")
 
 
 @app.get("/embed/{iata}", response_class=HTMLResponse)
