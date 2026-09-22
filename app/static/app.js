@@ -119,8 +119,8 @@ function renderLeaderboard(data) {
   const el = document.getElementById("leaderboard");
   if (!el) return;
   const sections = [
-    ["worst_standard", "Worst standard waits"],
-    ["worst_precheck", "Worst PreCheck waits"],
+    ["worst_standard", "Longest standard waits"],
+    ["worst_precheck", "Longest PreCheck waits"],
     ["most_improved", "Most improved (3 hr)"],
   ];
   let html = '<div class="leaderboard-grid">';

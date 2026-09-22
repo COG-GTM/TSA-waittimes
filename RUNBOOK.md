@@ -124,17 +124,26 @@ Retention windows are measured back from the cleanup run's current timestamp:
 
 | Environment variable | Default | Cutoff measured from |
 |---|---:|---|
-| `RETENTION_RAW_PAYLOAD_DAYS` | 14 days | `raw_payloads.fetched_at` |
-| `RETENTION_OBSERVATION_DAYS` | 90 days | `observations.fetched_at` |
+| `RETENTION_RAW_PAYLOAD_DAYS` | 3 days | `raw_payloads.fetched_at` |
+| `RETENTION_OBSERVATION_DAYS` | 30 days | `observations.fetched_at` |
 | `RETENTION_FAA_EVENT_DAYS` | 180 days | `faa_airport_events.fetched_at` |
 | `RETENTION_WEATHER_ALERT_DAYS` | 180 days | `coalesce(expires, ends, fetched_at)` |
+
+Sizing: at the current ~500 airports polled every 120s, raw payloads grow
+~25 MB/day on disk and observations ~14 MB/day, so the defaults hold the
+database near 600 MB. Keep the Fly Postgres volume at least 3x that;
+postgres-flex switches to read-only at 90% disk and the app cannot start
+without a database connection.
 
 Cleanup runs every 6 hours by default (`CLEANUP_INTERVAL_SECONDS`). It never
 deletes an observation unless its checkpoint/hour has an
 `observations_hourly` row. Expired observations, FAA events, and weather
 alerts are deleted in batches before expired raw payloads. Because raw payloads
 are referenced by foreign keys, cleanup first sets matching `raw_id` values to
-NULL in all three tables, then deletes the payload rows.
+NULL in all three tables, then deletes the payload rows. Those `raw_id`
+columns must stay indexed (`idx_obs_raw_id`, `idx_faa_events_raw_id`,
+`idx_weather_alerts_raw_id`); without them every payload batch and every
+FK check seq-scans `observations`, and cleanup falls behind ingest.
 
 Each successful cleanup emits exactly one JSON log line, for example:
 

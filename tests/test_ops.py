@@ -65,11 +65,11 @@ class FakeCursor:
             return [(True, NOW - timedelta(minutes=5)), (False, NOW - timedelta(minutes=2))]
         if "count(DISTINCT c.airport_iata)" in self.query:
             return [(2,)]
-        if self.query == "SELECT count(*) FROM observations":
+        if self.query == queries.estimated_row_count_sql("observations"):
             return [(100,)]
-        if self.query == "SELECT count(*) FROM observations_hourly":
+        if self.query == queries.estimated_row_count_sql("observations_hourly"):
             return [(20,)]
-        if self.query == "SELECT count(*) FROM raw_payloads":
+        if self.query == queries.estimated_row_count_sql("raw_payloads"):
             return [(50,)]
         if "max(updated_at)" in self.query:
             return [(NOW - timedelta(minutes=1),)]
@@ -192,7 +192,7 @@ async def test_successful_poll_clears_source_health_error(
                     self.connection.last_error_at,
                     0,
                 )
-            elif query == "SELECT count(*) FROM observations":
+            elif query == queries.estimated_row_count_sql("observations"):
                 self.result = (1,)
 
         async def fetchone(self) -> tuple[Any, ...] | None:

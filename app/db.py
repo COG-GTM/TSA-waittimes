@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS faa_airport_events (
     raw_id BIGINT REFERENCES raw_payloads(id)
 );
 CREATE INDEX IF NOT EXISTS idx_faa_events_time ON faa_airport_events (fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_faa_events_raw_id ON faa_airport_events (raw_id);
 
 CREATE TABLE IF NOT EXISTS checkpoints (
     id SERIAL PRIMARY KEY,
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS observations (
 );
 CREATE INDEX IF NOT EXISTS idx_obs_checkpoint_time ON observations (checkpoint_id, fetched_at DESC);
 CREATE INDEX IF NOT EXISTS idx_obs_time ON observations (fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_obs_raw_id ON observations (raw_id);
 
 CREATE TABLE IF NOT EXISTS observations_hourly (
     airport_iata TEXT NOT NULL REFERENCES airports(iata),
@@ -138,6 +140,7 @@ CREATE TABLE IF NOT EXISTS weather_alerts (
     PRIMARY KEY (airport_iata, alert_id)
 );
 CREATE INDEX IF NOT EXISTS idx_weather_alerts_airport ON weather_alerts (airport_iata);
+CREATE INDEX IF NOT EXISTS idx_weather_alerts_raw_id ON weather_alerts (raw_id);
 
 CREATE TABLE IF NOT EXISTS tsa_throughput (
     date DATE NOT NULL,
