@@ -48,8 +48,8 @@ def test_retention_helpers_use_strict_boundaries() -> None:
 @pytest.mark.parametrize(
     ("name", "default"),
     [
-        ("RETENTION_RAW_PAYLOAD_DAYS", 14),
-        ("RETENTION_OBSERVATION_DAYS", 90),
+        ("RETENTION_RAW_PAYLOAD_DAYS", 3),
+        ("RETENTION_OBSERVATION_DAYS", 30),
         ("RETENTION_FAA_EVENT_DAYS", 180),
         ("RETENTION_WEATHER_ALERT_DAYS", 180),
     ],

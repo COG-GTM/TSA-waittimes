@@ -185,9 +185,9 @@ async def build_ops(conn: Any, *, now: datetime) -> dict[str, Any]:
         """,
         (now - timedelta(minutes=30),),
     )
-    observations_count = await _safe(conn, "SELECT count(*) FROM observations")
-    hourly_count = await _safe(conn, "SELECT count(*) FROM observations_hourly")
-    raw_count = await _safe(conn, "SELECT count(*) FROM raw_payloads")
+    observations_count = await _safe(conn, queries.estimated_row_count_sql("observations"))
+    hourly_count = await _safe(conn, queries.estimated_row_count_sql("observations_hourly"))
+    raw_count = await _safe(conn, queries.estimated_row_count_sql("raw_payloads"))
     last_rollup = await _safe(
         conn,
         "SELECT max(updated_at) FROM observations_hourly",

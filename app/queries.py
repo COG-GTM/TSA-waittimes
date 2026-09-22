@@ -264,6 +264,11 @@ async def airport_detail(cur, iata: str) -> dict | None:
     }
 
 
+def estimated_row_count_sql(table: str) -> str:
+    """Planner estimate from pg_class; exact count(*) scans the whole heap."""
+    return f"SELECT greatest(reltuples, 0)::bigint FROM pg_class WHERE oid = '{table}'::regclass"
+
+
 async def source_health(cur) -> dict:
     await cur.execute(
         """
@@ -274,7 +279,7 @@ async def source_health(cur) -> dict:
             """
     )
     rows = await cur.fetchall()
-    await cur.execute("SELECT count(*) FROM observations")
+    await cur.execute(estimated_row_count_sql("observations"))
     obs_row = await cur.fetchone()
     assert obs_row is not None
     obs_count = obs_row[0]
