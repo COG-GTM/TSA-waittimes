@@ -15,7 +15,8 @@ Demonstration only.
   minute), with exponential backoff on failure and per-source health tracking.
 - **Sources** (`app/sources/adapters.py`): polite API clients for the public
   wait-time feeds each airport's own website loads. Honest user agent, public
-  endpoints only, no logins or credentials.
+  endpoints only, no logins. The vendor API keys some of those feeds require are
+  read from `FEED_KEY_*` environment variables (see below), never from source.
 - **Weather** (`app/weather_alerts.py`): one national `api.weather.gov`
   `/alerts/active` request every 10 minutes, matched to each airport by its NWS
   forecast/county/fire zone (resolved once per airport via `/points` and cached
@@ -76,6 +77,18 @@ uvicorn app.main:app --port 8080
 
 `DATABASE_URL` overrides the default local connection string.
 
+### Feed credentials
+
+DEN, MCO, IAH/HOU, DFW, CLT, CVG, LAS, BOS, PIT, PHX and MIA send a vendor API
+key with each request. Those keys live only in the environment — one
+`FEED_KEY_<CODE>` variable per feed, listed with descriptions in
+`FEED_CREDENTIALS` (`app/sources/credentials.py`) and in `.env.example`. A
+source whose variable is unset fails closed: the adapter raises
+`MissingCredentialError` before sending anything, `/healthz` reports the source
+unhealthy with that message, and every other source keeps polling. Startup logs
+the list of unconfigured credentials. On Fly, set them with
+`fly secrets set FEED_KEY_DEN=... FEED_KEY_MCO=...`.
+
 ## Tests
 
 ```bash
@@ -108,7 +121,10 @@ python scripts/probe_weather_alerts.py        # live NWS cycle, refresh tests/we
 parsed observations (wait in seconds and minutes, lane type, open/closed,
 publish timestamp), and records a fixture containing every HTTP exchange the
 adapter made plus the observations it parsed. Re-run it after a feed changes
-shape to refresh the fixture.
+shape to refresh the fixture. Probing a credentialed source needs its
+`FEED_KEY_<CODE>` variable set; the recorded fixture has the live value
+rewritten to the `fixture-feed-key-<code>` placeholder that `tests/conftest.py`
+injects at replay time, so fixtures never carry real keys.
 
 ## Continuous deployment
 

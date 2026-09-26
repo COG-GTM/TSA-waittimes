@@ -20,6 +20,7 @@ from .faa_events import (
 )
 from .sources.adapters import SOURCES
 from .sources.base import USER_AGENT, FetchResult, Source
+from .sources.credentials import missing_feed_credentials
 from .tsa_throughput import FIRST_YEAR, fetch_tsa_throughput, fetch_tsa_year
 
 log = logging.getLogger("poller")
@@ -621,6 +622,9 @@ _client: httpx.AsyncClient | None = None
 async def start() -> None:
     global _client
     await register_sources()
+    missing = missing_feed_credentials()
+    if missing:
+        log.warning("feed credentials not configured; those sources fail closed: %s", ", ".join(missing))
     _client = httpx.AsyncClient(
         headers={"User-Agent": USER_AGENT},
         timeout=30,

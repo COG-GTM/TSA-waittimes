@@ -7,7 +7,7 @@
   "exchanges": [
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t2K25H6KA%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%223Ll9yq2riLZctX1CZ94FRgLcScJimgXx%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t2K25H6KA%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%22fixture-feed-key-las%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -41,7 +41,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tGMD2ET8Y%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%223Ll9yq2riLZctX1CZ94FRgLcScJimgXx%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22tGMD2ET8Y%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%22fixture-feed-key-las%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [
@@ -75,7 +75,7 @@
     },
     {
       "method": "GET",
-      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t0CSXP4SK%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%223Ll9yq2riLZctX1CZ94FRgLcScJimgXx%22%7D%7D",
+      "url": "https://embed.zensors.live/api/embeddable-widget/trpc/waitTimeExplorer.update?batch=1&input=%7B%220%22%3A%20%7B%22journey%22%3A%20%22t0CSXP4SK%22%2C%20%22slug%22%3A%20%22t1LQGTAPA%22%2C%20%22domainSlug%22%3A%20%22LAS%22%2C%20%22token%22%3A%20%22fixture-feed-key-las%22%7D%7D",
       "status": 200,
       "content_type": "application/json",
       "json": [

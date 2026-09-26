@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import re
 import sys
 from datetime import UTC, datetime
@@ -24,10 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.sources.adapters import SOURCES
 from app.sources.base import USER_AGENT, FetchResult, Source
+from app.sources.credentials import FEED_CREDENTIALS
 from tests.harness import (
     FIXTURE_VERSION,
     fixture_path,
     observation_to_dict,
+    redact_credentials,
 )
 
 CODE_RE = re.compile(r"^[A-Z]{3}$")
@@ -126,7 +129,9 @@ def main() -> int:
         "captured_at": datetime.now(tz=UTC).isoformat(),
         "public_page": source.url,
         "attribution": source.attribution,
-        "exchanges": exchanges,
+        "exchanges": redact_credentials(
+            exchanges, {name: os.environ.get(name, "").strip() for name in FEED_CREDENTIALS}
+        ),
         "expected": summarize(observations),
     }
     path = fixture_path(source.code)

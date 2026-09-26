@@ -14,7 +14,7 @@ python3.12 -m pip install -r requirements.txt
 python3.12 -m uvicorn app.main:app --port 8080
 ```
 
-- No Devin secrets, credentials or logins are required: every upstream feed is one the airport's own public website loads in an ordinary visitor's browser. Outbound internet access to the airport/vendor APIs is required.
+- No logins are required: every upstream feed is one the airport's own public website loads in an ordinary visitor's browser. The vendor API keys those pages send (DEN, MCO, IAH/HOU, DFW, CLT, CVG, LAS, BOS, PIT, PHX, MIA) must be exported as `FEED_KEY_<CODE>` environment variables before starting uvicorn (see `.env.example`); an unset key makes only that source report `FEED_KEY_<CODE> is not configured` in `/healthz`. Outbound internet access to the airport/vendor APIs is required.
 - Poll loops start on app startup (`app/poller.py`), one task per source at its `refresh_seconds` (usually 120s). Allow ~30-60s after startup before checking health/UI, otherwise sources look unhealthy simply because they have not polled yet.
 - Data comes from live public feeds, so exact minute values change between polls. Never assert on fixed numbers; assert on presence, lane names, open/closed state, and rough magnitude.
 
