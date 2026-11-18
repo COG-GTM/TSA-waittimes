@@ -220,15 +220,18 @@ async def airport_detail(cur, iata: str) -> dict | None:
     history_by_checkpoint: dict[int, list[list[int | None]]] = {}
     await cur.execute(
         """
-        SELECT o.checkpoint_id,
-               extract(epoch FROM date_trunc('minute', o.fetched_at))::bigint AS m,
-               max(o.wait_seconds)
-        FROM observations o
-        JOIN checkpoints c ON c.id = o.checkpoint_id
-        WHERE c.airport_iata = %s AND o.wait_seconds IS NOT NULL
-          AND o.fetched_at > now() - interval '24 hours'
-        GROUP BY o.checkpoint_id, 2
-        ORDER BY o.checkpoint_id, 2
+        SELECT c.id, h.m, h.max_wait
+        FROM checkpoints c
+        CROSS JOIN LATERAL (
+            SELECT extract(epoch FROM date_trunc('minute', o.fetched_at))::bigint AS m,
+                   max(o.wait_seconds) AS max_wait
+            FROM observations o
+            WHERE o.checkpoint_id = c.id AND o.wait_seconds IS NOT NULL
+              AND o.fetched_at > now() - interval '24 hours'
+            GROUP BY 1
+        ) h
+        WHERE c.airport_iata = %s
+        ORDER BY c.id, h.m
         """,
         (iata,),
     )
