@@ -1,0 +1,60 @@
+// Architecture of US Checkpoint Wait Picture (TSA-waittimes).
+// Render with ./render.sh (needs Graphviz). Keep in step with app/main.py,
+// app/poller.py, app/public_api.py and app/db.py.
+digraph architecture {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=18, nodesep=0.35, ranksep=0.55,
+         labelloc=t, label="US Checkpoint Wait Picture — architecture (main)", pad=0.3];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=15,
+         fillcolor="#eef3fb", color="#4a6fa5", margin="0.18,0.08"];
+  edge  [fontname="DejaVu Sans", fontsize=12, color="#555555"];
+
+  subgraph cluster_external {
+    label="Public upstream feeds"; style="rounded,dashed"; color="#888888"; fontsize=16;
+    airports_feeds [label="21 airport wait-time feeds\n(SEA, DEN, MCO … PDX)\nper-source refresh_seconds (120 s)", fillcolor="#fff4e0", color="#c08a2b"];
+    faa  [label="FAA NAS Status\nnasstatus.faa.gov/api/airport-events\nevery 300 s", fillcolor="#fff4e0", color="#c08a2b"];
+    nws  [label="NWS api.weather.gov\n/alerts/active every 600 s\n/points for zone cache", fillcolor="#fff4e0", color="#c08a2b"];
+    tsa  [label="TSA passenger volumes\ntsa.gov (curl_cffi)\nevery 6 h + 2019→ backfill", fillcolor="#fff4e0", color="#c08a2b"];
+    
+  }
+
+    subgraph cluster_ingest {
+      label="Background tasks — app/poller.py (asyncio tasks started in the FastAPI lifespan)"; style="rounded,filled"; fillcolor="#f7f9fc"; color="#9fb3d1"; fontsize=15;
+      adapters [label="Source adapters\napp/sources/adapters.py\nSOURCES → Observation"];
+      poll_src [label="poll_source × 21\nbackoff ≤ 15 min\npoll_health"];
+      poll_ext [label="poll_faa_events (faa_events.py)\npoll_weather_alerts (weather_alerts.py)\npoll_tsa_throughput (tsa_throughput.py)"];
+      rollup [label="poll_rollups / backfill_rollups\nevery 900 s → observations_hourly"];
+      cleanup [label="poll_cleanup every 6 h\nretention (analytics.py)"];
+    }
+
+    subgraph cluster_web {
+      label="FastAPI web app — app/main.py (same uvicorn process, Fly.io :8080)"; style="rounded,filled"; fillcolor="#f7f9fc"; color="#9fb3d1"; fontsize=15;
+      mw [label="Middleware: canonical-host 301,\nsecurity headers + audit log (security.py),\nGZip, static Cache-Control"];
+      pages [label="HTML pages (Jinja2 templates)\n/  /airport/{iata}  /ops  /api"];
+      internal_api [label="Internal JSON API\n/api/summary  /api/leaderboard\n/api/airport/{iata}[/typical|/forecast]\n/api/ops  /healthz"];
+      v1 [label="Public API v1 (public_api.py)\n/api/v1/airports  /airport/{iata}  /status\n/embed/{iata} widget · 60 req/min/IP · CORS GET"];
+      logic [label="queries.py · leaderboard.py · analytics.py\nforecast.py · ops.py · travel_calendar.py\n30 s in-process caches (forecast 300 s)"];
+    }
+
+  db [label="PostgreSQL 16 (DATABASE_URL)\nairports · sources · checkpoints · observations · observations_hourly\nraw_payloads · poll_health · faa_airport_events · weather_alerts · airport_nws_zones\ntsa_throughput · airport_enplanements · travel_periods", shape=cylinder, fillcolor="#e6f4ea", color="#3d8b55"];
+
+  data [label="Committed data/ (seeded by db.init at startup)\nus_airports.json (502) · enplanements.json · travel_calendar.json", shape=folder, fillcolor="#f3efe6", color="#8a7a55"];
+
+  browser [label="Browser — vanilla JS + vendored Leaflet\napp.js · map.js · airport.js · ops.js", fillcolor="#f0e9f7", color="#7a5aa5"];
+  clients [label="Third-party sites / API clients\n(iframe embed, JSON)", fillcolor="#f0e9f7", color="#7a5aa5"];
+  flyhc [label="Fly health check\nGET /healthz every 30 s", fillcolor="#f0e9f7", color="#7a5aa5"];
+
+  airports_feeds -> adapters [label="httpx GET"];
+  adapters -> poll_src;
+  faa -> poll_ext; nws -> poll_ext; tsa -> poll_ext;
+  poll_src -> db [label="raw_payloads, checkpoints,\nobservations, poll_health"];
+  poll_ext -> db [label="events, alerts,\nthroughput"];
+  rollup -> db [dir=both, label="observations →\nhourly rollup"];
+  cleanup -> db [label="batched deletes"];
+  data -> db [label="seed"];
+
+  // Web side is drawn below the database: edges point "up" via dir=back.
+  mw -> browser [dir=back]; mw -> clients [dir=back]; mw -> flyhc [dir=back];
+  pages -> mw [dir=back]; internal_api -> mw [dir=back]; v1 -> mw [dir=back];
+  logic -> internal_api [dir=back]; logic -> v1 [dir=back]; logic -> pages [style=invis];
+  db -> logic [dir=back, label="SQL (psycopg pool)"];
+}
