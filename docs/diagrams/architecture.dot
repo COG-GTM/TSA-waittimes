@@ -14,7 +14,7 @@ digraph architecture {
     faa  [label="FAA NAS Status\nnasstatus.faa.gov/api/airport-events\nevery 300 s", fillcolor="#fff4e0", color="#c08a2b"];
     nws  [label="NWS api.weather.gov\n/alerts/active every 600 s\n/points for zone cache", fillcolor="#fff4e0", color="#c08a2b"];
     tsa  [label="TSA passenger volumes\ntsa.gov (curl_cffi)\nevery 6 h + 2019→ backfill", fillcolor="#fff4e0", color="#c08a2b"];
-    
+
   }
 
     subgraph cluster_ingest {

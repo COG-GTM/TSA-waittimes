@@ -111,7 +111,7 @@ Every request passes through middleware that, in order of effect:
 | `/api/leaderboard` | `app/leaderboard.py` | worst standard and PreCheck waits (fresh within 30 min, top 10) and most improved vs. 3 h ago; 30 s cache |
 | `/api/airport/{iata}` | `queries.airport_detail` + `app/analytics.py` | checkpoints (with stale flag), recent history, weather alerts, FAA events, enplanements, travel period, and the typical wait for the current hour |
 | `/api/airport/{iata}/typical` | `app/analytics.py` | standard-lane wait percentiles by UTC hour of week from `observations_hourly`; 30 s cache |
-| `/api/airport/{iata}/forecast` | `app/forecast.py` | 30/60/120-minute standard-lane forecast from recent trend plus hour-of-week profile; 300 s cache |
+| `/api/airport/{iata}/forecast` | `app/forecast.py` | 30/60/120-minute standard-lane forecast blending the recent trend with an hour-of-week profile (`blend`), or `trend_only` / `profile_only` when one input is missing or too thin; 300 s cache |
 | `/api/ops` | `app/ops.py` | per-source green/amber/red health, backoff estimate, row counts, last rollup/cleanup, DB size |
 | `/healthz` | `queries.source_health` | Fly health check (every 30 s); `ok` only when every source is healthy |
 
