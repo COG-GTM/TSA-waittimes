@@ -10,27 +10,79 @@ Demonstration only.
 
 ## How it works
 
-- **Ingestion** (`app/poller.py`): one async polling loop per verified source,
-  polling at each source's natural refresh rate (never faster than once per
-  minute), with exponential backoff on failure and per-source health tracking.
+See [docs/architecture.md](docs/architecture.md) for the full architecture and
+the [diagram](docs/diagrams/architecture.png) (source:
+[`docs/diagrams/architecture.dot`](docs/diagrams/architecture.dot)).
+
+![Architecture diagram](docs/diagrams/architecture.png)
+
+One FastAPI process runs both the background pollers and the website, backed
+by PostgreSQL:
+
+- **Ingestion** (`app/poller.py`): started from the app lifespan. One async
+  polling loop per verified source, polling at each source's natural refresh
+  rate (never faster than once per minute), with exponential backoff on failure
+  and per-source health tracking, plus loops for FAA events, NWS alerts, TSA
+  throughput, hourly rollups and retention cleanup.
 - **Sources** (`app/sources/adapters.py`): polite API clients for the public
   wait-time feeds each airport's own website loads. Honest user agent, public
   endpoints only, no logins or credentials.
+- **FAA airport events** (`app/faa_events.py`): the FAA NAS Status
+  airport-events feed every 5 minutes (ground stops, delay programs, closures),
+  shown on airport pages and `/ops`.
 - **Weather** (`app/weather_alerts.py`): one national `api.weather.gov`
   `/alerts/active` request every 10 minutes, matched to each airport by its NWS
   forecast/county/fire zone (resolved once per airport via `/points` and cached
   in `airport_nws_zones`) with a point-in-polygon fallback for alerts that carry
   geometry. Only aviation-relevant event types are surfaced; see
   `RELEVANT_EVENTS`. Attribution: National Weather Service (weather.gov).
-- **Storage**: PostgreSQL — airports, checkpoints, observations (wait value,
-  lane type, source URL, source publish timestamp, fetch timestamp), raw
-  payloads for provenance, poll health, TSA daily throughput, and FAA airport
-  enplanements.
-- **Web** (`app/main.py`): FastAPI serving the national map, airport drill-down
-  pages, and a JSON API. `/api/airport/{iata}/typical` provides historical
-  standard-lane wait percentiles by UTC hour of week. Frontend is vanilla JS +
-  vendored Leaflet with a vendored US-states GeoJSON basemap (no external tile
-  servers).
+- **Analytics** (`app/analytics.py`, `app/forecast.py`): hourly rollups into
+  `observations_hourly`, typical-wait percentiles, short-horizon forecasts, and
+  retention cleanup.
+- **Storage** (`app/db.py`): PostgreSQL — airports, checkpoints, observations
+  (wait value, lane type, source URL, source publish timestamp, fetch
+  timestamp), hourly rollups, raw payloads for provenance, poll health, FAA
+  events, weather alerts, TSA daily throughput, FAA airport enplanements, and
+  travel periods.
+- **Web** (`app/main.py`): FastAPI serving the national map with a national
+  leaderboard (`app/leaderboard.py`), airport drill-down pages, the `/ops`
+  dashboard (`app/ops.py`), and a JSON API. `/api/airport/{iata}/typical`
+  provides historical standard-lane wait percentiles by UTC hour of week.
+  Frontend is vanilla JS + vendored Leaflet with a vendored US-states GeoJSON
+  basemap (no external tile servers).
+- **Public API** (`app/public_api.py`): versioned, CORS-enabled, rate-limited
+  JSON at `/api/v1` (documented at `/api`) and an embeddable `/embed/{iata}`
+  widget.
+- **Security** (`app/security.py`): security headers, input validation,
+  client-IP attribution and structured audit logs for every route.
+
+## Project layout
+
+```text
+app/
+  main.py            FastAPI app, lifespan, pages, internal JSON API
+  public_api.py      /api/v1 sub-app and /embed widget
+  poller.py          background polling, rollup and cleanup tasks
+  sources/           airport wait-time adapters (SOURCES) and shared types
+  faa_events.py      FAA NAS airport events
+  weather_alerts.py  NWS alerts and zone matching
+  tsa_throughput.py  TSA national passenger volumes
+  enplanements.py    FAA enplanements loader
+  travel_calendar.py travel-demand calendar
+  analytics.py       rollups, typical waits, retention
+  forecast.py        short-horizon wait forecasts
+  leaderboard.py     national leaderboard
+  ops.py             /ops dashboard data
+  queries.py         shared SQL and response shaping
+  security.py        headers, validation, audit logging
+  db.py              schema, migrations, seeding
+  templates/         Jinja2 pages
+  static/            JS, CSS, vendored Leaflet and US-states GeoJSON
+data/                committed airports, enplanements and travel calendar
+scripts/             probes and data generators
+tests/               offline pytest suite with recorded fixtures
+docs/                architecture doc and diagram
+```
 
 ## Travel calendar
 
@@ -70,21 +122,28 @@ present in the regenerated file.
 
 ```bash
 docker run -d --name waits-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=waits -p 5432:5432 postgres:16-alpine
+python3.12 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --port 8080
 ```
 
-`DATABASE_URL` overrides the default local connection string.
+Requires Python 3.12 (CI and the Docker image use 3.12). `DATABASE_URL`
+overrides the default `postgresql://postgres:postgres@localhost:5432/waits`.
+Startup creates the schema and seeds the `data/` files; the app does not start
+without a database. Open http://localhost:8080/ for the map,
+`/airport/SEA` for a drill-down, `/ops` for source health and `/api` for the
+public API docs.
 
 ## Tests
 
 ```bash
 pip install -r requirements-dev.txt
+ruff check .
+mypy
 pytest
-ruff check app/ tests/
 ```
 
-Tests never touch the network. `tests/test_fixture_replay.py` replays one
+Tests never touch the network or a database. `tests/test_fixture_replay.py` replays one
 recorded payload per adapter (`tests/fixtures/<code>.json`) through the real
 adapter over an `httpx.MockTransport` and asserts the parsed observations:
 checkpoint count, lane classification, wait values in **seconds**, open/closed
