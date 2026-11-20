@@ -68,6 +68,11 @@ present in the regenerated file.
 
 ## Run locally
 
+Prerequisites: Python 3.12 (the version CI and the `Dockerfile` use; the app
+imports `datetime.UTC`, so Python 3.10 and older fail at startup) and Docker
+for the local PostgreSQL container. Using a virtual environment is recommended
+(`python3.12 -m venv .venv && source .venv/bin/activate`).
+
 ```bash
 docker run -d --name waits-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=waits -p 5432:5432 postgres:16-alpine
 pip install -r requirements.txt
